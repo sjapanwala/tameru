@@ -4,6 +4,7 @@ import type {
   Budget,
   Category,
   Goal,
+  ImportProfile,
   MerchantRule,
   Recurring,
   Setting,
@@ -19,6 +20,7 @@ export class TameruDB extends Dexie {
   recurring!: Table<Recurring, string>;
   goals!: Table<Goal, string>;
   settings!: Table<Setting, string>;
+  importProfiles!: Table<ImportProfile, string>;
 
   constructor(name = 'tameru') {
     super(name);
@@ -33,6 +35,10 @@ export class TameruDB extends Dexie {
       recurring: 'id, kind, updatedAt',
       goals: 'id, updatedAt',
       settings: 'id, &key, updatedAt',
+    });
+    // v2: remembered CSV column mappings, one per bank file layout.
+    this.version(2).stores({
+      importProfiles: 'id, signature, updatedAt',
     });
   }
 }

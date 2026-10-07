@@ -22,3 +22,19 @@ export const DEFAULT_SETTINGS: AppSettings = {
   onboardedAt: null,
   defaultAccountId: null,
 };
+
+/** Suggestions offered in the category menu alongside the user's own. */
+export const PRESET_CATEGORIES = [
+  'Coffee',
+  'Groceries',
+  'Dining out',
+  'Transport',
+  'Fun',
+  'Health',
+  'Shopping',
+  'Bills',
+  'Rent',
+  'Subscriptions',
+  'Travel',
+  'Gifts',
+];

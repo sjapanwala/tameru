@@ -1,10 +1,12 @@
-// Generates the placeholder app icons (teal ground, three rising white bars)
-// as PNGs with no dependencies. Run with `npm run icons`.
+// Generates the app icons (dark "mon coin": bone coin with a T-shaped hole on
+// a night ground, a stone ring behind it) as PNGs with no dependencies.
+// Run with `npm run icons`.
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { deflateSync } from 'node:zlib';
 
-const TEAL = [0x0a, 0x7a, 0x66];
-const WHITE = [0xff, 0xff, 0xff];
+const NIGHT = [0x1b, 0x1a, 0x18];
+const BONE = [0xec, 0xe5, 0xd7];
+const STONE = [0x4a, 0x47, 0x40];
 
 const crcTable = new Uint32Array(256).map((_, n) => {
   let c = n;
@@ -52,35 +54,44 @@ function encodePng(size, rgb) {
   ]);
 }
 
-// Bars in unit space: [x, top, width, bottom]
-const BARS = [
-  [0.22, 0.56, 0.14, 0.78],
-  [0.43, 0.4, 0.14, 0.78],
-  [0.64, 0.22, 0.14, 0.78],
+// Geometry is in the design's 100-unit space. Painted back to front: stone ring
+// behind, the coin with its T-shaped hole, then a faint rim line on the coin.
+const BACK_RING = { cx: 55, cy: 55, r: 30, width: 1.6 };
+const COIN = { cx: 47, cy: 47, r: 30 };
+const RIM = { cx: 47, cy: 47, r: 25.5, width: 0.9, opacity: 0.35 };
+// T hole: [left, top, right, bottom]
+const HOLE = [
+  [36, 36, 58, 43],
+  [43.5, 43, 50.5, 62],
 ];
-const RADIUS = 0.045;
 
-function inBars(u, v) {
-  return BARS.some(([x, top, w, bottom]) => {
-    const cx = Math.min(Math.max(u, x + RADIUS), x + w - RADIUS);
-    const cy = Math.min(Math.max(v, top + RADIUS), bottom - RADIUS);
-    return Math.hypot(u - cx, v - cy) <= RADIUS;
-  });
+const onRing = (x, y, { cx, cy, r, width }) =>
+  Math.abs(Math.hypot(x - cx, y - cy) - r) <= width / 2;
+
+const mix = (from, to, t) => from.map((c, i) => c + (to[i] - c) * t);
+
+function sample(x, y) {
+  let colour = onRing(x, y, BACK_RING) ? STONE : NIGHT;
+  const inCoin = Math.hypot(x - COIN.cx, y - COIN.cy) <= COIN.r;
+  const inHole = HOLE.some(([l, t, r, b]) => x >= l && x <= r && y >= t && y <= b);
+  if (inCoin && !inHole) {
+    colour = onRing(x, y, RIM) ? mix(BONE, NIGHT, RIM.opacity) : BONE;
+  }
+  return colour;
 }
 
 function icon(size, scale) {
   const SS = 4;
   return encodePng(size, (x, y) => {
-    let hits = 0;
+    const sum = [0, 0, 0];
     for (let sy = 0; sy < SS; sy++) {
       for (let sx = 0; sx < SS; sx++) {
         const u = ((x + (sx + 0.5) / SS) / size - 0.5) / scale + 0.5;
         const v = ((y + (sy + 0.5) / SS) / size - 0.5) / scale + 0.5;
-        if (inBars(u, v)) hits++;
+        sample(u * 100, v * 100).forEach((c, i) => (sum[i] += c));
       }
     }
-    const t = hits / (SS * SS);
-    return TEAL.map((c, i) => Math.round(c + (WHITE[i] - c) * t));
+    return sum.map((c) => Math.round(c / (SS * SS)));
   });
 }
 
@@ -91,7 +102,7 @@ const files = [
   ['icon-512.png', 512, 1],
   ['apple-touch-icon.png', 180, 1],
   // Maskable: keep artwork inside the central safe zone.
-  ['maskable-512.png', 512, 0.7],
+  ['maskable-512.png', 512, 0.8],
 ];
 for (const [name, size, scale] of files) {
   writeFileSync(new URL(name, out), icon(size, scale));

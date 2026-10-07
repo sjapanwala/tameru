@@ -1,0 +1,4 @@
+1. On startup, if the app is started through the browser, it will prompt the user to add it to home screen so it can turn into an actual app.
+2. After the user has "installed" the app they will be able to onboard - the onboarding will ask questions  based on the users life and spending habits, also ask about the users future financial goals - will then create a recommended financial plan and start recommending spending habits from that - the user can also change their goals as life progresses.
+3. Also be able to track multiple accounts and sources of income, there should also be an option of recurring payments and recurring income - based on that the app should also be able to predict future spending and earnings
+4. Be able to assign bills to multiple cards to keep track of card payments, when adding an expense, we should be able to add the card it was charged on.

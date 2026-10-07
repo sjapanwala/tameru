@@ -11,7 +11,7 @@ import type { MerchantRule } from './types';
 const PREFIXES: RegExp[] = [
   /^(sq|tst|pp|paypal|sp|gpay|google|apl|py|fs|ic|dd|in)\s*\*\s*/i,
   /^(pos|interac|debit|visa debit|point of sale)\s+(retail\s+)?(purchase|payment)\s*[-–:#]?\s*/i,
-  /^(pos|purchase|payment|pre-?authorized (debit|payment))\s*[-–:]\s*/i,
+  /^(pos|purchase|pre-?authorized (debit|payment))\s*[-–:]\s*/i,
 ];
 
 /** Well-known brands whose descriptors carry trailing junk. Checked in order. */

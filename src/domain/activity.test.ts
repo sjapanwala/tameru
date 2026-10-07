@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { filterTransactions, groupByDay, recentMerchants, sortNewestFirst } from './activity';
+import {
+  filterTransactions,
+  groupByDay,
+  monthTotals,
+  recentMerchants,
+  sortNewestFirst,
+  topCategories,
+} from './activity';
 import { validateBackup } from './backup';
 import { addDays, dayLabel, isISODate, parseISODate, toISODate } from './dates';
 
@@ -74,6 +81,41 @@ describe('filterTransactions', () => {
   it('filters to needs review, combined with search', () => {
     expect(run('', true)).toEqual([mystery]);
     expect(run('joe', true)).toEqual([]);
+  });
+});
+
+describe('kind filter, totals and top categories', () => {
+  const list = [
+    tx({ amountCents: -450, categoryId: 'dining' }),
+    tx({ amountCents: -900, categoryId: 'dining' }),
+    tx({ amountCents: -3000, categoryId: 'groceries' }),
+    tx({ amountCents: 200000, categoryId: null, merchant: 'Payroll' }),
+    tx({ date: '2026-09-30', amountCents: -7777, categoryId: 'fun' }),
+  ];
+
+  it('filters to expenses or income', () => {
+    const only = (kind: 'expense' | 'income') =>
+      filterTransactions(list, { query: '', needsReviewOnly: false, kind }, names);
+    expect(only('income').map((t) => t.merchant)).toEqual(['Payroll']);
+    expect(only('expense')).toHaveLength(4);
+  });
+
+  it('totals a month', () => {
+    expect(monthTotals(list, '2026-10')).toEqual({
+      inCents: 200000,
+      outCents: 4350,
+      netCents: 195650,
+    });
+  });
+
+  it('ranks categories by use, then by their own order', () => {
+    const categories = [{ id: 'groceries' }, { id: 'dining' }, { id: 'transport' }, { id: 'fun' }];
+    expect(topCategories(list, categories).map((c) => c.id)).toEqual([
+      'dining',
+      'groceries',
+      'fun',
+    ]);
+    expect(topCategories([], categories, 2).map((c) => c.id)).toEqual(['groceries', 'dining']);
   });
 });
 

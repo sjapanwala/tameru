@@ -3,6 +3,7 @@ import type {
   Budget,
   Category,
   Goal,
+  ImportProfile,
   MerchantRule,
   Recurring,
   Setting,
@@ -10,7 +11,8 @@ import type {
 } from './types';
 
 export const BACKUP_APP_ID = 'tameru';
-export const BACKUP_FORMAT_VERSION = 1;
+// v2 added importProfiles. Older backups simply lack the newer tables.
+export const BACKUP_FORMAT_VERSION = 2;
 
 export const TABLE_NAMES = [
   'accounts',
@@ -21,6 +23,7 @@ export const TABLE_NAMES = [
   'recurring',
   'goals',
   'settings',
+  'importProfiles',
 ] as const;
 
 export type TableName = (typeof TABLE_NAMES)[number];
@@ -34,6 +37,7 @@ export interface BackupData {
   recurring: Recurring[];
   goals: Goal[];
   settings: Setting[];
+  importProfiles: ImportProfile[];
 }
 
 export interface Backup {
@@ -116,6 +120,6 @@ export function validateBackup(json: unknown): BackupValidation {
   };
 }
 
-export function backupFileName(date: string): string {
-  return `tameru-backup-${date}.json`;
+export function backupFileName(date: string, encrypted = false): string {
+  return `tameru-backup-${date}.${encrypted ? 'encrypted.json' : 'json'}`;
 }

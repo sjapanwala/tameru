@@ -39,3 +39,35 @@ export function dayLabel(iso: ISODate, today: ISODate, locale?: string): string 
     year: sameYear ? undefined : 'numeric',
   }).format(parseISODate(iso));
 }
+
+/** Whole days from `a` to `b` (positive when `b` is later). DST-safe. */
+export function daysBetween(a: ISODate, b: ISODate): number {
+  const utc = (iso: ISODate) => {
+    const [y = 1970, m = 1, d = 1] = iso.split('-').map(Number);
+    return Date.UTC(y, m - 1, d);
+  };
+  return Math.round((utc(b) - utc(a)) / 86_400_000);
+}
+
+export function daysInMonth(year: number, month1: number): number {
+  return new Date(year, month1, 0).getDate();
+}
+
+/** First and last day of the month containing `iso`. */
+export function monthRange(iso: ISODate): { start: ISODate; end: ISODate } {
+  const [y = 1970, m = 1] = iso.split('-').map(Number);
+  const prefix = iso.slice(0, 8);
+  return { start: `${prefix}01`, end: `${prefix}${String(daysInMonth(y, m)).padStart(2, '0')}` };
+}
+
+/** Days left in the month, counting today. */
+export function daysLeftInMonth(today: ISODate): number {
+  return daysBetween(today, monthRange(today).end) + 1;
+}
+
+/** Short date without weekday ("Oct 5"). */
+export function shortDate(iso: ISODate, locale?: string): string {
+  return new Intl.DateTimeFormat(locale, { month: 'short', day: 'numeric' }).format(
+    parseISODate(iso),
+  );
+}

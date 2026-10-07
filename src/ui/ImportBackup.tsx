@@ -1,7 +1,13 @@
-import { useState, type ChangeEvent } from 'react';
+import { useState, type ChangeEvent, type FormEvent } from 'react';
 import { importAll } from '../db/backup';
 import { validateBackup, type Backup, type TableName } from '../domain/backup';
-import { ConfirmDialog } from './Sheet';
+import {
+  decryptBackup,
+  isEncryptedBackup,
+  WrongPassphraseError,
+  type EncryptedEnvelope,
+} from '../domain/encryptedBackup';
+import { ConfirmDialog, Sheet } from './Sheet';
 
 interface Pending {
   backup: Backup;
@@ -21,11 +27,21 @@ function describeDate(iso: string): string {
     : new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' }).format(date);
 }
 
-/** File picker + validation + "replace everything?" confirmation. */
+/** File picker + (decryption) + validation + "replace everything?" confirmation. */
 export function ImportBackup({ label, className = 'btn btn--secondary', onImported }: Props) {
+  const [locked, setLocked] = useState<EncryptedEnvelope | null>(null);
+  const [passphrase, setPassphrase] = useState('');
+  const [unlockError, setUnlockError] = useState<string | null>(null);
   const [pending, setPending] = useState<Pending | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+
+  function accept(json: unknown): boolean {
+    const result = validateBackup(json);
+    if (result.ok) setPending({ backup: result.backup, counts: result.counts });
+    else setError(result.error);
+    return result.ok;
+  }
 
   async function onFile(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
@@ -33,11 +49,33 @@ export function ImportBackup({ label, className = 'btn btn--secondary', onImport
     if (!file) return;
     setError(null);
     try {
-      const result = validateBackup(JSON.parse(await file.text()));
-      if (result.ok) setPending({ backup: result.backup, counts: result.counts });
-      else setError(result.error);
+      const json: unknown = JSON.parse(await file.text());
+      if (isEncryptedBackup(json)) {
+        setPassphrase('');
+        setUnlockError(null);
+        setLocked(json);
+      } else accept(json);
     } catch {
-      setError('That file could not be read as JSON.');
+      setError('That file could not be read as a Tameru backup.');
+    }
+  }
+
+  async function unlock(event: FormEvent) {
+    event.preventDefault();
+    if (!locked) return;
+    setBusy(true);
+    try {
+      const json: unknown = JSON.parse(await decryptBackup(locked, passphrase));
+      setLocked(null);
+      accept(json);
+    } catch (cause) {
+      setUnlockError(
+        cause instanceof WrongPassphraseError
+          ? 'That passphrase didn’t unlock the file.'
+          : 'The file decrypted but isn’t a valid backup.',
+      );
+    } finally {
+      setBusy(false);
     }
   }
 
@@ -72,6 +110,41 @@ export function ImportBackup({ label, className = 'btn btn--secondary', onImport
         <p className="notice notice--warn" role="alert">
           {error}
         </p>
+      )}
+      {locked && (
+        <Sheet label="Encrypted backup" variant="alert" onClose={() => setLocked(null)}>
+          <form className="stack" onSubmit={(event) => void unlock(event)}>
+            <h2 className="dialog__title">Encrypted backup</h2>
+            <label className="field">
+              <span className="field__label">Passphrase</span>
+              <input
+                className="input"
+                type="password"
+                autoComplete="off"
+                autoFocus
+                value={passphrase}
+                onChange={(event) => setPassphrase(event.target.value)}
+              />
+              {unlockError && (
+                <span className="field__error" role="alert">
+                  {unlockError}
+                </span>
+              )}
+            </label>
+            <div className="dialog__actions">
+              <button type="button" className="btn btn--quiet" onClick={() => setLocked(null)}>
+                Cancel
+              </button>
+              <button
+                type="submit"
+                className="btn btn--primary"
+                disabled={busy || passphrase === ''}
+              >
+                {busy ? 'Unlocking…' : 'Unlock'}
+              </button>
+            </div>
+          </form>
+        </Sheet>
       )}
       {pending && (
         <ConfirmDialog

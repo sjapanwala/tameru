@@ -1,51 +1,75 @@
 import { useLiveQuery } from 'dexie-react-hooks';
 import { useMemo, useState } from 'react';
 import { listTransactions } from '../db/repo';
-import { filterTransactions, groupByDay } from '../domain/activity';
-import { dayLabel, todayISO } from '../domain/dates';
+import { filterTransactions, groupByDay, monthTotals } from '../domain/activity';
+import { dayLabel, parseISODate, todayISO } from '../domain/dates';
 import { formatMoney, minorUnitDigits } from '../domain/money';
 import type { Transaction } from '../domain/types';
 import { useApp } from '../ui/context';
-import { AlertIcon, CloseIcon, SearchIcon } from '../ui/Icons';
+import { CloseIcon, SearchIcon } from '../ui/Icons';
 import { PageHeader } from '../ui/PageHeader';
 
 const PAGE_SIZE = 150;
 
+type Filter = 'all' | 'review' | 'expense' | 'income';
+
+const FILTERS: { value: Filter; label: string }[] = [
+  { value: 'all', label: 'All' },
+  { value: 'review', label: 'Needs review' },
+  { value: 'expense', label: 'Expenses' },
+  { value: 'income', label: 'Income' },
+];
+
 export function Activity() {
   const { settings, categories, openAdd, openEdit } = useApp();
   const [query, setQuery] = useState('');
-  const [needsReviewOnly, setNeedsReviewOnly] = useState(false);
+  const [filter, setFilter] = useState<Filter>('all');
   const [shown, setShown] = useState(PAGE_SIZE);
 
   const transactions = useLiveQuery(() => listTransactions(), []);
   const categoryNames = useMemo(() => new Map(categories.map((c) => [c.id, c.name])), [categories]);
 
+  const today = todayISO();
   const reviewCount = useMemo(
     () => (transactions ?? []).filter((tx) => tx.needsReview).length,
     [transactions],
+  );
+  const totals = useMemo(
+    () => monthTotals(transactions ?? [], today.slice(0, 7)),
+    [transactions, today],
   );
   const filtered = useMemo(
     () =>
       filterTransactions(
         transactions ?? [],
-        { query, needsReviewOnly },
+        {
+          query,
+          needsReviewOnly: filter === 'review',
+          kind: filter === 'expense' || filter === 'income' ? filter : undefined,
+        },
         categoryNames,
         minorUnitDigits(settings.currency),
       ),
-    [transactions, query, needsReviewOnly, categoryNames, settings.currency],
+    [transactions, query, filter, categoryNames, settings.currency],
   );
   const groups = useMemo(() => groupByDay(filtered.slice(0, shown)), [filtered, shown]);
 
-  const today = todayISO();
-  const money = (cents: number) => formatMoney(cents, settings.currency, { signed: true });
-  const filtering = query.trim() !== '' || needsReviewOnly;
+  // A real minus sign and an explicit plus, so direction never rests on colour.
+  const money = (cents: number) =>
+    formatMoney(cents, settings.currency, { signed: true }).replace('-', '−');
+  const filtering = query.trim() !== '' || filter !== 'all';
+  const monthShort = new Intl.DateTimeFormat(undefined, { month: 'short' }).format(
+    parseISODate(today),
+  );
 
   function row(tx: Transaction) {
     const category = tx.categoryId ? categoryNames.get(tx.categoryId) : undefined;
+    const fallback = tx.amountCents > 0 ? 'Income' : 'Uncategorised';
     const title = tx.merchant || category || (tx.amountCents > 0 ? 'Income' : 'Expense');
     const detail = [
-      tx.merchant ? (category ?? (tx.amountCents > 0 ? 'Income' : 'Uncategorised')) : null,
-      tx.note,
+      tx.merchant ? (category ?? fallback) : category ? null : fallback,
+      tx.needsReview ? 'needs review' : null,
+      tx.note || null,
     ]
       .filter(Boolean)
       .join(' · ');
@@ -54,11 +78,9 @@ export function Activity() {
         <button type="button" className="tx" onClick={() => openEdit(tx)}>
           <span className="tx__main">
             <span className="tx__title">{title}</span>
-            {detail && <span className="tx__detail">{detail}</span>}
-            {tx.needsReview && (
-              <span className="badge badge--warn">
-                <AlertIcon size={14} />
-                Needs review
+            {detail && (
+              <span className={`tx__detail${tx.needsReview ? ' tx__detail--review' : ''}`}>
+                {detail}
               </span>
             )}
           </span>
@@ -75,7 +97,7 @@ export function Activity() {
       <PageHeader title="Activity" />
 
       <div className="search">
-        <SearchIcon size={20} />
+        <SearchIcon size={18} />
         <label className="visually-hidden" htmlFor="activity-search">
           Search transactions
         </label>
@@ -104,25 +126,41 @@ export function Activity() {
         )}
       </div>
 
+      <dl className="totals num">
+        <div>
+          <dt>In · {monthShort}</dt>
+          <dd className="is-in">{money(totals.inCents)}</dd>
+        </div>
+        <div>
+          <dt>Out</dt>
+          <dd>{money(-totals.outCents)}</dd>
+        </div>
+        <div>
+          <dt>Net</dt>
+          <dd>{money(totals.netCents)}</dd>
+        </div>
+      </dl>
+
       <div className="chip-row" role="group" aria-label="Filter">
-        <button
-          type="button"
-          className="chip"
-          aria-pressed={!needsReviewOnly}
-          onClick={() => setNeedsReviewOnly(false)}
-        >
-          All
-        </button>
-        <button
-          type="button"
-          className="chip"
-          aria-pressed={needsReviewOnly}
-          onClick={() => setNeedsReviewOnly(true)}
-        >
-          <AlertIcon size={16} />
-          Needs review
-          <span className="chip__count num">{reviewCount}</span>
-        </button>
+        {FILTERS.map(({ value, label }) => (
+          <button
+            key={value}
+            type="button"
+            className="chip"
+            aria-pressed={filter === value}
+            onClick={() => {
+              setFilter(value);
+              setShown(PAGE_SIZE);
+            }}
+          >
+            {label}
+            {value === 'review' && (
+              <span className={`chip__count${reviewCount === 0 ? ' chip__count--zero' : ''}`}>
+                {reviewCount}
+              </span>
+            )}
+          </button>
+        ))}
       </div>
 
       {transactions === undefined ? null : groups.length === 0 ? (
@@ -130,7 +168,7 @@ export function Activity() {
           {filtering ? (
             <>
               <p className="card__text">
-                {needsReviewOnly && query.trim() === ''
+                {filter === 'review' && query.trim() === ''
                   ? 'Nothing needs review. All caught up.'
                   : 'No transactions match.'}
               </p>
@@ -139,7 +177,7 @@ export function Activity() {
                 className="btn btn--secondary"
                 onClick={() => {
                   setQuery('');
-                  setNeedsReviewOnly(false);
+                  setFilter('all');
                 }}
               >
                 Show everything
@@ -164,7 +202,7 @@ export function Activity() {
                 </h2>
                 <span className="day__total num">{money(group.totalCents)}</span>
               </div>
-              <ul className="card card--list">{group.items.map(row)}</ul>
+              <ul>{group.items.map(row)}</ul>
             </section>
           ))}
           {filtered.length > shown && (

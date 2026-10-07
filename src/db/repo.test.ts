@@ -5,7 +5,16 @@ import { exportAll, importAll } from './backup';
 import { db } from './db';
 import {
   addTransaction,
+  addTransactions,
   completeOnboarding,
+  deleteTransactions,
+  findImportProfile,
+  listBudgets,
+  listRecurring,
+  recordOccurrence,
+  saveImportProfile,
+  saveRecurring,
+  setBudget,
   deleteTransaction,
   getSettings,
   listAccounts,
@@ -120,6 +129,67 @@ describe('merchant rules', () => {
     const rules = await listRules();
     expect(rules).toHaveLength(1);
     expect(rules[0]?.categoryId).toBe('b');
+  });
+});
+
+describe('plan data', () => {
+  it('upserts and removes a budget', async () => {
+    await setBudget('cat', 5000);
+    await setBudget('cat', 7500);
+    expect((await listBudgets()).map((b) => b.monthlyCents)).toEqual([7500]);
+    await setBudget('cat', 0);
+    expect(await listBudgets()).toEqual([]);
+  });
+
+  it('records a bill occurrence as a linked expense', async () => {
+    const account = await onboard();
+    await saveRecurring(null, {
+      name: 'Rent',
+      amountCents: 150000,
+      kind: 'bill',
+      categoryId: null,
+      schedule: { freq: 'monthly', anchorDate: '2026-10-01' },
+    });
+    const [rent] = await listRecurring();
+    const tx = await recordOccurrence(rent!, '2026-10-01', '2026-10-02', account.id);
+    expect(tx).toMatchObject({
+      date: '2026-10-02',
+      amountCents: -150000,
+      merchant: 'Rent',
+      recurringId: rent!.id,
+      recurringDate: '2026-10-01',
+    });
+  });
+
+  it('bulk-adds and bulk-undoes imported transactions', async () => {
+    const account = await onboard();
+    const ids = await addTransactions([
+      expense(account.id),
+      expense(account.id, { amountCents: -1 }),
+    ]);
+    expect(await listTransactions()).toHaveLength(2);
+    await deleteTransactions(ids);
+    expect(await listTransactions()).toEqual([]);
+  });
+
+  it('remembers one import profile per file layout', async () => {
+    const mapping = {
+      hasHeader: true,
+      dateColumn: 0,
+      dateFormat: 'MDY' as const,
+      descriptionColumn: 1,
+      amountColumn: 2,
+      debitColumn: -1,
+      creditColumn: -1,
+      invertAmount: false,
+    };
+    await saveImportProfile('h:a|b|c', 'My bank', mapping);
+    await saveImportProfile('h:a|b|c', 'My bank (card)', { ...mapping, invertAmount: true });
+    expect(await db.importProfiles.count()).toBe(1);
+    expect(await findImportProfile('h:a|b|c')).toMatchObject({
+      name: 'My bank (card)',
+      mapping: { invertAmount: true },
+    });
   });
 });
 

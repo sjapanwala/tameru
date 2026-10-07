@@ -2,13 +2,20 @@ import type { Table } from 'dexie';
 import { sortNewestFirst } from '../domain/activity';
 import { DEFAULT_CATEGORIES, DEFAULT_SETTINGS } from '../domain/defaults';
 import type { RuleSuggestion } from '../domain/merchant';
+import { signedAmount } from '../domain/recurring';
 import type {
   Account,
   AppSettings,
   BaseRecord,
+  Budget,
   Category,
+  CsvMapping,
+  Goal,
+  ImportProfile,
+  ISODate,
   MerchantRule,
   NewRecord,
+  Recurring,
   Transaction,
 } from '../domain/types';
 import { db } from './db';
@@ -91,6 +98,18 @@ export async function listCategories(): Promise<Category[]> {
   );
 }
 
+/** Create a category, or return the live one that already has this name. */
+export async function addCategory(name: string): Promise<Category> {
+  const clean = name.replace(/\s+/g, ' ').trim();
+  return db.transaction('rw', db.categories, async () => {
+    const existing = await listCategories();
+    const match = existing.find((c) => c.name.toLowerCase() === clean.toLowerCase());
+    if (match) return match;
+    const sortOrder = Math.max(-1, ...existing.map((c) => c.sortOrder)) + 1;
+    return create<Category>(db.categories, { name: clean, sortOrder });
+  });
+}
+
 export interface OnboardingInput {
   currency: string;
   accountName: string;
@@ -159,3 +178,114 @@ export async function saveRule(rule: RuleSuggestion): Promise<void> {
 export const deleteRule = (id: string) => softDelete(db.merchantRules, id);
 
 export const restoreRule = (id: string) => restore(db.merchantRules, id);
+
+// ---- budgets -----------------------------------------------------------
+
+export async function listBudgets(): Promise<Budget[]> {
+  return live(await db.budgets.toArray());
+}
+
+/** Set a category's monthly budget; zero removes it. */
+export async function setBudget(categoryId: string, monthlyCents: number): Promise<void> {
+  await db.transaction('rw', db.budgets, async () => {
+    const existing = live(await db.budgets.where('categoryId').equals(categoryId).toArray())[0];
+    if (monthlyCents <= 0) {
+      if (existing) await softDelete(db.budgets, existing.id);
+    } else if (existing) {
+      await patch<Budget>(db.budgets, existing.id, { monthlyCents });
+    } else {
+      await create<Budget>(db.budgets, { categoryId, monthlyCents });
+    }
+  });
+}
+
+// ---- recurring bills & income -------------------------------------------
+
+export async function listRecurring(): Promise<Recurring[]> {
+  return live(await db.recurring.toArray()).sort((a, b) => a.name.localeCompare(b.name));
+}
+
+export async function saveRecurring(
+  id: string | null,
+  fields: NewRecord<Recurring>,
+): Promise<void> {
+  if (id) await patch<Recurring>(db.recurring, id, fields);
+  else await create<Recurring>(db.recurring, fields);
+}
+
+export const deleteRecurring = (id: string) => softDelete(db.recurring, id);
+
+export const restoreRecurring = (id: string) => restore(db.recurring, id);
+
+/**
+ * Record one occurrence of a recurring item as a transaction (bill paid or
+ * income received). The link back to the occurrence keeps it out of
+ * "variable spend" and out of the forecast.
+ */
+export function recordOccurrence(
+  item: Recurring,
+  occurrenceDate: ISODate,
+  paidOn: ISODate,
+  accountId: string,
+): Promise<Transaction> {
+  return addTransaction({
+    date: paidOn,
+    amountCents: signedAmount(item),
+    accountId,
+    categoryId: item.categoryId,
+    merchant: item.name,
+    rawDescriptor: item.name,
+    note: '',
+    needsReview: false,
+    recurringId: item.id,
+    recurringDate: occurrenceDate,
+  });
+}
+
+// ---- goals ---------------------------------------------------------------
+
+export async function listGoals(): Promise<Goal[]> {
+  return live(await db.goals.toArray()).sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+}
+
+export async function saveGoal(id: string | null, fields: NewRecord<Goal>): Promise<void> {
+  if (id) await patch<Goal>(db.goals, id, fields);
+  else await create<Goal>(db.goals, fields);
+}
+
+export const deleteGoal = (id: string) => softDelete(db.goals, id);
+
+export const restoreGoal = (id: string) => restore(db.goals, id);
+
+// ---- CSV import ----------------------------------------------------------
+
+/** Add many transactions at once; all or nothing. Returns their ids. */
+export async function addTransactions(rows: NewRecord<Transaction>[]): Promise<string[]> {
+  const records = rows.map((fields) => stamp<Transaction>(fields));
+  await db.transactions.bulkAdd(records);
+  return records.map((record) => record.id);
+}
+
+/** Undo for a CSV import. */
+export async function deleteTransactions(ids: string[]): Promise<void> {
+  await db.transaction('rw', db.transactions, async () => {
+    for (const id of ids) await softDelete(db.transactions, id);
+  });
+}
+
+export async function findImportProfile(signature: string): Promise<ImportProfile | undefined> {
+  return live(await db.importProfiles.where('signature').equals(signature).toArray())[0];
+}
+
+/** Remember how a bank's file layout maps to transactions. */
+export async function saveImportProfile(
+  signature: string,
+  name: string,
+  mapping: CsvMapping,
+): Promise<void> {
+  await db.transaction('rw', db.importProfiles, async () => {
+    const existing = await findImportProfile(signature);
+    if (existing) await patch<ImportProfile>(db.importProfiles, existing.id, { name, mapping });
+    else await create<ImportProfile>(db.importProfiles, { signature, name, mapping });
+  });
+}

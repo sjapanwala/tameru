@@ -3,3 +3,4 @@ dist
 dev-dist
 *.local
 .DS_Store
+claude_md

@@ -14,7 +14,9 @@ import { Activity } from './pages/Activity';
 import { Home } from './pages/Home';
 import { InstallScreen } from './pages/InstallScreen';
 import { Onboarding } from './pages/Onboarding';
-import { Forecast, Plan } from './pages/Placeholder';
+import { Forecast } from './pages/Forecast';
+import { ImportCsv } from './pages/ImportCsv';
+import { Plan } from './pages/Plan';
 import { Settings } from './pages/Settings';
 import { getBrowserOverride, setBrowserOverride } from './pwa/install';
 import { requestPersistenceOnFirstRun } from './pwa/persist';
@@ -56,6 +58,8 @@ function Page({ route }: { route: string }) {
       return <Plan />;
     case '/settings':
       return <Settings />;
+    case '/import':
+      return <ImportCsv />;
     default:
       return <Home />;
   }
@@ -174,9 +178,14 @@ export function App() {
       });
     };
 
+    // Settings and import are drill-in screens: back arrow, no tab bar.
+    const bare = route === '/settings' || route === '/import';
+
     content = (
       <>
-        <main className="page">
+        <main
+          className={`page${bare ? ' page--bare' : route === '/activity' ? ' page--activity' : ''}`}
+        >
           {inBrowser && (
             <p className="notice notice--warn">
               <AlertIcon size={20} />
@@ -188,7 +197,7 @@ export function App() {
           )}
           <Page route={route} />
         </main>
-        <TabBar route={route} onAdd={() => setSheet({ mode: 'add' })} />
+        {!bare && <TabBar route={route} onAdd={() => setSheet({ mode: 'add' })} />}
         {sheet && (
           <TransactionSheet
             // Remount per transaction so the form starts from clean state.

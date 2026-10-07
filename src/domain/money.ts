@@ -64,3 +64,14 @@ export function parseMoneyInput(text: string, currency: string = DEFAULT_CURRENC
   if (!Number.isSafeInteger(cents)) return null;
   return negative && cents !== 0 ? -cents : cents;
 }
+
+/** Plain decimal string for pre-filling an amount input ("12.50"; "" for zero). */
+export function centsToInput(cents: number, currency: string = DEFAULT_CURRENCY): string {
+  if (cents === 0) return '';
+  const digits = minorUnitDigits(currency);
+  const abs = Math.abs(cents);
+  const whole = Math.floor(abs / 10 ** digits);
+  const text =
+    digits === 0 ? String(whole) : `${whole}.${String(abs % 10 ** digits).padStart(digits, '0')}`;
+  return cents < 0 ? `-${text}` : text;
+}

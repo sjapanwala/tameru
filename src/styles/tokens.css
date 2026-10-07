@@ -1,28 +1,33 @@
+/* "Ledger" design tokens (Shu accent). Light is the default; dark follows
+   the system setting. */
 :root {
-  /* Colour */
-  --ink: #101c19;
-  --ground: #f3f5f4;
+  color-scheme: light dark;
+
+  --bg: #f5f4ef;
   --surface: #ffffff;
-  --hairline: #e1e8e5;
-  --muted: #55635f;
-  --accent: #0a7a66; /* good / primary */
-  --accent-pressed: #086655;
-  --accent-tint: #e3f1ed;
-  --warn: #b4470f; /* attention only */
-  --warn-tint: #fbebe1;
+  --ink: #151714;
+  --ink2: #5e625c; /* secondary text */
+  --ink3: #a9aca5; /* decoration only, never text */
+  --line: #e4e3dd;
+  --track: #e9e8e2;
+  --accent: #a5482c; /* Shu: primary */
+  --accent-soft: #f5e5dd;
   --on-accent: #ffffff;
-  --scrim: rgb(16 28 25 / 0.45);
+  --pos: #1f6b4f; /* money in: always green */
+  --neg: #8a6100; /* attention only; ochre so it can't be mistaken for the accent */
+  --neg-soft: #f3ead2;
+  --scrim: rgb(20 22 20 / 0.35);
+  --series-scenario: #6b4fd8;
 
   /* Type */
-  --font-display: 'Bricolage Grotesque', ui-rounded, system-ui, sans-serif;
-  --font-body: 'Instrument Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
-  --text-xs: 0.8125rem; /* 13px */
-  --text-sm: 0.875rem; /* 14px */
+  --font-body: 'Geist Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: 'Geist Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+  --text-xs: 0.75rem; /* 12px */
+  --text-sm: 0.8125rem; /* 13px */
+  --text-base: 0.9375rem; /* 15px */
   --text-md: 1rem; /* 16px: minimum for inputs, prevents iOS zoom */
-  --text-lg: 1.125rem;
-  --text-xl: 1.5rem;
-  --text-2xl: 1.75rem;
-  --text-hero: 3.5rem;
+  --text-title: 1.75rem; /* 28px */
+  --text-month: 2.125rem; /* 34px */
 
   /* Space */
   --space-1: 4px;
@@ -31,22 +36,50 @@
   --space-4: 16px;
   --space-5: 20px;
   --space-6: 24px;
+  --space-7: 28px;
   --space-8: 32px;
 
   /* Shape */
-  --radius-card: 22px;
-  --radius-control: 14px;
+  --radius-card: 16px;
+  --radius-control: 12px;
+  --radius-sheet: 28px;
   --radius-pill: 999px;
   --tap: 44px; /* minimum touch target */
+  --rule: 1.5px solid var(--ink); /* heavy ledger rule */
+  --hair: 1px solid var(--line);
 
   /* Layout */
   --page-max: 480px;
-  --tabbar-height: 64px;
+  --gutter: 22px;
+  --nav-height: 56px;
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-right: env(safe-area-inset-right, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
   --safe-left: env(safe-area-inset-left, 0px);
+  /* Floating nav sits just above the home indicator. */
+  --nav-bottom: max(calc(var(--safe-bottom) - 6px), 16px);
 
-  --shadow-raised: 0 6px 16px rgb(10 122 102 / 0.28);
-  --shadow-float: 0 8px 28px rgb(16 28 25 / 0.18);
+  --shadow-nav: 0 8px 24px -12px rgb(0 0 0 / 0.25);
+  --shadow-fab: 0 8px 24px -10px rgb(0 0 0 / 0.35);
+  --shadow-float: 0 20px 50px -16px rgb(0 0 0 / 0.35);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0e100f;
+    --surface: #181b19;
+    --ink: #ecede8;
+    --ink2: #a2a69f;
+    --ink3: #5a5e58;
+    --line: #262a27;
+    --track: #242826;
+    --accent: #c4664a;
+    --accent-soft: #2e1e18;
+    --on-accent: #0e100f;
+    --pos: #6fcf9f;
+    --neg: #e0b252;
+    --neg-soft: #2b2413;
+    --scrim: rgb(0 0 0 / 0.6);
+    --series-scenario: #a79bff;
+  }
 }

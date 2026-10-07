@@ -1,18 +1,24 @@
 import { exportAll } from '../db/backup';
 import { backupFileName } from '../domain/backup';
 import { todayISO } from '../domain/dates';
+import { encryptBackup } from '../domain/encryptedBackup';
 
 export type ExportOutcome = 'shared' | 'downloaded' | 'cancelled';
 
 /**
- * Write all data to a JSON file. On phones this goes through the share sheet
- * (Save to Files, AirDrop…), which is the dependable route out of an
- * installed iOS app; elsewhere it's a normal download.
+ * Write all data to a backup file: plain JSON, or encrypted when a
+ * passphrase is given. On phones this goes through the share sheet (Save to
+ * Files, AirDrop…), which is the dependable route out of an installed iOS
+ * app; elsewhere it's a normal download.
  */
-export async function exportBackupFile(): Promise<ExportOutcome> {
+export async function exportBackupFile(passphrase?: string): Promise<ExportOutcome> {
   const backup = await exportAll();
-  const name = backupFileName(todayISO());
-  const file = new File([JSON.stringify(backup, null, 2)], name, { type: 'application/json' });
+  const name = backupFileName(todayISO(), passphrase !== undefined);
+  const text =
+    passphrase === undefined
+      ? JSON.stringify(backup, null, 2)
+      : await encryptBackup(JSON.stringify(backup), passphrase);
+  const file = new File([text], name, { type: 'application/json' });
 
   const touch = window.matchMedia('(pointer: coarse)').matches;
   if (touch && navigator.canShare?.({ files: [file] })) {

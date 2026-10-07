@@ -36,6 +36,12 @@ export interface Transaction extends BaseRecord {
   rawDescriptor: string;
   note: string;
   needsReview: boolean;
+  /**
+   * Set when this transaction pays (or receives) one occurrence of a
+   * recurring item. Such transactions are not "variable spend".
+   */
+  recurringId?: string | null;
+  recurringDate?: ISODate | null;
 }
 
 export interface MerchantRule extends BaseRecord {
@@ -71,6 +77,27 @@ export interface Goal extends BaseRecord {
   savedCents: number;
   monthlyContributionCents: number;
   targetDate: ISODate | null;
+}
+
+/** How the columns of one bank's CSV export map onto transactions. */
+export interface CsvMapping {
+  hasHeader: boolean;
+  dateColumn: number;
+  dateFormat: 'YMD' | 'MDY' | 'DMY';
+  descriptionColumn: number;
+  /** Single signed amount column, or -1 when using debit/credit columns. */
+  amountColumn: number;
+  debitColumn: number;
+  creditColumn: number;
+  /** Flip the sign of the amount column (cards that list purchases as positive). */
+  invertAmount: boolean;
+}
+
+export interface ImportProfile extends BaseRecord {
+  name: string;
+  /** Identifies the file layout; see csvSignature. */
+  signature: string;
+  mapping: CsvMapping;
 }
 
 export interface Setting extends BaseRecord {

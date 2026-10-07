@@ -1,46 +1,53 @@
-import type { ReactNode } from 'react';
-import { ForecastIcon, HomeIcon, ListIcon, PlanIcon, PlusIcon } from './Icons';
+import { PlusIcon } from './Icons';
 
-function Tab({
-  href,
-  label,
-  active,
-  children,
-}: {
-  href: string;
-  label: string;
-  active: boolean;
-  children: ReactNode;
-}) {
+const TABS = [
+  { href: '/', label: 'Home', routes: ['/'] },
+  { href: '/activity', label: 'Activity', routes: ['/activity'] },
+  // Forecast lives inside Plan.
+  { href: '/plan', label: 'Plan', routes: ['/plan', '/forecast'] },
+];
+
+/** Floating three-tab pill with a separate Add button. */
+export function TabBar({ route, onAdd }: { route: string; onAdd(): void }) {
   return (
-    <a className="tab" href={`#${href}`} aria-current={active ? 'page' : undefined}>
-      {children}
-      <span className="tab__label">{label}</span>
-    </a>
+    <nav className="nav" aria-label="Main">
+      <div className="nav__tabs">
+        {TABS.map((tab) => (
+          <a
+            key={tab.href}
+            className="nav__tab"
+            href={`#${tab.href}`}
+            aria-current={tab.routes.includes(route) ? 'page' : undefined}
+          >
+            {tab.label}
+          </a>
+        ))}
+      </div>
+      <button type="button" className="nav__add" aria-label="Add transaction" onClick={onAdd}>
+        <PlusIcon size={22} />
+      </button>
+    </nav>
   );
 }
 
-export function TabBar({ route, onAdd }: { route: string; onAdd(): void }) {
+/** Plan and Forecast share one tab; this switches between them. */
+export function PlanTabs({ route }: { route: '/plan' | '/forecast' }) {
   return (
-    <nav className="tabbar" aria-label="Main">
-      <Tab href="/" label="Home" active={route === '/'}>
-        <HomeIcon />
-      </Tab>
-      <Tab href="/activity" label="Activity" active={route === '/activity'}>
-        <ListIcon />
-      </Tab>
-      <button type="button" className="tab tab--add" onClick={onAdd}>
-        <span className="tab__fab">
-          <PlusIcon size={28} />
-        </span>
-        <span className="tab__label">Add</span>
-      </button>
-      <Tab href="/forecast" label="Forecast" active={route === '/forecast'}>
-        <ForecastIcon />
-      </Tab>
-      <Tab href="/plan" label="Plan" active={route === '/plan'}>
-        <PlanIcon />
-      </Tab>
+    <nav className="subtabs" aria-label="Plan sections">
+      <a
+        className="subtabs__tab"
+        href="#/plan"
+        aria-current={route === '/plan' ? 'page' : undefined}
+      >
+        Plan
+      </a>
+      <a
+        className="subtabs__tab"
+        href="#/forecast"
+        aria-current={route === '/forecast' ? 'page' : undefined}
+      >
+        Forecast
+      </a>
     </nav>
   );
 }
