@@ -6,7 +6,8 @@ Differentiators: safe-to-spend number, cash flow forecast, very fast expense cap
 
 ## Commands
 
-- `npm run dev` – dev server
+- `npm run dev` – dev server (shows the install gate, as production does)
+- `npm run dev:app` – dev server with the gate off (`VITE_ALLOW_BROWSER=true`), for working on the app
 - `npm test` – Vitest (domain + db tests)
 - `npm run build` – typecheck + production build (must pass)
 - `npm run preview` – serve the production build (use this to verify install/offline)
@@ -26,7 +27,8 @@ Differentiators: safe-to-spend number, cash flow forecast, very fast expense cap
 
 - `src/domain` – pure functions. No DB, React, or DOM imports. Everything here is unit tested.
 - `src/db` – Dexie schema (`db.ts`), repository functions (`repo.ts`), backup export/import (`backup.ts`), dev sample data (`sample.ts`).
-- `src/pwa` – standalone detection, install prompt, storage persistence, service worker registration.
+- `src/gate` – the install gate, the only thing a browser tab renders. Must not import the app or database.
+- `src/pwa` – browser glue: standalone/platform wrappers, install prompt, storage persistence, service worker registration.
 - `src/ui` – shared components (tab bar, sheets, toast, icons, context, router).
 - `src/pages` – screens.
 
@@ -81,12 +83,24 @@ Rules that still hold:
 - Input font-size ≥ 16px (prevents iOS zoom).
 - Respect safe-area insets (`env(safe-area-inset-*)`, `viewport-fit=cover`).
 
-## PWA
+## PWA and the install gate
 
-- Manifest: name Tameru, standalone, icons incl. maskable, plus apple-touch-icon and iOS meta tags.
-- Install gate: if not standalone (`navigator.standalone` or `display-mode`), show the install screen (iOS Safari instructions; `beforeinstallprompt` button on Android/Chrome). Entering data in a browser tab is discouraged because iOS tab storage and installed-app storage are separate; "continue in browser" is a per-session escape hatch with a persistent warning banner.
-- On first run in standalone, call `navigator.storage.persist()`; Settings shows the result.
-- Must open and work with no connection.
+- Manifest: name Tameru, `display: standalone`, `id`/`start_url`/`scope` all `./` (no query string), theme and background colours, icons incl. maskable, plus apple-touch-icon and iOS meta tags. `viewport-fit=cover`.
+- **Tameru never runs in a browser tab.** `src/Root.tsx` decides once at launch: not standalone → render only `<InstallGate/>` (`src/gate/`). There is no demo mode, no sample data and no "continue in browser"; a separate demo site will cover that.
+- Detection is pure and tested in `src/domain/platform.ts`: `isStandalone()` (`display-mode: standalone` or `navigator.standalone === true`) and `platform()` → `ios_safari | ios_other_browser | ios_in_app_browser | android_chrome | android_other | desktop`.
+- Gate content per platform: iOS Safari gets three step cards (no fake install prompt); other iOS browsers and in-app browsers are told to open the link in Safari, with Copy link; Android Chrome gets a real Install button from `beforeinstallprompt` plus manual steps; other Android browsers are sent to Chrome; desktop gets a locally generated QR code (`qrcode-generator`) and Copy link. Every variant ends with "Already installed? Open Tameru from your home screen."
+- **Isolation is structural.** The app (`App.tsx`, pages, `db/`, Dexie) is behind a dynamic `import()` in `Root.tsx`, so a gated tab never loads database code at all. `src/gate/gate.test.ts` walks the static import graph from `main.tsx` and fails if `db/`, `pages/`, `App.tsx`, Dexie or any `indexedDB` reference becomes reachable. Keep anything the gate imports free of those.
+- First standalone launch: `Root` awaits `navigator.storage.persist()` (result stored in localStorage, shown in Settings), then mounts the app, which goes to onboarding.
+- Service worker: the gate applies updates immediately; the app shows an "Update ready" toast instead. The gate is precached and loads offline.
+- Link previews: Open Graph tags in `index.html`. Set `VITE_SITE_URL=https://…/` at build time so `og:url` and `og:image` are absolute (crawlers need that).
+
+### Developer escape hatch: `VITE_ALLOW_BROWSER`
+
+To run the app in a desktop browser, set `VITE_ALLOW_BROWSER=true` when starting Vite. It skips the gate.
+
+- `npm run dev:app` – dev server with the app in the browser (plain `npm run dev` shows the gate, like production).
+- `npm run build:browser` – a build with the gate off, for Playwright or `npm run preview`.
+- It is read in `vite.config.ts` and compiled to the constant `__ALLOW_BROWSER__`, so it is off unless explicitly set and the bypass is dead code in a normal `npm run build`. A build with it on prints a warning. **Never deploy a build made with it.**
 
 ## Milestones (all five built)
 

@@ -41,9 +41,9 @@
 
   /* Shape */
   --radius-card: 16px;
-  --radius-control: 12px;
+  --radius-control: 12px; /* buttons, inputs, chips. No pill shapes anywhere. */
   --radius-sheet: 28px;
-  --radius-pill: 999px;
+  --radius-small: 6px; /* badges, counters */
   --tap: 44px; /* minimum touch target */
   --rule: 1.5px solid var(--ink); /* heavy ledger rule */
   --hair: 1px solid var(--line);

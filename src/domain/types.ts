@@ -11,12 +11,31 @@ export interface BaseRecord {
   deletedAt: ISOTimestamp | null;
 }
 
-export type AccountType = 'chequing' | 'savings' | 'credit' | 'cash';
+export type AccountType = 'chequing' | 'savings' | 'cash' | 'investing' | 'credit';
 
 export interface Account extends BaseRecord {
   name: string;
   type: AccountType;
+  /**
+   * Balance when the account was added. For a credit card this is negative:
+   * the amount owed.
+   */
   startingBalanceCents: number;
+  /** Swatch used wherever the account is shown. */
+  color?: string;
+  /** Savings: annual interest rate in percent; null when the user doesn't know. */
+  interestRatePct?: number | null;
+  /** Investing: money put in so far (net contributions, not returns). */
+  contributedCents?: number | null;
+  // Credit cards (type 'credit') only:
+  /** Day of the month the statement closes, 1–31. */
+  statementDay?: number | null;
+  /** Day of the month payment is due, 1–31. */
+  dueDay?: number | null;
+  limitCents?: number | null;
+  aprPct?: number | null;
+  /** Account the card is paid from. */
+  payFromAccountId?: string | null;
 }
 
 export interface Category extends BaseRecord {
@@ -57,7 +76,8 @@ export interface Budget extends BaseRecord {
 }
 
 export interface Schedule {
-  freq: 'weekly' | 'biweekly' | 'monthly' | 'yearly';
+  /** semimonthly: twice a month, on the anchor's day and 15 days from it. */
+  freq: 'weekly' | 'biweekly' | 'semimonthly' | 'monthly' | 'yearly';
   /** A date the item is known to fall on; occurrences repeat from here. */
   anchorDate: ISODate;
 }
@@ -69,10 +89,34 @@ export interface Recurring extends BaseRecord {
   schedule: Schedule;
   kind: 'bill' | 'income';
   categoryId: string | null;
+  /** Account or card this is charged to (bills) or deposited into (income). */
+  accountId?: string | null;
+  /** Income that changes month to month; amountCents is a cautious monthly estimate. */
+  variable?: boolean;
+  /**
+   * Stable key for items created by a flow ("bill:rent", "fee:<accountId>"),
+   * so saving again updates the same record instead of adding another.
+   */
+  origin?: string | null;
+}
+
+export type GoalKind = 'emergency' | 'debt' | 'trip' | 'purchase' | 'invest' | 'custom';
+
+/** What a goal looked like before an edit. */
+export interface GoalRevision {
+  at: ISOTimestamp;
+  targetCents: number;
+  monthlyContributionCents: number;
+  targetDate: ISODate | null;
 }
 
 export interface Goal extends BaseRecord {
   name: string;
+  kind?: GoalKind;
+  /** For "pay off a card": the card. */
+  linkedAccountId?: string | null;
+  /** Earlier versions, oldest first. Appended whenever the numbers change. */
+  revisions?: GoalRevision[];
   targetCents: number;
   savedCents: number;
   monthlyContributionCents: number;
@@ -110,6 +154,11 @@ export interface AppSettings {
   currency: string;
   onboardedAt: ISOTimestamp | null;
   defaultAccountId: string | null;
+  /** What to call the user. Optional, never leaves the device. */
+  userName: string;
+  /** Where the user is in onboarding (see src/onboarding/machine.ts); null once not in a flow. */
+  onboarding: unknown;
+  debtStrategy: 'avalanche' | 'snowball';
 }
 
 /** Fields the caller supplies when creating a record. */

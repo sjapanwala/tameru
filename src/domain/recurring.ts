@@ -28,9 +28,13 @@ export function occurrencesBetween(schedule: Schedule, from: ISODate, to: ISODat
   const [startYear = 1970, startMonth = 1] = start.split('-').map(Number);
   const [endYear = 1970, endMonth = 1] = to.split('-').map(Number);
   for (let y = startYear, m = startMonth; y < endYear || (y === endYear && m <= endMonth);) {
-    if (freq === 'monthly' || m === anchorMonth) {
-      const date = `${y}-${pad(m)}-${pad(Math.min(anchorDay, daysInMonth(y, m)))}`;
-      if (date >= start && date <= to) result.push(date);
+    if (freq !== 'yearly' || m === anchorMonth) {
+      // Twice a month: the anchor's day and the day 15 away from it.
+      const days = freq === 'semimonthly' ? [anchorDay, anchorDay > 15 ? anchorDay - 15 : anchorDay + 15] : [anchorDay];
+      for (const day of days.sort((a, b) => a - b)) {
+        const date = `${y}-${pad(m)}-${pad(Math.min(day, daysInMonth(y, m)))}`;
+        if (date >= start && date <= to && result[result.length - 1] !== date) result.push(date);
+      }
     }
     if (++m > 12) {
       m = 1;
@@ -82,6 +86,20 @@ export const signedAmount = (item: Pick<Recurring, 'kind' | 'amountCents'>) =>
 export const FREQUENCY_LABELS: Record<Schedule['freq'], string> = {
   weekly: 'Weekly',
   biweekly: 'Every 2 weeks',
+  semimonthly: 'Twice a month',
   monthly: 'Monthly',
   yearly: 'Yearly',
 };
+
+const PER_YEAR: Record<Schedule['freq'], number> = {
+  weekly: 52,
+  biweekly: 26,
+  semimonthly: 24,
+  monthly: 12,
+  yearly: 1,
+};
+
+/** What an item comes to per month on average (a weekly $10 is about $43.33). */
+export function monthlyEquivalent(item: Pick<Recurring, 'amountCents' | 'schedule'>): number {
+  return Math.round((item.amountCents * PER_YEAR[item.schedule.freq]) / 12);
+}

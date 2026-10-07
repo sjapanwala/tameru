@@ -110,6 +110,46 @@ export async function addCategory(name: string): Promise<Category> {
   });
 }
 
+/** Create or update an account; returns its id. */
+export async function saveAccount(
+  id: string | null,
+  fields: NewRecord<Account> | Partial<NewRecord<Account>>,
+): Promise<string> {
+  if (id) {
+    await patch<Account>(db.accounts, id, fields);
+    return id;
+  }
+  return (await create<Account>(db.accounts, fields as NewRecord<Account>)).id;
+}
+
+export const deleteAccount = (id: string) => softDelete(db.accounts, id);
+
+async function ensureDefaultCategories(): Promise<void> {
+  if ((await listCategories()).length > 0) return;
+  await db.categories.bulkAdd(
+    DEFAULT_CATEGORIES.map((name, sortOrder) => stamp<Category>({ name, sortOrder })),
+  );
+}
+
+/**
+ * The last step of onboarding: make sure the basics exist, pick the account
+ * new transactions default to, and mark setup as finished.
+ */
+export async function finishOnboarding(): Promise<void> {
+  await db.transaction('rw', db.accounts, db.categories, db.settings, async () => {
+    let accounts = await listAccounts();
+    if (!accounts.some((account) => account.type === 'chequing' || account.type === 'cash')) {
+      // Skipped the accounts chapter: transactions still need somewhere to live.
+      await saveAccount(null, { name: 'Everyday', type: 'chequing', startingBalanceCents: 0 });
+      accounts = await listAccounts();
+    }
+    const everyday = accounts.find((a) => a.type === 'chequing') ?? accounts.find((a) => a.type === 'cash');
+    await ensureDefaultCategories();
+    await setSetting('defaultAccountId', everyday?.id ?? null);
+    await setSetting('onboardedAt', nowISO());
+  });
+}
+
 export interface OnboardingInput {
   currency: string;
   accountName: string;
@@ -205,12 +245,38 @@ export async function listRecurring(): Promise<Recurring[]> {
   return live(await db.recurring.toArray()).sort((a, b) => a.name.localeCompare(b.name));
 }
 
+/** Create or update; returns the record's id. */
 export async function saveRecurring(
   id: string | null,
-  fields: NewRecord<Recurring>,
-): Promise<void> {
-  if (id) await patch<Recurring>(db.recurring, id, fields);
-  else await create<Recurring>(db.recurring, fields);
+  fields: NewRecord<Recurring> | Partial<NewRecord<Recurring>>,
+): Promise<string> {
+  if (id) {
+    await patch<Recurring>(db.recurring, id, fields);
+    return id;
+  }
+  return (await create<Recurring>(db.recurring, fields as NewRecord<Recurring>)).id;
+}
+
+/**
+ * Create or update the live item with this origin key. Saving twice (going
+ * back in onboarding, re-opening a bill chip) never makes a second record.
+ */
+export async function upsertRecurring(
+  origin: string,
+  fields: Omit<NewRecord<Recurring>, 'origin'>,
+): Promise<string> {
+  return db.transaction('rw', db.recurring, async () => {
+    const existing = live(await db.recurring.toArray()).find((item) => item.origin === origin);
+    return saveRecurring(existing?.id ?? null, { ...fields, origin });
+  });
+}
+
+export async function removeRecurringByOrigin(origin: string): Promise<void> {
+  await db.transaction('rw', db.recurring, async () => {
+    for (const item of live(await db.recurring.toArray())) {
+      if (item.origin === origin) await softDelete(db.recurring, item.id);
+    }
+  });
 }
 
 export const deleteRecurring = (id: string) => softDelete(db.recurring, id);
@@ -248,9 +314,35 @@ export async function listGoals(): Promise<Goal[]> {
   return live(await db.goals.toArray()).sort((a, b) => a.createdAt.localeCompare(b.createdAt));
 }
 
-export async function saveGoal(id: string | null, fields: NewRecord<Goal>): Promise<void> {
-  if (id) await patch<Goal>(db.goals, id, fields);
-  else await create<Goal>(db.goals, fields);
+/**
+ * Create or update a goal; returns its id. When the target, date or monthly
+ * amount changes, the previous numbers are kept in `revisions`.
+ */
+export async function saveGoal(
+  id: string | null,
+  fields: NewRecord<Goal> | Partial<NewRecord<Goal>>,
+): Promise<string> {
+  if (!id) return (await create<Goal>(db.goals, fields as NewRecord<Goal>)).id;
+  await db.transaction('rw', db.goals, async () => {
+    const before = await db.goals.get(id);
+    if (!before) return;
+    const changed = (['targetCents', 'monthlyContributionCents', 'targetDate'] as const).some(
+      (key) => fields[key] !== undefined && fields[key] !== before[key],
+    );
+    const revisions = changed
+      ? [
+          ...(before.revisions ?? []),
+          {
+            at: nowISO(),
+            targetCents: before.targetCents,
+            monthlyContributionCents: before.monthlyContributionCents,
+            targetDate: before.targetDate,
+          },
+        ]
+      : before.revisions;
+    await patch<Goal>(db.goals, id, { ...fields, revisions });
+  });
+  return id;
 }
 
 export const deleteGoal = (id: string) => softDelete(db.goals, id);

@@ -1,7 +1,7 @@
 import { useSyncExternalStore } from 'react';
 
 // Chrome/Android fire beforeinstallprompt once, early. Capture it at module
-// load (imported from main.tsx) so the install screen can use it later.
+// load (imported from main.tsx) so the install gate can use it later.
 
 interface BeforeInstallPromptEvent extends Event {
   prompt(): Promise<void>;
@@ -9,6 +9,7 @@ interface BeforeInstallPromptEvent extends Event {
 }
 
 let deferred: BeforeInstallPromptEvent | null = null;
+let installed = false;
 const listeners = new Set<() => void>();
 const notify = () => listeners.forEach((listener) => listener());
 
@@ -20,6 +21,7 @@ window.addEventListener('beforeinstallprompt', (event) => {
 
 window.addEventListener('appinstalled', () => {
   deferred = null;
+  installed = true;
   notify();
 });
 
@@ -33,6 +35,11 @@ export function useCanPromptInstall(): boolean {
   return useSyncExternalStore(subscribe, () => deferred !== null);
 }
 
+/** True once the browser reports the app was installed from this tab. */
+export function useJustInstalled(): boolean {
+  return useSyncExternalStore(subscribe, () => installed);
+}
+
 export async function promptInstall(): Promise<'accepted' | 'dismissed' | 'unavailable'> {
   if (!deferred) return 'unavailable';
   const event = deferred;
@@ -40,26 +47,7 @@ export async function promptInstall(): Promise<'accepted' | 'dismissed' | 'unava
   const { outcome } = await event.userChoice;
   // The event can only be used once.
   deferred = null;
+  if (outcome === 'accepted') installed = true;
   notify();
   return outcome;
-}
-
-// Per-session escape hatch for using the app in a browser tab. Session-scoped
-// UI state, not app data.
-const BROWSER_OK_KEY = 'tameru.browserOk';
-
-export function getBrowserOverride(): boolean {
-  try {
-    return sessionStorage.getItem(BROWSER_OK_KEY) === '1';
-  } catch {
-    return false;
-  }
-}
-
-export function setBrowserOverride(): void {
-  try {
-    sessionStorage.setItem(BROWSER_OK_KEY, '1');
-  } catch {
-    // Storage blocked: the override just lasts until reload.
-  }
 }

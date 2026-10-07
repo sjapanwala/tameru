@@ -5,7 +5,6 @@ import { deleteRule, listRules, restoreRule, setSetting } from '../db/repo';
 import { CURRENCIES } from '../domain/defaults';
 import { MIN_PASSPHRASE_LENGTH } from '../domain/encryptedBackup';
 import { getStorageStatus, requestPersistence, type StorageStatus } from '../pwa/persist';
-import { useStandalone } from '../pwa/standalone';
 import { useApp } from '../ui/context';
 import { exportBackupFile } from '../ui/exportBackup';
 import { AlertIcon, CheckIcon } from '../ui/Icons';
@@ -29,7 +28,6 @@ function Status({ good, children }: { good: boolean; children: ReactNode }) {
 
 export function Settings() {
   const { settings, categories, showToast } = useApp();
-  const standalone = useStandalone();
   const rules = useLiveQuery(listRules, []);
   const [storage, setStorage] = useState<StorageStatus | null>(null);
   const [confirmErase, setConfirmErase] = useState(false);
@@ -148,10 +146,6 @@ export function Settings() {
         </h2>
         <div className="group__card">
           <div className="setting">
-            <span>Installed app</span>
-            <Status good={standalone}>{standalone ? 'Yes' : 'No, browser tab'}</Status>
-          </div>
-          <div className="setting">
             <span>Protected storage</span>
             {storage === null ? (
               <span className="setting__value">…</span>
@@ -185,9 +179,7 @@ export function Settings() {
               ? "The browser has agreed not to clear Tameru's data to free up space."
               : storage.firstRun
                 ? 'Tameru asked for protected storage and the browser said no, so data could be cleared if the device runs low on space or the app goes unused for a long time. Export a backup regularly.'
-                : standalone
-                  ? 'Protected storage has not been requested yet.'
-                  : 'Protected storage is requested the first time Tameru runs as an installed app.'}
+                : 'Protected storage has not been requested yet.'}
           </p>
         )}
       </section>

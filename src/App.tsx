@@ -12,18 +12,13 @@ import { formatMoney } from './domain/money';
 import type { Account, AppSettings, Category, Transaction } from './domain/types';
 import { Activity } from './pages/Activity';
 import { Home } from './pages/Home';
-import { InstallScreen } from './pages/InstallScreen';
 import { Onboarding } from './pages/Onboarding';
 import { Forecast } from './pages/Forecast';
 import { ImportCsv } from './pages/ImportCsv';
 import { Plan } from './pages/Plan';
 import { Settings } from './pages/Settings';
-import { getBrowserOverride, setBrowserOverride } from './pwa/install';
-import { requestPersistenceOnFirstRun } from './pwa/persist';
-import { useStandalone } from './pwa/standalone';
-import { initServiceWorker } from './pwa/sw';
+import { onUpdateReady } from './pwa/sw';
 import { AppContext, type AppContextValue, type ToastInput } from './ui/context';
-import { AlertIcon } from './ui/Icons';
 import { useRoute } from './ui/router';
 import { TabBar } from './ui/TabBar';
 import { Toast, type ToastState } from './ui/Toast';
@@ -66,8 +61,6 @@ function Page({ route }: { route: string }) {
 }
 
 export function App() {
-  const standalone = useStandalone();
-  const [browserOk, setBrowserOk] = useState(getBrowserOverride);
   const data = useLiveQuery(loadAppData, []);
   const route = useRoute();
   const [sheet, setSheet] = useState<SheetState>(null);
@@ -80,8 +73,7 @@ export function App() {
   const dismissToast = useCallback(() => setToast(null), []);
 
   useEffect(() => {
-    void requestPersistenceOnFirstRun();
-    initServiceWorker((apply) =>
+    onUpdateReady((apply) =>
       showToast({
         message: 'A new version is ready.',
         actionLabel: 'Reload',
@@ -110,18 +102,6 @@ export function App() {
         : null,
     [data, showToast],
   );
-
-  const inBrowser = !standalone;
-  if (inBrowser && !browserOk) {
-    return (
-      <InstallScreen
-        onContinueInBrowser={() => {
-          setBrowserOverride();
-          setBrowserOk(true);
-        }}
-      />
-    );
-  }
 
   if (data === undefined) return null; // IndexedDB answers within a frame or two
   if (!data.ok || !context) {
@@ -186,15 +166,6 @@ export function App() {
         <main
           className={`page${bare ? ' page--bare' : route === '/activity' ? ' page--activity' : ''}`}
         >
-          {inBrowser && (
-            <p className="notice notice--warn">
-              <AlertIcon size={20} />
-              <span>
-                <strong>Not installed.</strong> Data entered in this browser tab won't appear in the
-                installed app.
-              </span>
-            </p>
-          )}
           <Page route={route} />
         </main>
         {!bare && <TabBar route={route} onAdd={() => setSheet({ mode: 'add' })} />}

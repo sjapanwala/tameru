@@ -6,6 +6,12 @@ import { db } from './db';
 import {
   addTransaction,
   addTransactions,
+  finishOnboarding,
+  listGoals,
+  removeRecurringByOrigin,
+  saveAccount,
+  saveGoal,
+  upsertRecurring,
   completeOnboarding,
   deleteTransactions,
   findImportProfile,
@@ -59,10 +65,12 @@ beforeEach(async () => {
 
 describe('onboarding', () => {
   it('starts un-onboarded with defaults', async () => {
-    expect(await getSettings()).toEqual({
+        expect(await getSettings()).toMatchObject({
       currency: 'CAD',
       onboardedAt: null,
       defaultAccountId: null,
+      userName: '',
+      onboarding: null,
     });
   });
 
@@ -190,6 +198,71 @@ describe('plan data', () => {
       name: 'My bank (card)',
       mapping: { invertAmount: true },
     });
+  });
+});
+
+describe('onboarding writes', () => {
+  const rent = {
+    name: 'Rent',
+    amountCents: 150000,
+    kind: 'bill' as const,
+    categoryId: null,
+    schedule: { freq: 'monthly' as const, anchorDate: '2026-10-01' },
+  };
+
+  it('upserts recurring items by origin, so going back never duplicates', async () => {
+    const first = await upsertRecurring('bill:rent', rent);
+    const second = await upsertRecurring('bill:rent', { ...rent, amountCents: 160000 });
+    expect(second).toBe(first);
+    const items = await listRecurring();
+    expect(items).toHaveLength(1);
+    expect(items[0]).toMatchObject({ amountCents: 160000, origin: 'bill:rent' });
+
+    await removeRecurringByOrigin('bill:rent');
+    expect(await listRecurring()).toEqual([]);
+    // Re-adding after removal makes a fresh record rather than reviving the old one.
+    expect(await upsertRecurring('bill:rent', rent)).not.toBe(first);
+    expect(await listRecurring()).toHaveLength(1);
+  });
+
+  it('updates an account in place', async () => {
+    const id = await saveAccount(null, { name: 'Chequing', type: 'chequing', startingBalanceCents: 0 });
+    expect(await saveAccount(id, { startingBalanceCents: 125000, color: '#a5482c' })).toBe(id);
+    expect(await listAccounts()).toHaveLength(1);
+    expect((await listAccounts())[0]).toMatchObject({ name: 'Chequing', startingBalanceCents: 125000 });
+  });
+
+  it('keeps earlier versions of a goal when its numbers change', async () => {
+    const goal = { name: 'Trip', targetCents: 300000, savedCents: 0, monthlyContributionCents: 25000, targetDate: '2027-06-01' };
+    const id = await saveGoal(null, goal);
+    await saveGoal(id, { name: 'Japan trip' }); // a rename isn't a revision
+    await saveGoal(id, { targetCents: 400000, monthlyContributionCents: 30000 });
+    const [saved] = await listGoals();
+    expect(saved).toMatchObject({ name: 'Japan trip', targetCents: 400000 });
+    expect(saved?.revisions).toHaveLength(1);
+    expect(saved?.revisions?.[0]).toMatchObject({ targetCents: 300000, monthlyContributionCents: 25000, targetDate: '2027-06-01' });
+  });
+
+  it('finishes onboarding with an everyday account and categories even if every chapter was skipped', async () => {
+    await finishOnboarding();
+    const settings = await getSettings();
+    expect(settings.onboardedAt).not.toBeNull();
+    const [account] = await listAccounts();
+    expect(settings.defaultAccountId).toBe(account?.id);
+    expect(await listCategories()).toHaveLength(5);
+  });
+
+  it('defaults new transactions to chequing over savings', async () => {
+    await saveAccount(null, { name: 'Rainy day', type: 'savings', startingBalanceCents: 500000 });
+    const chequing = await saveAccount(null, { name: 'Daily', type: 'chequing', startingBalanceCents: 90000 });
+    await finishOnboarding();
+    expect((await getSettings()).defaultAccountId).toBe(chequing);
+    expect(await listAccounts()).toHaveLength(2);
+  });
+
+  it('remembers where onboarding got to', async () => {
+    await setSetting('onboarding', { v: 1, stage: 'setup', step: 'payday.date' });
+    expect((await getSettings()).onboarding).toMatchObject({ step: 'payday.date' });
   });
 });
 

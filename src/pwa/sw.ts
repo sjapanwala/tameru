@@ -1,18 +1,36 @@
 import { registerSW } from 'virtual:pwa-register';
 
-/**
- * Register the service worker. `onUpdateReady` is called when a new version
- * has been downloaded; call the function it receives to activate it and
- * reload. We never reload on our own, so an entry in progress isn't lost.
- */
-let started = false;
+type Apply = () => void;
 
-export function initServiceWorker(onUpdateReady: (apply: () => void) => void): void {
+let started = false;
+let pending: Apply | null = null;
+let listener: ((apply: Apply) => void) | null = null;
+
+/**
+ * Register the service worker (once, from main.tsx).
+ * - 'auto': a new version is applied straight away. Used by the install
+ *   gate, where there is nothing to lose by reloading.
+ * - 'prompt': the app is told an update is waiting (see onUpdateReady) and
+ *   decides when to reload, so an entry in progress isn't lost.
+ */
+export function initServiceWorker(mode: 'auto' | 'prompt'): void {
   if (started) return;
   started = true;
   const update = registerSW({
     onNeedRefresh() {
-      onUpdateReady(() => void update(true));
+      const apply = () => void update(true);
+      if (mode === 'auto') apply();
+      else if (listener) listener(apply);
+      else pending = apply;
     },
   });
+}
+
+/** Be told when a new version has been downloaded and is ready to apply. */
+export function onUpdateReady(callback: (apply: Apply) => void): void {
+  listener = callback;
+  if (pending) {
+    callback(pending);
+    pending = null;
+  }
 }

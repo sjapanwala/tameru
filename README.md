@@ -9,10 +9,12 @@ IndexedDB on your device. Install it with "Add to Home Screen".
 
 ```sh
 npm install
-npm run dev       # dev server (Settings has a "Load sample data" button in dev)
+npm run dev:app   # dev server with the app in your browser (Settings has "Load sample data")
+npm run dev       # dev server as users see it: a browser tab shows only the install screen
 npm test          # unit tests
 npm run build     # typecheck + production build into dist/
 npm run preview   # serve dist/ — use this to check install and offline behaviour
+npm run build:browser   # build with the install gate off, for browser testing; never deploy it
 ```
 
 `dist/` is fully static and uses hash routing with relative paths, so it can be hosted from any

@@ -44,7 +44,11 @@ export async function requestPersistence(): Promise<boolean> {
   return granted;
 }
 
-/** Called on launch: requests persistence the first time we run installed. */
+/**
+ * Called at boot, before the app mounts: requests persistence the first time
+ * we run installed. Resolves once the browser has answered, so Settings can
+ * show the result from the very first screen.
+ */
 export async function requestPersistenceOnFirstRun(): Promise<void> {
   if (!isStandalone() || readAttempt()) return;
   try {

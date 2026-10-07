@@ -21,6 +21,9 @@ export const DEFAULT_SETTINGS: AppSettings = {
   currency: DEFAULT_CURRENCY,
   onboardedAt: null,
   defaultAccountId: null,
+  userName: '',
+  onboarding: null,
+  debtStrategy: 'avalanche',
 };
 
 /** Suggestions offered in the category menu alongside the user's own. */

@@ -2,7 +2,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { useMemo, useState } from 'react';
 import { listRecurring, listTransactions } from '../db/repo';
 import { addDays, dayLabel, isISODate, shortDate, todayISO } from '../domain/dates';
-import { averageDailySpend, currentBalance, forecast, type WhatIf } from '../domain/forecast';
+import { averageDailySpend, forecast, spendableBalance, type WhatIf } from '../domain/forecast';
 import { formatMoney, parseMoneyInput } from '../domain/money';
 import { paidKeys } from '../domain/recurring';
 import { BalanceChart } from '../ui/BalanceChart';
@@ -44,7 +44,7 @@ export function Forecast() {
     const input = {
       today,
       days,
-      balanceCents: currentBalance(accounts, transactions),
+      balanceCents: spendableBalance(accounts, transactions),
       recurring,
       paid: paidKeys(transactions),
       dailySpendCents: includeSpending ? typicalCents : 0,

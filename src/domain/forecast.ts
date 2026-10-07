@@ -104,3 +104,23 @@ export function currentBalance(
     transactions.reduce((sum, tx) => sum + tx.amountCents, 0)
   );
 }
+
+/** Accounts whose money is there to be spent day to day. */
+export const isSpendable = (account: { type: string }) =>
+  account.type === 'chequing' || account.type === 'cash';
+
+/**
+ * Balance available for everyday spending: chequing and cash only. Savings,
+ * investments and card debt are tracked but don't move the forecast.
+ */
+export function spendableBalance(
+  accounts: readonly { id: string; type: string; startingBalanceCents: number }[],
+  transactions: readonly { accountId: string; amountCents: number }[],
+): number {
+  const spendable = accounts.filter(isSpendable);
+  const ids = new Set(spendable.map((account) => account.id));
+  return currentBalance(
+    spendable,
+    transactions.filter((tx) => ids.has(tx.accountId)),
+  );
+}

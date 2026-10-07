@@ -7,14 +7,36 @@ const pkg = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 
   version: string;
 };
 
+// Developer escape hatch (see CLAUDE.md). Off unless explicitly set, and
+// compiled to a constant so the bypass is dead code in normal builds.
+const allowBrowser = process.env.VITE_ALLOW_BROWSER === 'true';
+if (allowBrowser) {
+  console.warn(
+    '\n  VITE_ALLOW_BROWSER=true: the install gate is DISABLED. Do not deploy this build.\n',
+  );
+}
+
+// Absolute address of the deployed app, for link previews (optional).
+const siteUrl = (process.env.VITE_SITE_URL ?? '').replace(/\/?$/, '/');
+const absolute = (path: string) => (process.env.VITE_SITE_URL ? siteUrl + path : path);
+
 export default defineConfig({
   // Relative base + hash routing: deployable to any static host or sub-path.
   base: './',
   define: {
     __APP_VERSION__: JSON.stringify(pkg.version),
+    __ALLOW_BROWSER__: JSON.stringify(allowBrowser),
   },
   plugins: [
     react(),
+    {
+      // Link previews need absolute URLs; fill them in when the site URL is known.
+      name: 'tameru-og',
+      transformIndexHtml: (html) =>
+        html
+          .replace('%OG_IMAGE%', absolute('icons/icon-512.png'))
+          .replace('%OG_URL%', process.env.VITE_SITE_URL ? siteUrl : './'),
+    },
     VitePWA({
       registerType: 'prompt',
       includeAssets: ['favicon.svg', 'icons/*.png'],
@@ -25,6 +47,7 @@ export default defineConfig({
         lang: 'en',
         display: 'standalone',
         orientation: 'portrait',
+        id: './',
         start_url: './',
         scope: './',
         theme_color: '#F5F4EF',
