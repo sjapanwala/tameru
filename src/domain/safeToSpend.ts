@@ -1,15 +1,21 @@
 import { addDays, daysLeftInMonth, monthRange } from './dates';
-import { occurrencesOf } from './recurring';
+import { occurrenceKey, occurrencesOf, recordedAmounts } from './recurring';
 import type { Budget, Category, Goal, ISODate, Recurring, Transaction } from './types';
 
-type Tx = Pick<Transaction, 'date' | 'amountCents' | 'categoryId' | 'recurringId'>;
+type Tx = Pick<
+  Transaction,
+  'date' | 'amountCents' | 'categoryId' | 'recurringId' | 'recurringDate'
+>;
 
 /** Spending that isn't the payment of a recurring bill. */
 export const isVariableSpend = (tx: Pick<Tx, 'amountCents' | 'recurringId'>) =>
   tx.amountCents < 0 && !tx.recurringId;
 
 export interface SafeToSpend {
-  /** Recurring income expected across the whole month. */
+  /**
+   * Recurring income across the whole month: what actually arrived for
+   * paydays already received, the planned amount for the rest.
+   */
   incomeCents: number;
   /** Recurring bills across the whole month, paid or not. */
   billsCents: number;
@@ -29,7 +35,7 @@ export interface SafeToSpend {
 
 /**
  * safeToSpendToday =
- *   (expected income this month − reserved bills − goal contributions − variable spend so far)
+ *   (income this month, received or still expected − reserved bills − goal contributions − variable spend so far)
  *   ÷ days left in month
  */
 export function safeToSpend(input: {
@@ -41,9 +47,14 @@ export function safeToSpend(input: {
   const { start, end } = monthRange(input.today);
   let incomeCents = 0;
   let billsCents = 0;
-  for (const { recurring } of occurrencesOf(input.recurring, start, end)) {
-    if (recurring.kind === 'income') incomeCents += recurring.amountCents;
-    else billsCents += recurring.amountCents;
+  const received = recordedAmounts(input.transactions);
+  for (const { recurring, date } of occurrencesOf(input.recurring, start, end)) {
+    if (recurring.kind === 'income') {
+      // A payday that has landed counts for what it really was.
+      incomeCents += received.get(occurrenceKey(recurring.id, date)) ?? recurring.amountCents;
+    } else {
+      billsCents += recurring.amountCents;
+    }
   }
   const goalsCents = input.goals.reduce((sum, goal) => sum + goal.monthlyContributionCents, 0);
   const spentCents = input.transactions

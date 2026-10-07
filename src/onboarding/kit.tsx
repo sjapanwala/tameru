@@ -13,9 +13,8 @@ import { addDays, parseISODate } from '../domain/dates';
 import { currencySymbol, formatMoney } from '../domain/money';
 import type { Account, Goal, Recurring, Transaction } from '../domain/types';
 import { BackIcon, BackspaceIcon, CheckIcon } from '../ui/Icons';
-import { Jar } from './art';
 import { useCountUp } from './motion';
-import type { OnboardingState } from './machine';
+import { CHAPTERS, CHAPTER_TITLES, chapterOf, type OnboardingState } from './machine';
 
 export interface Flow {
   state: OnboardingState;
@@ -48,7 +47,6 @@ interface ScreenProps {
   title: string;
   /** One or two short lines under the title. */
   lede?: ReactNode;
-  art?: ReactNode;
   children?: ReactNode;
   /** Controls anchored above the primary button (the keypad, usually). */
   dock?: ReactNode;
@@ -59,11 +57,10 @@ interface ScreenProps {
   hideBack?: boolean;
 }
 
-/** One question per screen: jar on top, the question, controls by the thumb. */
+/** One question per screen: where you are, the question, controls by the thumb. */
 export function Screen({
   title,
   lede,
-  art,
   children,
   dock,
   primary,
@@ -73,6 +70,7 @@ export function Screen({
 }: ScreenProps) {
   const flow = useFlow();
   const heading = useRef<HTMLHeadingElement>(null);
+  const chapter = chapterOf(flow.state.step);
 
   // Each screen is a fresh mount (keyed by step), so move focus to its question.
   useEffect(() => {
@@ -84,13 +82,29 @@ export function Screen({
     <main className="ob">
       <div className="ob__top">
         {flow.canGoBack && !hideBack ? (
-          <button type="button" className="icon-btn icon-btn--back" aria-label="Back" onClick={flow.back}>
+          <button
+            type="button"
+            className="icon-btn icon-btn--back"
+            aria-label="Back"
+            onClick={flow.back}
+          >
             <BackIcon size={22} />
           </button>
         ) : (
           <span className="ob__spacer" />
         )}
-        <Jar coins={flow.state.completed.length} size={40} />
+        <p className="ob__progress">
+          {chapter === 'dreams' ? (
+            'Goals'
+          ) : (
+            <>
+              <span className="mono">
+                {CHAPTERS.indexOf(chapter) + 1}/{CHAPTERS.length}
+              </span>{' '}
+              {CHAPTER_TITLES[chapter]}
+            </>
+          )}
+        </p>
         {onSkip ? (
           <button type="button" className="ob__skip" onClick={onSkip}>
             {skipLabel}
@@ -101,7 +115,6 @@ export function Screen({
       </div>
 
       <div className="ob__body">
-        {art && <div className="ob__art">{art}</div>}
         <h1 ref={heading} tabIndex={-1} className="ob__title">
           {title}
         </h1>
@@ -126,33 +139,33 @@ export function Screen({
 
 // ---- choices ---------------------------------------------------------------
 
-interface TileProps {
+interface OptionProps {
   label: string;
-  hint?: string;
-  art?: ReactNode;
+  /** Quiet text on the right: a description, or an amount. */
+  hint?: ReactNode;
   selected?: boolean;
   onClick(): void;
 }
 
-/** A big illustrated choice. Selected tiles get a tick as well as a border. */
-export function Tile({ label, hint, art, selected, onClick }: TileProps) {
+/** One row in a list of choices. Selected rows get a tick as well as weight. */
+export function Option({ label, hint, selected, onClick }: OptionProps) {
   return (
-    <button type="button" className="tile" aria-pressed={selected ?? undefined} onClick={onClick}>
-      {art}
-      <span className="tile__label">{label}</span>
-      {hint && <span className="tile__hint">{hint}</span>}
-      {selected && (
-        <span className="tile__tick">
-          <CheckIcon size={14} />
-        </span>
-      )}
+    <button
+      type="button"
+      className="ob-option"
+      aria-pressed={selected ?? undefined}
+      onClick={onClick}
+    >
+      <span className="ob-option__label">{label}</span>
+      {hint && <span className="ob-option__hint">{hint}</span>}
+      <span className="ob-option__tick">{selected && <CheckIcon size={18} />}</span>
     </button>
   );
 }
 
-export function Tiles({ label, children, wide }: { label: string; children: ReactNode; wide?: boolean }) {
+export function Options({ label, children }: { label: string; children: ReactNode }) {
   return (
-    <div className={`tiles${wide ? ' tiles--wide' : ''}`} role="group" aria-label={label}>
+    <div className="ob-options" role="group" aria-label={label}>
       {children}
     </div>
   );
@@ -165,21 +178,24 @@ interface ChipsProps<T extends string | number> {
   onChange(value: T): void;
 }
 
-export function Chips<T extends string | number>({ label, options, value, onChange }: ChipsProps<T>) {
+/** Pick one from a short list. */
+export function Chips<T extends string | number>({
+  label,
+  options,
+  value,
+  onChange,
+}: ChipsProps<T>) {
   return (
-    <div className="ob-chips" role="group" aria-label={label}>
+    <Options label={label}>
       {options.map((option) => (
-        <button
+        <Option
           key={option.value}
-          type="button"
-          className="ob-chip"
-          aria-pressed={value === option.value}
+          label={option.label}
+          selected={value === option.value}
           onClick={() => onChange(option.value)}
-        >
-          {option.label}
-        </button>
+        />
       ))}
-    </div>
+    </Options>
   );
 }
 
@@ -200,12 +216,13 @@ export function Swatches({ value, onChange }: { value: string; onChange(value: s
           key={swatch.value}
           type="button"
           className="swatch"
-          style={{ background: swatch.value }}
           aria-label={swatch.name}
           aria-pressed={value === swatch.value}
           onClick={() => onChange(swatch.value)}
         >
-          {value === swatch.value && <CheckIcon size={18} />}
+          <span className="swatch__chip" style={{ background: swatch.value }}>
+            {value === swatch.value && <CheckIcon size={14} />}
+          </span>
         </button>
       ))}
     </div>
@@ -251,7 +268,11 @@ export function DateStrip({
   onChange(date: string): void;
 }) {
   const weekday = new Intl.DateTimeFormat(undefined, { weekday: 'short' });
-  const full = new Intl.DateTimeFormat(undefined, { weekday: 'long', month: 'long', day: 'numeric' });
+  const full = new Intl.DateTimeFormat(undefined, {
+    weekday: 'long',
+    month: 'long',
+    day: 'numeric',
+  });
   return (
     <div className="datestrip" role="group" aria-label="Next payday">
       {Array.from({ length: 14 }, (_, i) => addDays(today, i)).map((date, i) => (
@@ -264,7 +285,9 @@ export function DateStrip({
           data-date={date}
           onClick={() => onChange(date)}
         >
-          <span className="datestrip__dow">{i === 0 ? 'Today' : weekday.format(parseISODate(date))}</span>
+          <span className="datestrip__dow">
+            {i === 0 ? 'Today' : weekday.format(parseISODate(date))}
+          </span>
           <span className="datestrip__num">{Number(date.slice(8))}</span>
         </button>
       ))}
@@ -346,7 +369,11 @@ export interface Slice {
 export function AllocationBar({ slices, total }: { slices: Slice[]; total: number }) {
   const { money } = useFlow();
   const shown = slices.filter((slice) => slice.cents > 0);
-  const sum = Math.max(total, shown.reduce((acc, slice) => acc + slice.cents, 0), 1);
+  const sum = Math.max(
+    total,
+    shown.reduce((acc, slice) => acc + slice.cents, 0),
+    1,
+  );
   return (
     <div className="alloc">
       <div className="alloc__bar" aria-hidden="true">

@@ -3,10 +3,11 @@
 // routes. src/gate/gate.test.ts enforces that.
 
 import qrcode from 'qrcode-generator';
-import { useMemo, useState, type ReactNode } from 'react';
+import { useMemo, useRef, useState, type FormEvent, type ReactNode } from 'react';
 import type { Platform } from '../domain/platform';
 import { promptInstall, useCanPromptInstall, useJustInstalled } from '../pwa/install';
 import { currentPlatform } from '../pwa/standalone';
+import { unlock } from '../pwa/unlock';
 import './gate.css';
 
 /** The address to install from: this page, without hash or query. */
@@ -270,12 +271,68 @@ const CONTENT: Record<Platform, () => ReactNode> = {
   desktop: () => <Desktop />,
 };
 
+// ---- developer code (hidden) ------------------------------------------------
+
+const LOGO_TAPS = 5;
+
+function CodeEntry() {
+  const [code, setCode] = useState('');
+  const [wrong, setWrong] = useState(false);
+
+  function submit(event: FormEvent) {
+    event.preventDefault();
+    // Root decides once at launch, so the override takes effect on reload.
+    if (unlock(code)) window.location.reload();
+    else setWrong(true);
+  }
+
+  return (
+    <form className="install__code" onSubmit={submit}>
+      <label htmlFor="install-code">Developer code</label>
+      <div className="install__code-row">
+        <input
+          id="install-code"
+          className="install__code-input"
+          type="password"
+          inputMode="numeric"
+          autoComplete="off"
+          autoFocus
+          value={code}
+          onChange={(event) => {
+            setCode(event.target.value);
+            setWrong(false);
+          }}
+        />
+        <button type="submit" className="install__btn install__btn--outline">
+          Enter
+        </button>
+      </div>
+      {wrong && <p role="alert">That code isn't right.</p>}
+    </form>
+  );
+}
+
 export function InstallGate({ platform = currentPlatform() }: { platform?: Platform }) {
   const desktop = platform === 'desktop';
+  const taps = useRef(0);
+  const [codeEntry, setCodeEntry] = useState(false);
+
   return (
     <main className={`install${desktop ? ' install--desktop' : ''}`}>
       <header className="install__head">
-        <img className="install__logo" src="icons/icon-192.png" alt="" width={64} height={64} />
+        {/* Unmarked on purpose: five taps on the logo reveal the developer code field. */}
+        <button
+          type="button"
+          className="install__logo-tap"
+          tabIndex={-1}
+          aria-hidden="true"
+          onClick={() => {
+            taps.current += 1;
+            if (taps.current >= LOGO_TAPS) setCodeEntry(true);
+          }}
+        >
+          <img className="install__logo" src="icons/icon-192.png" alt="" width={64} height={64} />
+        </button>
         <h1>{desktop ? 'Tameru lives on your phone' : 'Install Tameru'}</h1>
         <p className="install__pitch">
           Know what you can safely spend today. Private, offline, and all on your device.
@@ -283,6 +340,8 @@ export function InstallGate({ platform = currentPlatform() }: { platform?: Platf
       </header>
 
       {CONTENT[platform]()}
+
+      {codeEntry && <CodeEntry />}
 
       <footer className="install__foot">
         <p>

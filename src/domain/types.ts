@@ -91,7 +91,10 @@ export interface Recurring extends BaseRecord {
   categoryId: string | null;
   /** Account or card this is charged to (bills) or deposited into (income). */
   accountId?: string | null;
-  /** Income that changes month to month; amountCents is a cautious monthly estimate. */
+  /**
+   * Income whose amount changes from one payday to the next. amountCents is
+   * then a cautious estimate; what actually arrives is entered when received.
+   */
   variable?: boolean;
   /**
    * Stable key for items created by a flow ("bill:rent", "fee:<accountId>"),

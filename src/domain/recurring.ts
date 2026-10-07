@@ -30,7 +30,10 @@ export function occurrencesBetween(schedule: Schedule, from: ISODate, to: ISODat
   for (let y = startYear, m = startMonth; y < endYear || (y === endYear && m <= endMonth);) {
     if (freq !== 'yearly' || m === anchorMonth) {
       // Twice a month: the anchor's day and the day 15 away from it.
-      const days = freq === 'semimonthly' ? [anchorDay, anchorDay > 15 ? anchorDay - 15 : anchorDay + 15] : [anchorDay];
+      const days =
+        freq === 'semimonthly'
+          ? [anchorDay, anchorDay > 15 ? anchorDay - 15 : anchorDay + 15]
+          : [anchorDay];
       for (const day of days.sort((a, b) => a - b)) {
         const date = `${y}-${pad(m)}-${pad(Math.min(day, daysInMonth(y, m)))}`;
         if (date >= start && date <= to && result[result.length - 1] !== date) result.push(date);
@@ -62,6 +65,38 @@ export function paidKeys(
       keys.add(occurrenceKey(tx.recurringId, tx.recurringDate));
   }
   return keys;
+}
+
+/**
+ * What was actually recorded against each occurrence, as a positive
+ * magnitude keyed by occurrenceKey.
+ */
+export function recordedAmounts(
+  transactions: readonly {
+    amountCents: number;
+    recurringId?: string | null;
+    recurringDate?: ISODate | null;
+  }[],
+): Map<string, number> {
+  const amounts = new Map<string, number>();
+  for (const tx of transactions) {
+    if (tx.recurringId && tx.recurringDate) {
+      const key = occurrenceKey(tx.recurringId, tx.recurringDate);
+      amounts.set(key, (amounts.get(key) ?? 0) + Math.abs(tx.amountCents));
+    }
+  }
+  return amounts;
+}
+
+const ESTIMATE_SAMPLE = 3;
+
+/**
+ * A cautious estimate for income that varies: the lowest of the most recent
+ * three amounts received (newest first). Null until there are three.
+ */
+export function cautiousEstimate(receivedNewestFirst: readonly number[]): number | null {
+  if (receivedNewestFirst.length < ESTIMATE_SAMPLE) return null;
+  return Math.min(...receivedNewestFirst.slice(0, ESTIMATE_SAMPLE));
 }
 
 /** All occurrences of the given items in [from, to], soonest first. */

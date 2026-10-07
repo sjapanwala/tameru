@@ -3,6 +3,7 @@ import { shouldShowGate } from './domain/platform';
 import { InstallGate } from './gate/InstallGate';
 import { requestPersistenceOnFirstRun } from './pwa/persist';
 import { isStandalone } from './pwa/standalone';
+import { isUnlocked } from './pwa/unlock';
 
 // The app (routes, database, everything) is a separate chunk that is only
 // requested once we know we're allowed to run. A browser tab never loads it.
@@ -12,6 +13,7 @@ const App = lazy(() => import('./App').then((module) => ({ default: module.App }
 export const gated = shouldShowGate({
   standalone: isStandalone(),
   allowBrowser: __ALLOW_BROWSER__,
+  unlocked: isUnlocked(),
 });
 
 function Boot() {

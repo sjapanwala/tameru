@@ -1,7 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import { daysBetween, daysLeftInMonth, monthRange } from './dates';
 import { averageDailySpend, forecast } from './forecast';
-import { occurrenceKey, occurrencesBetween, occurrencesOf, paidKeys } from './recurring';
+import {
+  cautiousEstimate,
+  occurrenceKey,
+  occurrencesBetween,
+  occurrencesOf,
+  paidKeys,
+  recordedAmounts,
+} from './recurring';
 import { budgetProgress, compareToLastMonth, dailySpend, safeToSpend } from './safeToSpend';
 import type { Budget, Category, Goal, Recurring, Schedule } from './types';
 
@@ -174,6 +181,27 @@ describe('safeToSpend', () => {
       perDayCents: 16_000,
       hasIncome: true,
     });
+  });
+
+  it('counts a received payday for what actually arrived', () => {
+    const pay = [rec('pay', 'income', 100_000, 'biweekly', '2026-10-02')];
+    const planned = safeToSpend({
+      today: '2026-10-07',
+      recurring: pay,
+      goals: [],
+      transactions: [],
+    });
+    expect(planned.incomeCents).toBe(300_000); // Oct 2, 16, 30
+
+    const short = safeToSpend({
+      today: '2026-10-07',
+      recurring: pay,
+      goals: [],
+      transactions: [tx('2026-10-02', 70_000, null, 'pay')],
+    });
+    // The first cheque came in low; the two still to come stay at the estimate.
+    expect(short.incomeCents).toBe(270_000);
+    expect(short.spentCents).toBe(0);
   });
 
   it('rounds the daily amount down', () => {
@@ -369,5 +397,23 @@ describe('compareToLastMonth', () => {
 
   it('reports when there is nothing to compare against', () => {
     expect(compareToLastMonth([tx('2026-10-02', -4_000)], '2026-10-07').hasPrevious).toBe(false);
+  });
+});
+
+describe('income that varies', () => {
+  it('keys recorded amounts by occurrence, as magnitudes', () => {
+    const amounts = recordedAmounts([
+      { amountCents: 70_000, recurringId: 'pay', recurringDate: '2026-10-02' },
+      { amountCents: -5_000, recurringId: 'rent', recurringDate: '2026-10-01' },
+      { amountCents: -1_000 },
+    ]);
+    expect(amounts.get(occurrenceKey('pay', '2026-10-02'))).toBe(70_000);
+    expect(amounts.get(occurrenceKey('rent', '2026-10-01'))).toBe(5_000);
+    expect(amounts.size).toBe(2);
+  });
+
+  it('suggests the lowest of the last three paydays, once there are three', () => {
+    expect(cautiousEstimate([90_000, 80_000])).toBeNull();
+    expect(cautiousEstimate([90_000, 80_000, 110_000, 10_000])).toBe(80_000);
   });
 });

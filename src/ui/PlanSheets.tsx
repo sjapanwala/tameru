@@ -171,7 +171,9 @@ export function RecurringSheet({ item, kind: initialKind, onClose }: RecurringSh
   );
   const [anchorDate, setAnchorDate] = useState(item?.schedule.anchorDate ?? todayISO());
   const [categoryId, setCategoryId] = useState(item?.categoryId ?? '');
+  const [variable, setVariable] = useState(item?.variable ?? false);
   const [error, setError] = useState<string | null>(null);
+  const varies = kind === 'income' && variable;
 
   async function submit() {
     const cents = parseMoneyInput(amount, settings.currency);
@@ -184,6 +186,7 @@ export function RecurringSheet({ item, kind: initialKind, onClose }: RecurringSh
       kind,
       schedule: { freq, anchorDate },
       categoryId: kind === 'bill' && categoryId ? categoryId : null,
+      variable: varies,
     });
     onClose();
   }
@@ -234,10 +237,31 @@ export function RecurringSheet({ item, kind: initialKind, onClose }: RecurringSh
         />
       </label>
       <MoneyField
-        label={kind === 'bill' ? 'Amount each time' : 'Take-home amount each time'}
+        label={
+          kind === 'bill'
+            ? 'Amount each time'
+            : varies
+              ? 'A low take-home amount'
+              : 'Take-home amount each time'
+        }
         value={amount}
         onChange={setAmount}
       />
+      {kind === 'income' && (
+        <label className="check">
+          <input
+            type="checkbox"
+            checked={variable}
+            onChange={(event) => setVariable(event.target.checked)}
+          />
+          <span>
+            The amount changes each time
+            <span className="field__hint check__hint">
+              Tameru plans on the low amount and asks what arrived on payday.
+            </span>
+          </span>
+        </label>
+      )}
       <div className="field-pair">
         <label className="field">
           <span className="field__label">Repeats</span>

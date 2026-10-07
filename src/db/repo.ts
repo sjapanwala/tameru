@@ -143,7 +143,8 @@ export async function finishOnboarding(): Promise<void> {
       await saveAccount(null, { name: 'Everyday', type: 'chequing', startingBalanceCents: 0 });
       accounts = await listAccounts();
     }
-    const everyday = accounts.find((a) => a.type === 'chequing') ?? accounts.find((a) => a.type === 'cash');
+    const everyday =
+      accounts.find((a) => a.type === 'chequing') ?? accounts.find((a) => a.type === 'cash');
     await ensureDefaultCategories();
     await setSetting('defaultAccountId', everyday?.id ?? null);
     await setSetting('onboardedAt', nowISO());
@@ -286,17 +287,19 @@ export const restoreRecurring = (id: string) => restore(db.recurring, id);
 /**
  * Record one occurrence of a recurring item as a transaction (bill paid or
  * income received). The link back to the occurrence keeps it out of
- * "variable spend" and out of the forecast.
+ * "variable spend" and out of the forecast. `actualCents` is what really
+ * arrived or was paid, when that differs from the planned amount.
  */
 export function recordOccurrence(
   item: Recurring,
   occurrenceDate: ISODate,
   paidOn: ISODate,
   accountId: string,
+  actualCents: number = item.amountCents,
 ): Promise<Transaction> {
   return addTransaction({
     date: paidOn,
-    amountCents: signedAmount(item),
+    amountCents: signedAmount({ kind: item.kind, amountCents: actualCents }),
     accountId,
     categoryId: item.categoryId,
     merchant: item.name,

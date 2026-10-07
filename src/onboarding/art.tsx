@@ -3,7 +3,15 @@
 
 import type { ReactNode } from 'react';
 
-function Art({ children, size = 56, box = 64 }: { children: ReactNode; size?: number; box?: number }) {
+function Art({
+  children,
+  size = 56,
+  box = 64,
+}: {
+  children: ReactNode;
+  size?: number;
+  box?: number;
+}) {
   return (
     <svg
       className="art"
@@ -27,7 +35,10 @@ export function Coin({ x = 0, y = 0, r = 9 }: { x?: number; y?: number; r?: numb
     <g transform={`translate(${x} ${y})`}>
       <circle r={r} className="art-coin" />
       <circle r={r * 0.72} className="art-coin-rim" />
-      <path d={`M${-r * 0.36} ${-r * 0.3}h${r * 0.72}M0 ${-r * 0.3}v${r * 0.66}`} className="art-coin-mark" />
+      <path
+        d={`M${-r * 0.36} ${-r * 0.3}h${r * 0.72}M0 ${-r * 0.3}v${r * 0.66}`}
+        className="art-coin-mark"
+      />
     </g>
   );
 }
@@ -59,7 +70,10 @@ export function Jar({ coins, size = 72 }: { coins: number; size?: number }) {
       focusable="false"
     >
       <rect x="20" y="4" width="30" height="7" rx="2.5" className="art-ink-fill" />
-      <path d="M22 11v5c-8 3-12 8-12 16v36a10 10 0 0 0 10 10h30a10 10 0 0 0 10-10V32c0-8-4-13-12-16v-5" className="art-glass" />
+      <path
+        d="M22 11v5c-8 3-12 8-12 16v36a10 10 0 0 0 10 10h30a10 10 0 0 0 10-10V32c0-8-4-13-12-16v-5"
+        className="art-glass"
+      />
       {SLOTS.slice(0, coins).map(([x, y], i) => (
         <g key={i} className={i === coins - 1 ? 'jar__coin jar__coin--new' : 'jar__coin'}>
           <Coin x={x} y={y} r={8.5} />
@@ -108,7 +122,15 @@ export const ArtInvesting = () => (
 
 export const ArtCards = () => (
   <Art size={72}>
-    <rect x="14" y="14" width="42" height="27" rx="5" className="art-surface" transform="rotate(-8 35 27)" />
+    <rect
+      x="14"
+      y="14"
+      width="42"
+      height="27"
+      rx="5"
+      className="art-surface"
+      transform="rotate(-8 35 27)"
+    />
     <rect x="8" y="24" width="44" height="28" rx="5" className="art-accent" />
     <path d="M8 33h44" className="art-on-accent-line" />
     <path d="M14 44h12" className="art-on-accent-line" />
@@ -173,7 +195,10 @@ export const ArtSprout = () => (
 
 export const ArtStar = () => (
   <Art>
-    <path d="M32 10l6.500 14 15 2-11 10.500 3 15-13.500-7.500-13.500 7.500 3-15-11-10.500 15-2z" className="art-surface" />
+    <path
+      d="M32 10l6.500 14 15 2-11 10.500 3 15-13.500-7.500-13.500 7.500 3-15-11-10.500 15-2z"
+      className="art-surface"
+    />
     <circle cx="32" cy="33" r="4" className="art-accent" />
   </Art>
 );

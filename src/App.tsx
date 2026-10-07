@@ -117,7 +117,8 @@ export function App() {
   }
 
   let content;
-  if (!data.settings.onboardedAt) {
+  // First run, or the optional goals stage entered from the reveal.
+  if (!data.settings.onboardedAt || data.settings.onboarding != null) {
     content = <Onboarding />;
   } else {
     const money = (cents: number) => formatMoney(cents, data.settings.currency, { signed: true });

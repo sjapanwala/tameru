@@ -126,9 +126,15 @@ describe('platform', () => {
 });
 
 describe('shouldShowGate', () => {
+  const tab = { standalone: false, allowBrowser: false, unlocked: false };
+
   it('gates every browser tab unless the developer flag is on', () => {
-    expect(shouldShowGate({ standalone: false, allowBrowser: false })).toBe(true);
-    expect(shouldShowGate({ standalone: false, allowBrowser: true })).toBe(false);
-    expect(shouldShowGate({ standalone: true, allowBrowser: false })).toBe(false);
+    expect(shouldShowGate(tab)).toBe(true);
+    expect(shouldShowGate({ ...tab, allowBrowser: true })).toBe(false);
+    expect(shouldShowGate({ ...tab, standalone: true })).toBe(false);
+  });
+
+  it('lets a tab through once the gate code has been entered', () => {
+    expect(shouldShowGate({ ...tab, unlocked: true })).toBe(false);
   });
 });

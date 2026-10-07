@@ -1,122 +1,154 @@
-import { useState, type FormEvent } from 'react';
-import { completeOnboarding } from '../db/repo';
-import { CURRENCIES, DEFAULT_CATEGORIES, DEFAULT_CURRENCY } from '../domain/defaults';
-import { parseMoneyInput } from '../domain/money';
-import { CheckIcon } from '../ui/Icons';
-import { ImportBackup } from '../ui/ImportBackup';
+import { useLiveQuery } from 'dexie-react-hooks';
+import { useCallback, useMemo, useState, type ReactNode } from 'react';
+import {
+  finishOnboarding,
+  listGoals,
+  listRecurring,
+  listTransactions,
+  setSetting,
+} from '../db/repo';
+import { formatMoney, minorUnitDigits } from '../domain/money';
+import { DreamsBudgets, DreamsGoal, DreamsPick, DreamsPlan } from '../onboarding/dreams';
+import { FlowContext, type Flow } from '../onboarding/kit';
+import {
+  back as stepBack,
+  next as stepNext,
+  parseState,
+  type Facts,
+  type OnboardingState,
+  type StepId,
+} from '../onboarding/machine';
+import {
+  AccountBalance,
+  AccountContributed,
+  AccountFee,
+  AccountName,
+  AccountRate,
+  AccountsPick,
+  BillsPick,
+  CardBalance,
+  CardDays,
+  CardExtras,
+  CardMore,
+  CardName,
+  CardsAsk,
+  HelloCurrency,
+  HelloIntro,
+  HelloName,
+  isDeposit,
+  PaydayAccount,
+  PaydayAmount,
+  PaydayDate,
+  PaydayDone,
+  PaydaySchedule,
+  Reveal,
+} from '../onboarding/setup';
+import '../onboarding/onboarding.css';
+import { useApp } from '../ui/context';
+
+const STEPS: Record<StepId, () => ReactNode> = {
+  'hello.intro': HelloIntro,
+  'hello.name': HelloName,
+  'hello.currency': HelloCurrency,
+  'accounts.pick': AccountsPick,
+  'accounts.name': AccountName,
+  'accounts.balance': AccountBalance,
+  'accounts.rate': AccountRate,
+  'accounts.contributed': AccountContributed,
+  'accounts.fee': AccountFee,
+  'cards.ask': CardsAsk,
+  'cards.name': CardName,
+  'cards.balance': CardBalance,
+  'cards.days': CardDays,
+  'cards.extras': CardExtras,
+  'cards.more': CardMore,
+  'payday.schedule': PaydaySchedule,
+  'payday.amount': PaydayAmount,
+  'payday.date': PaydayDate,
+  'payday.account': PaydayAccount,
+  'payday.done': PaydayDone,
+  'bills.pick': BillsPick,
+  reveal: Reveal,
+  'dreams.pick': DreamsPick,
+  'dreams.goal': DreamsGoal,
+  'dreams.plan': DreamsPlan,
+  'dreams.budgets': DreamsBudgets,
+};
+
+// Cash has no monthly fee to ask about, so that screen is passed over in
+// both directions.
+const isCashFee = (state: OnboardingState) =>
+  state.step === 'accounts.fee' && state.accountKinds[state.accountIndex] === 'cash';
+
+function advance(state: OnboardingState, facts: Facts): OnboardingState {
+  const forward = stepNext(state, facts);
+  return isCashFee(forward) ? stepNext(forward, facts) : forward;
+}
+
+function retreat(state: OnboardingState, facts: Facts): OnboardingState | null {
+  const previous = stepBack(state, facts);
+  return previous && isCashFee(previous) ? stepBack(previous, facts) : previous;
+}
 
 export function Onboarding() {
-  const [currency, setCurrency] = useState(DEFAULT_CURRENCY);
-  const [accountName, setAccountName] = useState('Chequing');
-  const [balance, setBalance] = useState('');
-  const [error, setError] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
+  const { settings, accounts } = useApp();
+  const recurring = useLiveQuery(listRecurring, []);
+  const goals = useLiveQuery(listGoals, []);
+  const transactions = useLiveQuery(() => listTransactions(), []);
+  // Held locally so screens change at once; every move is also saved, so
+  // quitting part-way resumes on the same screen.
+  const [state, setState] = useState(() => parseState(settings.onboarding));
 
-  async function submit(event: FormEvent) {
-    event.preventDefault();
-    const startingBalanceCents = balance.trim() === '' ? 0 : parseMoneyInput(balance, currency);
-    if (startingBalanceCents === null) {
-      setError('Enter the balance as a number, like 1250.00');
-      return;
-    }
-    setBusy(true);
-    try {
-      await completeOnboarding({ currency, accountName, startingBalanceCents });
-    } catch (cause) {
-      console.error(cause);
-      setError('Could not save. Check that this browser allows storage and try again.');
-      setBusy(false);
-    }
-  }
+  const { currency } = settings;
+  const facts = useMemo<Facts>(
+    () => ({ depositAccounts: accounts.filter(isDeposit).length }),
+    [accounts],
+  );
+  const money = useCallback((cents: number) => formatMoney(cents, currency), [currency]);
+
+  const flow = useMemo<Flow | null>(() => {
+    if (!recurring || !goals || !transactions) return null;
+
+    const go = (to: OnboardingState) => {
+      setState(to);
+      void setSetting('onboarding', to);
+    };
+    const finish = async () => {
+      setState({ ...state, stage: 'done' });
+      if (state.stage === 'setup') await finishOnboarding();
+      await setSetting('onboarding', null);
+    };
+
+    return {
+      state,
+      currency,
+      decimals: minorUnitDigits(currency),
+      accounts,
+      recurring,
+      goals,
+      transactions,
+      next: (changes) => {
+        const forward = advance({ ...state, ...changes }, facts);
+        if (forward.stage === 'done') void finish();
+        else go(forward);
+      },
+      go,
+      back: () => {
+        const previous = retreat(state, facts);
+        if (previous) go(previous);
+      },
+      canGoBack: retreat(state, facts) !== null,
+      money,
+    };
+  }, [state, currency, accounts, recurring, goals, transactions, facts, money]);
+
+  if (!flow || state.stage === 'done') return null;
+  const Step = STEPS[state.step];
 
   return (
-    <main className="gate">
-      <h1 className="gate__title">Welcome to Tameru</h1>
-      <p className="gate__lede">Three quick things and you're ready to log your first expense.</p>
-
-      <form className="stack" onSubmit={(event) => void submit(event)}>
-        <div className="card stack">
-          <label className="field">
-            <span className="field__label">Currency</span>
-            <select
-              className="input"
-              value={currency}
-              onChange={(event) => setCurrency(event.target.value)}
-            >
-              {CURRENCIES.map(({ code, label }) => (
-                <option key={code} value={code}>
-                  {code} · {label}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <label className="field">
-            <span className="field__label">Main account</span>
-            <input
-              className="input"
-              type="text"
-              required
-              maxLength={40}
-              autoComplete="off"
-              value={accountName}
-              onChange={(event) => setAccountName(event.target.value)}
-            />
-          </label>
-
-          <label className="field">
-            <span className="field__label">Balance today</span>
-            <input
-              className="input num"
-              type="text"
-              inputMode="decimal"
-              placeholder="0.00"
-              autoComplete="off"
-              aria-describedby={error ? 'balance-error' : 'balance-hint'}
-              aria-invalid={error ? true : undefined}
-              value={balance}
-              onChange={(event) => {
-                setBalance(event.target.value);
-                setError(null);
-              }}
-            />
-            {error ? (
-              <span id="balance-error" className="field__error" role="alert">
-                {error}
-              </span>
-            ) : (
-              <span id="balance-hint" className="field__hint">
-                What's in the account right now. You can leave it at zero.
-              </span>
-            )}
-          </label>
-        </div>
-
-        <div className="card">
-          <h2 className="card__title">Starter categories</h2>
-          <ul className="chip-wrap chip-wrap--static">
-            {DEFAULT_CATEGORIES.map((name) => (
-              <li key={name} className="chip chip--static">
-                <CheckIcon size={16} />
-                {name}
-              </li>
-            ))}
-          </ul>
-        </div>
-
-        <button type="submit" className="btn btn--primary btn--block" disabled={busy}>
-          {busy ? 'Setting up…' : 'Start using Tameru'}
-        </button>
-      </form>
-
-      <div className="gate__alt">
-        <p>Moving from another device?</p>
-        <ImportBackup
-          label="Restore from a backup file"
-          className="btn btn--quiet"
-          onImported={() => {}}
-        />
-      </div>
-    </main>
+    <FlowContext.Provider value={flow}>
+      {/* Keyed so each screen (and each account, card or goal) mounts fresh. */}
+      <Step key={`${state.step}:${state.accountIndex}:${state.goalIndex}:${state.cardId}`} />
+    </FlowContext.Provider>
   );
 }

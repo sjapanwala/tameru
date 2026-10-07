@@ -1,5 +1,6 @@
-/* "Ledger" design tokens (Shu accent). Light is the default; dark follows
-   the system setting. */
+/* "Ledger" design tokens. Light is the default and dark follows the system
+   setting, unless Settings pins one with data-theme on <html>. The accent is
+   Shu unless data-accent picks another (see pwa/appearance.ts). */
 :root {
   color-scheme: light dark;
 
@@ -10,8 +11,14 @@
   --ink3: #a9aca5; /* decoration only, never text */
   --line: #e4e3dd;
   --track: #e9e8e2;
-  --accent: #a5482c; /* Shu: primary */
-  --accent-soft: #f5e5dd;
+  --shu: #a5482c;
+  --shu-soft: #f5e5dd;
+  --navy: #27457a;
+  --navy-soft: #e2e8f2;
+  --sage: #4f6b52;
+  --sage-soft: #e3ebdf;
+  --accent: var(--shu); /* primary */
+  --accent-soft: var(--shu-soft);
   --on-accent: #ffffff;
   --pos: #1f6b4f; /* money in: always green */
   --neg: #8a6100; /* attention only; ochre so it can't be mistaken for the accent */
@@ -65,7 +72,7 @@
 }
 
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme='light']) {
     --bg: #0e100f;
     --surface: #181b19;
     --ink: #ecede8;
@@ -73,8 +80,12 @@
     --ink3: #5a5e58;
     --line: #262a27;
     --track: #242826;
-    --accent: #c4664a;
-    --accent-soft: #2e1e18;
+    --shu: #c4664a;
+    --shu-soft: #2e1e18;
+    --navy: #86a8e0;
+    --navy-soft: #18223a;
+    --sage: #9dbb95;
+    --sage-soft: #1e2a1d;
     --on-accent: #0e100f;
     --pos: #6fcf9f;
     --neg: #e0b252;
@@ -82,4 +93,42 @@
     --scrim: rgb(0 0 0 / 0.6);
     --series-scenario: #a79bff;
   }
+}
+
+/* Dark pinned in Settings: the same values as the block above. */
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --bg: #0e100f;
+  --surface: #181b19;
+  --ink: #ecede8;
+  --ink2: #a2a69f;
+  --ink3: #5a5e58;
+  --line: #262a27;
+  --track: #242826;
+  --shu: #c4664a;
+  --shu-soft: #2e1e18;
+  --navy: #86a8e0;
+  --navy-soft: #18223a;
+  --sage: #9dbb95;
+  --sage-soft: #1e2a1d;
+  --on-accent: #0e100f;
+  --pos: #6fcf9f;
+  --neg: #e0b252;
+  --neg-soft: #2b2413;
+  --scrim: rgb(0 0 0 / 0.6);
+  --series-scenario: #a79bff;
+}
+
+:root[data-theme='light'] {
+  color-scheme: light;
+}
+
+:root[data-accent='navy'] {
+  --accent: var(--navy);
+  --accent-soft: var(--navy-soft);
+}
+
+:root[data-accent='sage'] {
+  --accent: var(--sage);
+  --accent-soft: var(--sage-soft);
 }

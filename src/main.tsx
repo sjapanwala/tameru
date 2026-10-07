@@ -10,8 +10,11 @@ import './pwa/install';
 
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
+import { initAppearance } from './pwa/appearance';
 import { initServiceWorker } from './pwa/sw';
 import { gated, Root } from './Root';
+
+initAppearance();
 
 // The gate has nothing to lose, so it takes updates immediately; the app asks first.
 initServiceWorker(gated ? 'auto' : 'prompt');

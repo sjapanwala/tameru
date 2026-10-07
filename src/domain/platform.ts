@@ -54,8 +54,13 @@ export function platform({ userAgent, maxTouchPoints = 0 }: AgentEnv): Platform 
 
 /**
  * The one decision at the app root: in a browser tab, show only the install
- * gate. `allowBrowser` is the developer escape hatch (VITE_ALLOW_BROWSER).
+ * gate. `allowBrowser` is the developer escape hatch (VITE_ALLOW_BROWSER);
+ * `unlocked` is the code typed into the gate's hidden field.
  */
-export function shouldShowGate(input: { standalone: boolean; allowBrowser: boolean }): boolean {
-  return !input.standalone && !input.allowBrowser;
+export function shouldShowGate(input: {
+  standalone: boolean;
+  allowBrowser: boolean;
+  unlocked: boolean;
+}): boolean {
+  return !input.standalone && !input.allowBrowser && !input.unlocked;
 }

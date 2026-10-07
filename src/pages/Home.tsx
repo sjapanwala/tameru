@@ -1,5 +1,5 @@
 import { useLiveQuery } from 'dexie-react-hooks';
-import { useMemo } from 'react';
+import { useMemo, useState, type FormEvent } from 'react';
 import {
   deleteTransaction,
   listBudgets,
@@ -7,10 +7,12 @@ import {
   listRecurring,
   listTransactions,
   recordOccurrence,
+  saveRecurring,
 } from '../db/repo';
 import { addDays, parseISODate, todayISO } from '../domain/dates';
-import { formatMoney } from '../domain/money';
+import { centsToInput, formatMoney, parseMoneyInput } from '../domain/money';
 import {
+  cautiousEstimate,
   occurrenceKey,
   occurrencesOf,
   paidKeys,
@@ -21,6 +23,7 @@ import { budgetProgress, compareToLastMonth, dailySpend, safeToSpend } from '../
 import { useApp } from '../ui/context';
 import { AlertIcon, CheckIcon } from '../ui/Icons';
 import { PageHeader } from '../ui/PageHeader';
+import { Sheet } from '../ui/Sheet';
 
 const LOOK_BACK_DAYS = 7;
 const LOOK_AHEAD_DAYS = 14;
@@ -45,12 +48,68 @@ function Segments({ fraction, over = false }: { fraction: number; over?: boolean
   );
 }
 
+/** Asks what actually arrived for a payday whose amount varies. */
+function ReceivedSheet({
+  occurrence,
+  currency,
+  onSave,
+  onClose,
+}: {
+  occurrence: Occurrence;
+  currency: string;
+  onSave(cents: number): void;
+  onClose(): void;
+}) {
+  const { recurring: item } = occurrence;
+  const [amount, setAmount] = useState(centsToInput(item.amountCents, currency));
+  const cents = parseMoneyInput(amount, currency);
+  const valid = cents !== null && cents > 0;
+
+  function submit(event: FormEvent) {
+    event.preventDefault();
+    if (valid) onSave(cents);
+  }
+
+  return (
+    <Sheet label={`${item.name} received`} variant="alert" onClose={onClose}>
+      <form className="stack" onSubmit={submit}>
+        <h2 className="dialog__title">How much arrived?</h2>
+        <label className="field">
+          <span className="field__label">{item.name}, take-home</span>
+          <input
+            className="input num"
+            type="text"
+            inputMode="decimal"
+            autoComplete="off"
+            autoFocus
+            value={amount}
+            onChange={(event) => setAmount(event.target.value)}
+          />
+          <span className="field__hint">
+            Planned on {formatMoney(item.amountCents, currency)}. Your daily number adjusts to the
+            real amount.
+          </span>
+        </label>
+        <div className="dialog__actions">
+          <button type="button" className="btn btn--quiet" onClick={onClose}>
+            Cancel
+          </button>
+          <button type="submit" className="btn btn--primary" disabled={!valid}>
+            Save
+          </button>
+        </div>
+      </form>
+    </Sheet>
+  );
+}
+
 export function Home() {
   const { settings, accounts, categories, openAdd, showToast } = useApp();
   const transactions = useLiveQuery(() => listTransactions(), []);
   const recurring = useLiveQuery(listRecurring, []);
   const budgets = useLiveQuery(listBudgets, []);
   const goals = useLiveQuery(listGoals, []);
+  const [receiving, setReceiving] = useState<Occurrence | null>(null);
 
   const today = todayISO();
   const money = (cents: number) => formatMoney(cents, settings.currency);
@@ -111,11 +170,29 @@ export function Home() {
   const spentDays = days.slice(0, dayOfMonth);
   const overDays = spentDays.filter((cents) => cents > safe.perDayCents).length;
 
-  async function record({ recurring: item, date: due }: Occurrence) {
+  async function record({ recurring: item, date: due }: Occurrence, actualCents?: number) {
     const accountId = settings.defaultAccountId ?? accounts[0]?.id;
     if (!accountId) return;
     // A future bill paid early is dated today; a past one keeps its due date.
-    const tx = await recordOccurrence(item, due, due > today ? today : due, accountId);
+    const tx = await recordOccurrence(item, due, due > today ? today : due, accountId, actualCents);
+
+    // Income that varies: once there are a few paydays to go on, offer (never
+    // assume) to plan on the lowest recent one.
+    if (actualCents !== undefined && transactions) {
+      const earlier = transactions
+        .filter((t) => t.recurringId === item.id && t.recurringDate)
+        .map((t) => Math.abs(t.amountCents));
+      const estimate = cautiousEstimate([actualCents, ...earlier]);
+      if (estimate !== null && estimate !== item.amountCents) {
+        showToast({
+          message: `${money(actualCents)} received. Your lowest recent ${item.name} was ${money(estimate)}. Plan on that?`,
+          actionLabel: 'Update',
+          onAction: () => saveRecurring(item.id, { amountCents: estimate }).then(() => {}),
+          sticky: true,
+        });
+        return;
+      }
+    }
     showToast({
       message: item.kind === 'bill' ? `${item.name} marked paid.` : `${item.name} marked received.`,
       actionLabel: 'Undo',
@@ -272,6 +349,9 @@ export function Home() {
                   <span className="bill__name">
                     {item.name}
                     {late && <small>{item.kind === 'bill' ? 'Overdue' : 'Not received yet'}</small>}
+                    {item.kind === 'income' && item.variable && (
+                      <small className="bill__note">Estimate</small>
+                    )}
                   </span>
                   <span
                     className={`bill__amount${item.kind === 'income' ? ' tx__amount--in' : ''}`}
@@ -283,7 +363,11 @@ export function Home() {
                   <button
                     type="button"
                     className="bill__done"
-                    onClick={() => void record(occurrence)}
+                    onClick={() =>
+                      item.kind === 'income' && item.variable
+                        ? setReceiving(occurrence)
+                        : void record(occurrence)
+                    }
                   >
                     <CheckIcon size={16} />
                     {item.kind === 'bill' ? 'Paid' : 'Got it'}
@@ -350,6 +434,17 @@ export function Home() {
             Add an expense
           </button>
         </section>
+      )}
+      {receiving && (
+        <ReceivedSheet
+          occurrence={receiving}
+          currency={settings.currency}
+          onClose={() => setReceiving(null)}
+          onSave={(cents) => {
+            setReceiving(null);
+            void record(receiving, cents);
+          }}
+        />
       )}
     </>
   );

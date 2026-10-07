@@ -2,9 +2,12 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { useCallback, useEffect, useState, type FormEvent, type ReactNode } from 'react';
 import { eraseAll } from '../db/backup';
 import { deleteRule, listRules, restoreRule, setSetting } from '../db/repo';
+import { ACCENTS, THEMES } from '../domain/appearance';
 import { CURRENCIES } from '../domain/defaults';
 import { MIN_PASSPHRASE_LENGTH } from '../domain/encryptedBackup';
+import { setAppearance, useAppearance } from '../pwa/appearance';
 import { getStorageStatus, requestPersistence, type StorageStatus } from '../pwa/persist';
+import { isUnlocked, lock } from '../pwa/unlock';
 import { useApp } from '../ui/context';
 import { exportBackupFile } from '../ui/exportBackup';
 import { AlertIcon, CheckIcon } from '../ui/Icons';
@@ -29,6 +32,7 @@ function Status({ good, children }: { good: boolean; children: ReactNode }) {
 export function Settings() {
   const { settings, categories, showToast } = useApp();
   const rules = useLiveQuery(listRules, []);
+  const appearance = useAppearance();
   const [storage, setStorage] = useState<StorageStatus | null>(null);
   const [confirmErase, setConfirmErase] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -138,6 +142,48 @@ export function Settings() {
           </label>
         </div>
         <p className="group__note">Changes how amounts are shown. Amounts aren't converted.</p>
+      </section>
+
+      <section className="group" aria-labelledby="set-appearance">
+        <h2 id="set-appearance" className="group__label">
+          Appearance
+        </h2>
+        <div className="group__card">
+          <div className="setting setting--stack" role="group" aria-label="Theme">
+            <span>Theme</span>
+            <div className="segmented segmented--block">
+              {THEMES.map(({ value, label }) => (
+                <button
+                  key={value}
+                  type="button"
+                  className="segmented__option"
+                  aria-pressed={appearance.theme === value}
+                  onClick={() => setAppearance({ theme: value })}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="setting setting--stack" role="group" aria-label="Accent colour">
+            <span>Accent colour</span>
+            <div className="segmented segmented--block">
+              {ACCENTS.map(({ value, label }) => (
+                <button
+                  key={value}
+                  type="button"
+                  className="segmented__option"
+                  aria-pressed={appearance.accent === value}
+                  onClick={() => setAppearance({ accent: value })}
+                >
+                  <span className={`accent-dot accent-dot--${value}`} aria-hidden="true" />
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+        <p className="group__note">System follows this device's light or dark setting.</p>
       </section>
 
       <section className="group" aria-labelledby="set-storage">
@@ -284,6 +330,29 @@ export function Settings() {
             </button>
           </div>
           <p className="group__note">Only in development builds.</p>
+        </section>
+      )}
+
+      {isUnlocked() && (
+        <section className="group" aria-labelledby="set-unlock">
+          <h2 id="set-unlock" className="group__label">
+            Browser access
+          </h2>
+          <div className="group__card">
+            <button
+              type="button"
+              className="setting setting--action"
+              onClick={() => {
+                lock();
+                window.location.reload();
+              }}
+            >
+              Lock this browser again
+            </button>
+          </div>
+          <p className="group__note">
+            This browser was let past the install screen with the developer code. Your data stays.
+          </p>
         </section>
       )}
 
