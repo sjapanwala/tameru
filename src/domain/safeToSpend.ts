@@ -1,160 +1,148 @@
-import { addDays, daysLeftInMonth, monthRange } from './dates';
-import { occurrenceKey, occurrencesOf, recordedAmounts } from './recurring';
-import type { Budget, Category, Goal, ISODate, Recurring, Transaction } from './types';
+// Safe-to-spend: the hero number.
+//
+//   safe = spendable balance now (chequing + cash, minus card balances owing if opted in)
+//        + expected income until period end
+//        − upcoming bills until period end
+//        − remaining goal contributions this period
+//        − buffer
+//
+// Ranges are read conservatively (income low, bills high); irregular income is left out.
+// Pending generated transactions are not in balances yet, so they count as expected/upcoming.
 
-type Tx = Pick<
-  Transaction,
-  'date' | 'amountCents' | 'categoryId' | 'recurringId' | 'recurringDate'
->;
+import { balanceAsOf, cardOwing } from './ledger';
+import { recurringOriginKey } from './materialise';
+import { daysLeft, type Period } from './period';
+import { occurrenceAmount, occurrences } from './recurrence';
+import type { Account, Cents, Goal, Id, LocalDate, RecurringItem, Transaction } from './types';
 
-/** Spending that isn't the payment of a recurring bill. */
-export const isVariableSpend = (tx: Pick<Tx, 'amountCents' | 'recurringId'>) =>
-  tx.amountCents < 0 && !tx.recurringId;
+export interface SafeToSpendInput {
+  today: LocalDate;
+  period: Period;
+  accounts: readonly Account[];
+  transactions: readonly Transaction[];
+  recurring: readonly RecurringItem[];
+  goals: readonly Goal[];
+  goalContributions: Readonly<Record<Id, Cents>>; // planned per period
+  subtractCardBalances: boolean;
+  bufferCents: Cents;
+}
+
+export interface FlowLine {
+  label: string;
+  date: LocalDate;
+  amountCents: Cents;
+  recurringId?: Id;
+  transactionId?: Id;
+  accountId: Id;
+}
+
+export type Recovery =
+  | { kind: 'pause_goal'; goalId: Id; amountCents: Cents }
+  | { kind: 'move_bill'; recurringId: Id; date: LocalDate; amountCents: Cents }
+  | { kind: 'ease_category'; amountCents: Cents }; // the UI names the category with most left
 
 export interface SafeToSpend {
-  /**
-   * Recurring income across the whole month: what actually arrived for
-   * paydays already received, the planned amount for the rest.
-   */
-  incomeCents: number;
-  /** Recurring bills across the whole month, paid or not. */
-  billsCents: number;
-  /** Monthly goal contributions. */
-  goalsCents: number;
-  /** Variable spend so far this month. */
-  spentCents: number;
-  /** income − bills − goals − spent. Negative when overspent. */
-  remainingCents: number;
-  /** Days left in the month, counting today. */
+  safeCents: Cents;
+  dailyCents: Cents; // per day for the rest of the period, 0 when safe ≤ 0
   daysLeft: number;
-  /** remaining ÷ daysLeft, never below zero. */
-  perDayCents: number;
-  /** False until at least one recurring income exists; the number means little without it. */
-  hasIncome: boolean;
+  breakdown: {
+    spendableCents: Cents;
+    accounts: { accountId: Id; balanceCents: Cents }[];
+    cardsOwingCents: Cents;
+    incomeCents: Cents;
+    incomeLines: FlowLine[];
+    billsCents: Cents;
+    billLines: FlowLine[];
+    goalsCents: Cents;
+    goalLines: { goalId: Id; plannedCents: Cents; contributedCents: Cents; remainingCents: Cents }[];
+    bufferCents: Cents;
+  };
+  shortfallCents: Cents; // max(0, −safe)
+  recovery?: Recovery;
 }
 
-/**
- * safeToSpendToday =
- *   (income this month, received or still expected − reserved bills − goal contributions − variable spend so far)
- *   ÷ days left in month
- */
-export function safeToSpend(input: {
-  today: ISODate;
-  recurring: readonly Recurring[];
-  goals: readonly Goal[];
-  transactions: readonly Tx[];
-}): SafeToSpend {
-  const { start, end } = monthRange(input.today);
-  let incomeCents = 0;
-  let billsCents = 0;
-  const received = recordedAmounts(input.transactions);
-  for (const { recurring, date } of occurrencesOf(input.recurring, start, end)) {
-    if (recurring.kind === 'income') {
-      // A payday that has landed counts for what it really was.
-      incomeCents += received.get(occurrenceKey(recurring.id, date)) ?? recurring.amountCents;
-    } else {
-      billsCents += recurring.amountCents;
+const SPENDABLE = new Set(['chequing', 'cash']);
+
+export function safeToSpend(i: SafeToSpendInput): SafeToSpend {
+  const accById = new Map(i.accounts.map((a) => [a.id, a]));
+  const live = i.accounts.filter((a) => !a.archived);
+  const spendableAccounts = live.filter((a) => SPENDABLE.has(a.type));
+  const accounts = spendableAccounts.map((a) => ({ accountId: a.id, balanceCents: balanceAsOf(a, i.transactions, i.today) }));
+  const cardsOwingCents = i.subtractCardBalances
+    ? live.filter((a) => a.type === 'credit_card').reduce((s, a) => s + cardOwing(balanceAsOf(a, i.transactions, i.today)), 0)
+    : 0;
+  const spendableCents = accounts.reduce((s, a) => s + a.balanceCents, 0) - cardsOwingCents;
+
+  // Which accounts' flows affect the number: spendable ones, plus cards when card balances are subtracted.
+  const affects = (accountId: Id) => {
+    const acc = accById.get(accountId);
+    if (!acc || acc.archived) return false; // removed accounts no longer move the number
+    return SPENDABLE.has(acc.type) || (acc.type === 'credit_card' && i.subtractCardBalances);
+  };
+
+  const keys = new Map(i.transactions.filter((t) => t.originKey).map((t) => [t.originKey!, t]));
+  const incomeLines: FlowLine[] = [];
+  const billLines: FlowLine[] = [];
+
+  for (const t of i.transactions) {
+    if (t.status !== 'pending' || t.date > i.period.end || !affects(t.accountId)) continue;
+    const label = t.merchant ?? i.recurring.find((r) => r.id === t.recurringId)?.name ?? '';
+    const line = { label, date: t.date, amountCents: t.amountCents, transactionId: t.id, accountId: t.accountId, ...(t.recurringId ? { recurringId: t.recurringId } : {}) };
+    if (t.type === 'income') incomeLines.push(line);
+    else if (t.type === 'expense') billLines.push(line);
+  }
+  for (const item of i.recurring) {
+    if (item.archived || !affects(item.defaultAccountId)) continue;
+    for (const date of occurrences(item, i.today, i.period.end)) {
+      if (keys.has(recurringOriginKey(item.id, date))) continue; // already recorded (posted, pending or skipped)
+      const line = { label: item.name, date, amountCents: occurrenceAmount(item, 'conservative'), recurringId: item.id, accountId: item.defaultAccountId };
+      (item.kind === 'income' ? incomeLines : billLines).push(line);
     }
   }
-  const goalsCents = input.goals.reduce((sum, goal) => sum + goal.monthlyContributionCents, 0);
-  const spentCents = input.transactions
-    .filter((tx) => tx.date >= start && tx.date <= end && isVariableSpend(tx))
-    .reduce((sum, tx) => sum - tx.amountCents, 0);
+  incomeLines.sort((a, b) => a.date.localeCompare(b.date));
+  billLines.sort((a, b) => a.date.localeCompare(b.date));
+  const incomeCents = incomeLines.reduce((s, l) => s + l.amountCents, 0);
+  const billsCents = billLines.reduce((s, l) => s + l.amountCents, 0);
 
-  const remainingCents = incomeCents - billsCents - goalsCents - spentCents;
-  const daysLeft = daysLeftInMonth(input.today);
-  return {
-    incomeCents,
-    billsCents,
-    goalsCents,
-    spentCents,
-    remainingCents,
-    daysLeft,
-    perDayCents: Math.max(0, Math.floor(remainingCents / daysLeft)),
-    hasIncome: input.recurring.some((item) => item.kind === 'income'),
-  };
-}
-
-export interface BudgetProgress {
-  categoryId: string;
-  name: string;
-  budgetCents: number;
-  spentCents: number;
-  /** Negative when over budget. */
-  leftCents: number;
-  /** 0–1, capped, for drawing the bar. */
-  fraction: number;
-  over: boolean;
-}
-
-/** This month's spend against each budgeted category, in category order. */
-export function budgetProgress(input: {
-  today: ISODate;
-  budgets: readonly Budget[];
-  categories: readonly Category[];
-  transactions: readonly Tx[];
-}): BudgetProgress[] {
-  const { start, end } = monthRange(input.today);
-  const spent = new Map<string, number>();
-  for (const tx of input.transactions) {
-    if (tx.amountCents >= 0 || !tx.categoryId || tx.date < start || tx.date > end) continue;
-    spent.set(tx.categoryId, (spent.get(tx.categoryId) ?? 0) - tx.amountCents);
-  }
-  const result: BudgetProgress[] = [];
-  for (const category of input.categories) {
-    const budget = input.budgets.find((b) => b.categoryId === category.id);
-    if (!budget || budget.monthlyCents <= 0) continue;
-    const spentCents = spent.get(category.id) ?? 0;
-    result.push({
-      categoryId: category.id,
-      name: category.name,
-      budgetCents: budget.monthlyCents,
-      spentCents,
-      leftCents: budget.monthlyCents - spentCents,
-      fraction: Math.min(1, spentCents / budget.monthlyCents),
-      over: spentCents > budget.monthlyCents,
+  const goalLines = i.goals
+    .filter((g) => !g.archived && (i.goalContributions[g.id] ?? 0) > 0)
+    .map((g) => {
+      const plannedCents = i.goalContributions[g.id] ?? 0;
+      const contributedCents = goalContributedIn(g.id, i.transactions, i.period.start, i.period.end);
+      return { goalId: g.id, plannedCents, contributedCents, remainingCents: Math.max(0, plannedCents - contributedCents) };
     });
-  }
+  const goalsCents = goalLines.reduce((s, g) => s + g.remainingCents, 0);
+
+  const safeCents = spendableCents + incomeCents - billsCents - goalsCents - i.bufferCents;
+  const left = daysLeft(i.period, i.today);
+  const shortfallCents = Math.max(0, -safeCents);
+  const result: SafeToSpend = {
+    safeCents,
+    dailyCents: safeCents > 0 ? Math.floor(safeCents / left) : 0,
+    daysLeft: left,
+    breakdown: { spendableCents, accounts, cardsOwingCents, incomeCents, incomeLines, billsCents, billLines, goalsCents, goalLines, bufferCents: i.bufferCents },
+    shortfallCents,
+  };
+  if (shortfallCents > 0) result.recovery = chooseRecovery(shortfallCents, goalLines, billLines);
   return result;
 }
 
-/** Variable spend for each day of the month containing `today` (index 0 = the 1st). */
-export function dailySpend(transactions: readonly Tx[], today: ISODate): number[] {
-  const { start, end } = monthRange(today);
-  const days = new Array<number>(Number(end.slice(8))).fill(0);
-  for (const tx of transactions) {
-    if (tx.date < start || tx.date > end || !isVariableSpend(tx)) continue;
-    days[Number(tx.date.slice(8)) - 1]! -= tx.amountCents;
-  }
-  return days;
+/**
+ * One way forward when the number is negative. Least disruptive first:
+ * pause a goal contribution that covers it, then move the bill that covers it
+ * (the latest such bill, so it can shift past payday), then ease off flexible spending.
+ */
+function chooseRecovery(short: Cents, goals: SafeToSpend['breakdown']['goalLines'], bills: FlowLine[]): Recovery {
+  const goal = [...goals].sort((a, b) => b.remainingCents - a.remainingCents).find((g) => g.remainingCents >= short);
+  if (goal) return { kind: 'pause_goal', goalId: goal.goalId, amountCents: short };
+  const bill = [...bills].filter((b) => b.recurringId && !b.transactionId && b.amountCents >= short).sort((a, b) => b.date.localeCompare(a.date))[0];
+  if (bill) return { kind: 'move_bill', recurringId: bill.recurringId!, date: bill.date, amountCents: bill.amountCents };
+  return { kind: 'ease_category', amountCents: short };
 }
 
-export interface MonthComparison {
-  /** First day of the previous month. */
-  previousMonth: ISODate;
-  /**
-   * Variable spend so far this month minus last month's through the same
-   * day. Positive means spending is running ahead of last month.
-   */
-  diffCents: number;
-  /** False when there was nothing recorded last month to compare against. */
-  hasPrevious: boolean;
-}
-
-export function compareToLastMonth(transactions: readonly Tx[], today: ISODate): MonthComparison {
-  const { start } = monthRange(today);
-  const previous = monthRange(addDays(start, -1));
-  // Same day number, capped at the shorter month's end (Mar 31 -> Feb 28).
-  const cutoffDay = today.slice(8) < previous.end.slice(8) ? today.slice(8) : previous.end.slice(8);
-  const cutoff = `${previous.start.slice(0, 8)}${cutoffDay}`;
-  let current = 0;
-  let before = 0;
-  let hasPrevious = false;
-  for (const tx of transactions) {
-    if (tx.date >= previous.start && tx.date <= previous.end) hasPrevious = true;
-    if (!isVariableSpend(tx)) continue;
-    if (tx.date >= start && tx.date <= today) current -= tx.amountCents;
-    else if (tx.date >= previous.start && tx.date <= cutoff) before -= tx.amountCents;
-  }
-  return { previousMonth: previous.start, diffCents: current - before, hasPrevious };
+/** Goal-tagged transfers posted within [from, to]. */
+export function goalContributedIn(goalId: Id, txs: readonly Transaction[], from: LocalDate, to: LocalDate): Cents {
+  return txs
+    .filter((t) => t.goalId === goalId && t.type === 'transfer' && t.status === 'posted' && t.date >= from && t.date <= to)
+    .reduce((s, t) => s + t.amountCents, 0);
 }

@@ -1,43 +1,52 @@
-import { useEffect } from 'react';
-import type { ToastInput } from './context';
-import { CloseIcon } from './Icons';
+// One toast at a time, floating above the tab bar. Screens call toast(text).
 
-export interface ToastState extends ToastInput {
+import { useEffect, useState } from 'preact/hooks';
+
+interface ToastAction {
+  label: string;
+  run: () => void;
+}
+interface Toast {
+  text: string;
   id: number;
+  action?: ToastAction;
 }
 
-const AUTO_DISMISS_MS = 7000;
+let push: ((t: Toast) => void) | null = null;
+let seq = 0;
 
-export function Toast({ toast, onDismiss }: { toast: ToastState | null; onDismiss(): void }) {
+/** Show a toast; with an action (e.g. Undo) it stays a little longer. */
+export function toast(text: string, action?: ToastAction): void {
+  push?.({ text, id: ++seq, ...(action ? { action } : {}) });
+}
+
+export function ToastHost() {
+  const [t, setT] = useState<Toast | null>(null);
   useEffect(() => {
-    if (!toast || toast.sticky) return;
-    const timer = window.setTimeout(onDismiss, AUTO_DISMISS_MS);
-    return () => window.clearTimeout(timer);
-  }, [toast, onDismiss]);
-
-  return (
-    // The live region stays mounted so screen readers announce new toasts.
-    <div className="toast-region" role="status" aria-live="polite">
-      {toast && (
-        <div className="toast" key={toast.id}>
-          <span className="toast__message">{toast.message}</span>
-          {toast.actionLabel && (
-            <button
-              type="button"
-              className="toast__action"
-              onClick={() => {
-                onDismiss();
-                void toast.onAction?.();
-              }}
-            >
-              {toast.actionLabel}
-            </button>
-          )}
-          <button type="button" className="toast__close" aria-label="Dismiss" onClick={onDismiss}>
-            <CloseIcon size={18} />
-          </button>
-        </div>
+    push = setT;
+    return () => {
+      push = null;
+    };
+  }, []);
+  useEffect(() => {
+    if (!t) return;
+    const h = setTimeout(() => setT(null), t.action ? 4600 : 2800);
+    return () => clearTimeout(h);
+  }, [t?.id]);
+  return t ? (
+    <div class={`toast${t.action ? ' toast--action' : ''}`} role="status" key={t.id}>
+      <span>{t.text}</span>
+      {t.action && (
+        <button
+          type="button"
+          onClick={() => {
+            t.action!.run();
+            setT(null);
+          }}
+        >
+          {t.action.label}
+        </button>
       )}
     </div>
-  );
+  ) : null;
 }

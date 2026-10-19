@@ -1,0 +1,59 @@
+import { describe, expect, it } from 'vitest';
+import { expandSchedule, monthlyEquivalent, nextOccurrence, occurrenceAmount, occurrences, scheduleFrom } from './recurrence';
+
+describe('expandSchedule', () => {
+  it('puts a 31st bill on the last day of shorter months', () => {
+    expect(expandSchedule({ freq: 'monthly', day: 31 }, '2026-01-01', '2026-05-31')).toEqual([
+      '2026-01-31', '2026-02-28', '2026-03-31', '2026-04-30', '2026-05-31',
+    ]);
+  });
+  it('handles leap years for the 29th and 31st', () => {
+    expect(expandSchedule({ freq: 'monthly', day: 29 }, '2028-02-01', '2028-03-31')).toEqual(['2028-02-29', '2028-03-29']);
+    expect(expandSchedule({ freq: 'monthly', day: 30 }, '2027-02-01', '2027-02-28')).toEqual(['2027-02-28']);
+    expect(expandSchedule({ freq: 'yearly', month: 2, day: 29 }, '2027-01-01', '2028-12-31')).toEqual(['2027-02-28', '2028-02-29']);
+  });
+  it('semi-monthly pays the 1st and 15th', () => {
+    expect(expandSchedule({ freq: 'semimonthly', days: [1, 15] }, '2026-01-10', '2026-02-20')).toEqual(['2026-01-15', '2026-02-01', '2026-02-15']);
+    expect(expandSchedule({ freq: 'semimonthly', days: [15, 31] }, '2026-02-01', '2026-02-28')).toEqual(['2026-02-15', '2026-02-28']);
+  });
+  it('anchors biweekly cycles to the start date, in either direction', () => {
+    const s = { freq: 'biweekly' as const, anchor: '2026-01-02' };
+    expect(expandSchedule(s, '2026-01-01', '2026-02-15')).toEqual(['2026-01-02', '2026-01-16', '2026-01-30', '2026-02-13']);
+    expect(expandSchedule(s, '2025-12-01', '2025-12-31')).toEqual(['2025-12-05', '2025-12-19']);
+    expect(expandSchedule(s, '2026-01-03', '2026-01-15')).toEqual([]);
+    // 27 paydays in some years
+    expect(expandSchedule({ freq: 'biweekly', anchor: '2026-01-01' }, '2026-01-01', '2026-12-31')).toHaveLength(27);
+  });
+  it('weekly', () => {
+    expect(expandSchedule({ freq: 'weekly', anchor: '2026-03-02' }, '2026-03-01', '2026-03-20')).toEqual(['2026-03-02', '2026-03-09', '2026-03-16']);
+  });
+  it('irregular and empty ranges produce nothing', () => {
+    expect(expandSchedule({ freq: 'irregular' }, '2026-01-01', '2026-12-31')).toEqual([]);
+    expect(expandSchedule({ freq: 'monthly', day: 1 }, '2026-02-01', '2026-01-01')).toEqual([]);
+  });
+});
+
+describe('items', () => {
+  const rent = { schedule: { freq: 'monthly' as const, day: 1 }, startDate: '2026-03-01', endDate: '2026-05-01' };
+  it('respects start and end dates', () => {
+    expect(occurrences(rent, '2026-01-01', '2026-12-31')).toEqual(['2026-03-01', '2026-04-01', '2026-05-01']);
+    expect(nextOccurrence(rent, '2026-03-02')).toBe('2026-04-01');
+    expect(nextOccurrence(rent, '2026-05-02')).toBeUndefined();
+  });
+  it('builds schedules from a next date', () => {
+    expect(scheduleFrom('monthly', '2026-01-31')).toEqual({ freq: 'monthly', day: 31 });
+    expect(scheduleFrom('biweekly', '2026-01-02')).toEqual({ freq: 'biweekly', anchor: '2026-01-02' });
+    expect(scheduleFrom('yearly', '2026-07-04')).toEqual({ freq: 'yearly', month: 7, day: 4 });
+  });
+  it('reads ranges conservatively', () => {
+    const pay = { kind: 'income' as const, amount: { minCents: 70000, maxCents: 90000 } };
+    const bill = { kind: 'bill' as const, amount: { minCents: 7000, maxCents: 9000 } };
+    expect(occurrenceAmount(pay)).toBe(80000);
+    expect(occurrenceAmount(pay, 'conservative')).toBe(70000);
+    expect(occurrenceAmount(bill, 'conservative')).toBe(9000);
+  });
+  it('monthly equivalents', () => {
+    expect(monthlyEquivalent({ kind: 'income', amount: { fixedCents: 100000 }, schedule: { freq: 'biweekly', anchor: '2026-01-02' } })).toBe(216667);
+    expect(monthlyEquivalent({ kind: 'income', amount: { fixedCents: 0 }, schedule: { freq: 'irregular' }, irregularMonthlyCents: 30000 })).toBe(30000);
+  });
+});

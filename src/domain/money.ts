@@ -1,77 +1,78 @@
-import { DEFAULT_CURRENCY } from './defaults';
+// Integer-cent money helpers. Never store or sum floats.
 
-const digitsCache = new Map<string, number>();
+import type { Cents } from './types';
 
-/** Number of minor-unit digits for a currency (2 for CAD, 0 for JPY). */
-export function minorUnitDigits(currency: string = DEFAULT_CURRENCY): number {
-  let digits = digitsCache.get(currency);
-  if (digits === undefined) {
-    try {
-      digits =
-        new Intl.NumberFormat('en', { style: 'currency', currency }).resolvedOptions()
-          .maximumFractionDigits ?? 2;
-    } catch {
-      digits = 2;
-    }
-    digitsCache.set(currency, digits);
-  }
-  return digits;
+export function isCents(n: unknown): n is Cents {
+  return typeof n === 'number' && Number.isSafeInteger(n);
 }
 
-export interface FormatMoneyOptions {
-  locale?: string;
-  /** Always show a sign for non-zero amounts (+ for income, − for spend). */
-  signed?: boolean;
-}
-
-/** Format integer minor units as a currency string. */
-export function formatMoney(
-  cents: number,
-  currency: string = DEFAULT_CURRENCY,
-  { locale, signed = false }: FormatMoneyOptions = {},
-): string {
-  const digits = minorUnitDigits(currency);
-  return new Intl.NumberFormat(locale, {
-    style: 'currency',
-    currency,
-    signDisplay: signed ? 'exceptZero' : 'auto',
-  }).format(cents / 10 ** digits);
-}
-
-/** The currency symbol as the locale would print it ("$", "US$", "€"). */
-export function currencySymbol(currency: string = DEFAULT_CURRENCY, locale?: string): string {
-  const parts = new Intl.NumberFormat(locale, { style: 'currency', currency }).formatToParts(0);
-  return parts.find((p) => p.type === 'currency')?.value ?? currency;
+export function assertCents(n: number, label = 'amount'): Cents {
+  if (!isCents(n)) throw new Error(`${label} must be integer cents, got ${n}`);
+  return n;
 }
 
 /**
- * Parse user-typed money ("1,234.50", "$12", "12,5") into integer minor units
- * without going through floats. Returns null when it isn't a number.
+ * Parse user input like "12", "12.5", "$1,234.56", "-3.10" into cents
+ * using string arithmetic only. Returns null when it isn't a valid amount.
  */
-export function parseMoneyInput(text: string, currency: string = DEFAULT_CURRENCY): number | null {
-  const digits = minorUnitDigits(currency);
-  let s = text.replace(/[^\d.,-]/g, '');
-  const negative = s.startsWith('-');
-  s = s.replace(/-/g, '');
-  // A lone comma followed by 1–2 digits at the end is a decimal comma.
-  if (!s.includes('.') && /^\d+,\d{1,2}$/.test(s)) s = s.replace(',', '.');
-  s = s.replace(/,/g, '');
-  if (!/^\d*\.?\d*$/.test(s) || !/\d/.test(s)) return null;
-
-  const [whole = '', frac = ''] = s.split('.');
-  const fracPadded = (frac + '0'.repeat(digits)).slice(0, digits);
-  const cents = Number(whole || '0') * 10 ** digits + Number(fracPadded || '0');
+export function parseCents(input: string): Cents | null {
+  const s = input.trim().replace(/[$,\s]/g, '').replace(/^CA/i, '');
+  const m = /^(-)?(\d*)(?:\.(\d{0,2}))?$/.exec(s);
+  if (!m || (m[2] === '' && (m[3] === undefined || m[3] === ''))) return null;
+  const whole = Number(m[2] || '0');
+  const frac = Number((m[3] ?? '').padEnd(2, '0') || '0');
+  const cents = whole * 100 + frac;
   if (!Number.isSafeInteger(cents)) return null;
-  return negative && cents !== 0 ? -cents : cents;
+  return m[1] ? -cents : cents;
 }
 
-/** Plain decimal string for pre-filling an amount input ("12.50"; "" for zero). */
-export function centsToInput(cents: number, currency: string = DEFAULT_CURRENCY): string {
-  if (cents === 0) return '';
-  const digits = minorUnitDigits(currency);
+const formatters = new Map<string, Intl.NumberFormat>();
+
+export function formatCents(cents: Cents, currency = 'CAD'): string {
+  let f = formatters.get(currency);
+  if (!f) {
+    f = new Intl.NumberFormat('en-CA', { style: 'currency', currency });
+    formatters.set(currency, f);
+  }
+  // cents / 100 is exact enough for display at any safe-integer amount; nothing is stored from it.
+  return f.format(cents / 100);
+}
+
+/** Plain "1234.56" (for CSV / inputs). */
+export function centsToDecimal(cents: Cents): string {
+  const sign = cents < 0 ? '-' : '';
   const abs = Math.abs(cents);
-  const whole = Math.floor(abs / 10 ** digits);
-  const text =
-    digits === 0 ? String(whole) : `${whole}.${String(abs % 10 ** digits).padStart(digits, '0')}`;
-  return cents < 0 ? `-${text}` : text;
+  return `${sign}${Math.floor(abs / 100)}.${String(abs % 100).padStart(2, '0')}`;
+}
+
+export const sum = (xs: readonly Cents[]): Cents => xs.reduce((a, b) => a + b, 0);
+
+/** Round half away from zero to an integer cent. */
+export function roundCents(x: number): Cents {
+  return x < 0 ? -Math.round(-x) : Math.round(x);
+}
+
+/** cents × num / den, rounded to the nearest cent. */
+export function mulDiv(cents: Cents, num: number, den: number): Cents {
+  return roundCents((cents * num) / den);
+}
+
+/**
+ * Split `total` across weights so the parts are integers and sum exactly to total
+ * (largest-remainder method).
+ */
+export function allocate(total: Cents, weights: readonly number[]): Cents[] {
+  const wsum = weights.reduce((a, b) => a + Math.max(0, b), 0);
+  if (weights.length === 0) return [];
+  if (wsum === 0) {
+    const out = weights.map(() => 0);
+    out[0] = total;
+    return out;
+  }
+  const raw = weights.map((w) => (total * Math.max(0, w)) / wsum);
+  const floors = raw.map((r) => Math.floor(r));
+  let left = total - sum(floors);
+  const order = raw.map((r, i) => ({ i, rem: r - Math.floor(r) })).sort((a, b) => b.rem - a.rem);
+  for (let k = 0; left > 0; k = (k + 1) % order.length, left--) floors[order[k]!.i]!++;
+  return floors;
 }

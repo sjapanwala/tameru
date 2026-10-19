@@ -1,107 +1,119 @@
-import type { ReactNode } from 'react';
+// Line icons for the tab bar. 24×24, 1.75 stroke, currentColor.
 
-// Decorative inline icons. Always paired with visible text or an aria-label
-// on the parent control, so they are hidden from assistive tech.
-function icon(children: ReactNode, strokeWidth = 1.9) {
-  return function Icon({ size = 24 }: { size?: number }) {
-    return (
-      <svg
-        width={size}
-        height={size}
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth={strokeWidth}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        aria-hidden="true"
-        focusable="false"
-      >
-        {children}
-      </svg>
-    );
-  };
-}
-
-export const HomeIcon = icon(
-  <>
-    <path d="M4 11.2 12 4l8 7.2" />
-    <path d="M6 10v9.5h12V10" />
-  </>,
+export const Svg = ({ children }: { children: preact.ComponentChildren }) => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+    {children}
+  </svg>
 );
 
-export const ListIcon = icon(
-  <>
-    <path d="M8.5 7H20M8.5 12H20M8.5 17H20" />
-    <path d="M4.2 7h.1M4.2 12h.1M4.2 17h.1" strokeWidth={2.6} />
-  </>,
+export const HomeIcon = () => (
+  <Svg>
+    <path d="M4 10.5 12 4l8 6.5V20a1 1 0 0 1-1 1h-4.5v-6h-5v6H5a1 1 0 0 1-1-1z" />
+  </Svg>
 );
 
-export const PlusIcon = icon(<path d="M12 5v14M5 12h14" />, 2.4);
-
-export const ForecastIcon = icon(
-  <>
-    <path d="M4 19.5h16" />
-    <path d="m5 15 4.5-4.5 3.5 3L19 7" />
-    <path d="M15 7h4v4" />
-  </>,
+export const ActivityIcon = () => (
+  <Svg>
+    <path d="M5 6h14M5 12h14M5 18h9" />
+  </Svg>
 );
 
-export const PlanIcon = icon(
-  <>
+export const PlusIcon = () => (
+  <Svg>
+    <path d="M12 5v14M5 12h14" />
+  </Svg>
+);
+
+export const PlanIcon = () => (
+  <Svg>
     <circle cx="12" cy="12" r="8" />
-    <circle cx="12" cy="12" r="3.2" />
-  </>,
+    <path d="M12 4v8l5.5 5.5" />
+  </Svg>
 );
 
-// Settings, drawn as sliders: reads clearly at 24px where a cog does not.
-export const GearIcon = icon(
-  <>
-    <path d="M4 7.5h9M17.5 7.5H20M4 16.5h2.5M11 16.5h9" />
-    <circle cx="15.25" cy="7.5" r="2.25" />
-    <circle cx="8.75" cy="16.5" r="2.25" />
-  </>,
+export const MoreIcon = () => (
+  <Svg>
+    <circle cx="6" cy="12" r="1" />
+    <circle cx="12" cy="12" r="1" />
+    <circle cx="18" cy="12" r="1" />
+  </Svg>
 );
 
-export const SearchIcon = icon(
-  <>
-    <circle cx="11" cy="11" r="6.5" />
-    <path d="m16 16 4 4" />
-  </>,
+export const ArrowUpRight = () => (
+  <Svg>
+    <path d="M7 17 17 7M8 7h9v9" />
+  </Svg>
 );
 
-export const CloseIcon = icon(<path d="M6 6l12 12M18 6 6 18" />, 2.2);
-
-export const BackIcon = icon(<path d="M14.5 5.5 8 12l6.5 6.5" />, 2.2);
-
-export const BackspaceIcon = icon(
-  <>
-    <path d="M9 5.5h10.5v13H9L3.5 12 9 5.5Z" />
-    <path d="m12 9.5 5 5M17 9.5l-5 5" />
-  </>,
+export const ArrowDownLeft = () => (
+  <Svg>
+    <path d="M17 7 7 17M16 17H7V8" />
+  </Svg>
 );
 
-export const CheckIcon = icon(<path d="m5 12.5 4.5 4.5L19 7.5" />, 2.4);
-
-export const AlertIcon = icon(
-  <>
-    <path d="M12 4 21 19.5H3L12 4Z" />
-    <path d="M12 10v4.5M12 17.2v.1" />
-  </>,
+export const SwapIcon = () => (
+  <Svg>
+    <path d="M8 4v16M4 8l4-4 4 4M16 20V4M20 16l-4 4-4-4" />
+  </Svg>
 );
 
-export const ShareIcon = icon(
-  <>
-    <path d="M12 15V3.5M8 7l4-4 4 4" />
-    <path d="M7.5 10.5H6v10h12v-10h-1.5" />
-  </>,
+export const BellIcon = () => (
+  <Svg>
+    <path d="M6 16V11a6 6 0 1 1 12 0v5l1.5 2h-15zM10 20.5a2 2 0 0 0 4 0" />
+  </Svg>
 );
 
-export const AddSquareIcon = icon(
-  <>
-    <rect x="4" y="4" width="16" height="16" rx="4" />
-    <path d="M12 8.5v7M8.5 12h7" />
-  </>,
+export const CardIcon = () => (
+  <Svg>
+    <rect x="3" y="5.5" width="18" height="13" rx="2.5" />
+    <path d="M3 10h18M7 15h3" />
+  </Svg>
 );
 
-export const DotsIcon = icon(<path d="M12 5.5v.1M12 12v.1M12 18.5v.1" />, 2.8);
+export const PersonIcon = () => (
+  <Svg>
+    <circle cx="12" cy="8.5" r="3.5" />
+    <path d="M5 20c1.2-3.6 4-5.5 7-5.5s5.8 1.9 7 5.5" />
+  </Svg>
+);
+
+export const UploadIcon = () => (
+  <Svg>
+    <path d="M12 15V4M7.5 8.5 12 4l4.5 4.5M5 14v4.5A1.5 1.5 0 0 0 6.5 20h11a1.5 1.5 0 0 0 1.5-1.5V14" />
+  </Svg>
+);
+
+export const CameraIcon = () => (
+  <Svg>
+    <path d="M4 8.5A1.5 1.5 0 0 1 5.5 7h2l1.5-2h6l1.5 2h2A1.5 1.5 0 0 1 20 8.5v9a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 17.5z" />
+    <circle cx="12" cy="13" r="3.5" />
+  </Svg>
+);
+
+export const SearchIcon = () => (
+  <Svg>
+    <circle cx="11" cy="11" r="6" />
+    <path d="m20 20-4.5-4.5" />
+  </Svg>
+);
+
+export const PencilIcon = () => (
+  <Svg>
+    <path d="M14.5 5.5l4 4M4 20l4.2-.8L19 8.4a1.4 1.4 0 0 0 0-2l-1.4-1.4a1.4 1.4 0 0 0-2 0L4.8 15.8z" />
+  </Svg>
+);
+
+export const ArrangeIcon = () => (
+  <Svg>
+    <rect x="4" y="4" width="7" height="7" rx="1.5" />
+    <rect x="13" y="4" width="7" height="7" rx="1.5" />
+    <rect x="4" y="13" width="7" height="7" rx="1.5" />
+    <rect x="13" y="13" width="7" height="7" rx="1.5" />
+  </Svg>
+);
+
+export const TrashIcon = () => (
+  <Svg>
+    <path d="M4.5 7h15M9.5 7V4.5h5V7M6.5 7l.9 12a1.5 1.5 0 0 0 1.5 1.4h6.2a1.5 1.5 0 0 0 1.5-1.4l.9-12M10 11v6M14 11v6" />
+  </Svg>
+);

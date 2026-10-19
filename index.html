@@ -3,43 +3,18 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <title>Tameru: know what you can safely spend today</title>
-    <meta
-      name="description"
-      content="A private budgeting app that lives on your phone. Know what you can safely spend today. No account, works offline."
-    />
-    <!-- Link previews -->
-    <meta property="og:type" content="website" />
-    <meta property="og:site_name" content="Tameru" />
-    <meta property="og:title" content="Tameru: know what you can safely spend today" />
-    <meta
-      property="og:description"
-      content="A private budgeting app that lives on your phone. No account, works offline, and your data never leaves your device."
-    />
-    <meta property="og:url" content="%OG_URL%" />
-    <meta property="og:image" content="%OG_IMAGE%" />
-    <meta property="og:image:width" content="512" />
-    <meta property="og:image:height" content="512" />
-    <meta name="twitter:card" content="summary" />
-
-    <meta name="theme-color" content="#F5F4EF" media="(prefers-color-scheme: light)" />
-    <meta name="theme-color" content="#0E100F" media="(prefers-color-scheme: dark)" />
-    <meta name="color-scheme" content="light dark" />
-    <meta name="format-detection" content="telephone=no" />
-
-    <!-- iOS home screen app -->
-    <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-title" content="Tameru" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-    <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
-
-    <link rel="icon" type="image/svg+xml" href="favicon.svg" />
-    <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png" />
+    <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#0e0e0e" media="(prefers-color-scheme: dark)" />
+    <link rel="icon" href="./favicon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png" />
+    <title>Tameru</title>
   </head>
   <body>
-    <div id="root"></div>
-    <noscript>Tameru needs JavaScript to run.</noscript>
-    <script type="module" src="/src/main.tsx"></script>
+    <div id="app"></div>
+    <script type="module" src="/src/ui/main.tsx"></script>
   </body>
 </html>

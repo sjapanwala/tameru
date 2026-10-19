@@ -1,22 +1,28 @@
-import { useSyncExternalStore } from 'react';
+// Minimal hash router: '#/path?x=1'. No dependency, works on any static host.
 
-// Minimal hash router: "#/activity" -> "/activity". Hash routing means any
-// static host works without rewrite rules.
+import { useEffect, useState } from 'preact/hooks';
 
-function currentPath(): string {
-  const path = window.location.hash.replace(/^#/, '');
-  return path.startsWith('/') ? path : '/';
+export interface Route {
+  path: string;
+  params: URLSearchParams;
 }
 
-function subscribe(onChange: () => void): () => void {
-  window.addEventListener('hashchange', onChange);
-  return () => window.removeEventListener('hashchange', onChange);
+function read(): Route {
+  const raw = window.location.hash.replace(/^#/, '') || '/';
+  const [path, query] = raw.split('?');
+  return { path: path || '/', params: new URLSearchParams(query ?? '') };
 }
 
-export function useRoute(): string {
-  return useSyncExternalStore(subscribe, currentPath);
+export function useRoute(): Route {
+  const [route, setRoute] = useState(read);
+  useEffect(() => {
+    const on = () => setRoute(read());
+    window.addEventListener('hashchange', on);
+    return () => window.removeEventListener('hashchange', on);
+  }, []);
+  return route;
 }
 
-export function navigate(path: string): void {
+export function go(path: string): void {
   window.location.hash = path;
 }

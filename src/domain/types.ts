@@ -1,168 +1,270 @@
-/** Local calendar date, `YYYY-MM-DD`. No timezone. */
-export type ISODate = string;
-/** ISO 8601 UTC timestamp. */
-export type ISOTimestamp = string;
+// Core entity types. Money is always integer cents; day-level dates are LocalDate strings.
 
-/** Fields every stored record carries. Soft delete keeps future sync possible. */
+import type { OnboardingState } from './onboarding';
+
+export type LocalDate = string; // 'YYYY-MM-DD', a calendar day with no timezone
+export type Cents = number; // integer minor units
+export type Id = string;
+
 export interface BaseRecord {
-  id: string;
-  createdAt: ISOTimestamp;
-  updatedAt: ISOTimestamp;
-  deletedAt: ISOTimestamp | null;
+  id: Id;
+  createdAt: string; // ISO 8601 UTC
+  updatedAt: string;
 }
 
-export type AccountType = 'chequing' | 'savings' | 'cash' | 'investing' | 'credit';
+// ---------- Accounts ----------
+
+export type AccountType = 'chequing' | 'savings' | 'credit_card' | 'investing' | 'cash';
+export type Compounding = 'daily' | 'monthly' | 'quarterly' | 'annually';
+
+export interface InterestConfig {
+  rateBps: number; // annual rate in basis points: 425 = 4.25%
+  kind: 'apy' | 'apr';
+  compounding: Compounding; // also the posting frequency
+}
+
+export interface CardConfig {
+  monthlyFeeCents: Cents; // 0 = no fee
+  statementDay: number; // 1–31
+  dueDay: number; // 1–31
+  limitCents?: Cents;
+}
 
 export interface Account extends BaseRecord {
   name: string;
   type: AccountType;
-  /**
-   * Balance when the account was added. For a credit card this is negative:
-   * the amount owed.
-   */
-  startingBalanceCents: number;
-  /** Swatch used wherever the account is shown. */
-  color?: string;
-  /** Savings: annual interest rate in percent; null when the user doesn't know. */
-  interestRatePct?: number | null;
-  /** Investing: money put in so far (net contributions, not returns). */
-  contributedCents?: number | null;
-  // Credit cards (type 'credit') only:
-  /** Day of the month the statement closes, 1–31. */
-  statementDay?: number | null;
-  /** Day of the month payment is due, 1–31. */
-  dueDay?: number | null;
-  limitCents?: number | null;
-  aprPct?: number | null;
-  /** Account the card is paid from. */
-  payFromAccountId?: string | null;
+  currency: string; // ISO 4217, default CAD
+  // Asset-signed: a card that starts with $200 owing has openingBalanceCents = -20000.
+  openingBalanceCents: Cents;
+  openingDate: LocalDate;
+  archived: boolean;
+  interest?: InterestConfig; // savings only
+  card?: CardConfig; // credit_card only
+  face?: CardFace; // how the account's card looks (credit or debit)
+  sortOrder?: number; // user's order (wallet, carousel, pickers); unset until they reorder
 }
 
-export interface Category extends BaseRecord {
+/**
+ * Card appearance. Display only; never used in any calculation.
+ * - artId: a card from the bundled art catalog (its image is the face)
+ * - institutionId without artId: drawn in the institution's colour with its badge
+ * - cardName / color: the user's own card when it isn't in the catalog
+ */
+export interface CardFace {
+  artId?: string;
+  institutionId?: string; // catalog bank folder, or "custom/<slug>"
+  cardName?: string;
+  color?: string; // #rrggbb, overrides the institution colour
+  last4?: string; // shown as •••• 1234; never the full number
+  hidePrinted?: boolean; // frost the art's printed name/number corner; unset = catalog default
+}
+
+/** An institution the user created because it isn't in the catalog. */
+export interface CustomInstitution {
+  id: string; // "custom/<slug>"
   name: string;
-  sortOrder: number;
+  color: string; // #rrggbb
+}
+
+// ---------- Recurring ----------
+
+export type Schedule =
+  | { freq: 'weekly'; anchor: LocalDate }
+  | { freq: 'biweekly'; anchor: LocalDate }
+  | { freq: 'semimonthly'; days: [number, number] }
+  | { freq: 'monthly'; day: number } // 29–31 clamp to the last day of short months
+  | { freq: 'yearly'; month: number; day: number }
+  | { freq: 'irregular' };
+
+export type Frequency = Schedule['freq'];
+
+export type RecurringAmount = { fixedCents: Cents } | { minCents: Cents; maxCents: Cents };
+
+export type RecurringKind = 'bill' | 'subscription' | 'income';
+
+export interface RecurringItem extends BaseRecord {
+  name: string;
+  kind: RecurringKind;
+  amount: RecurringAmount;
+  schedule: Schedule;
+  startDate: LocalDate; // no occurrences before this
+  endDate?: LocalDate; // inclusive
+  categoryId: Id;
+  accountIds: Id[]; // accounts/cards this can be paid from or deposited to
+  defaultAccountId: Id;
+  autoPost: boolean | null; // null = follow settings.autoPostRecurring
+  // Estimated monthly amount for 'irregular' income, used by forecasts only.
+  irregularMonthlyCents?: Cents;
+  merchant?: string;
+  system?: { kind: 'card_fee'; accountId: Id };
+  archived: boolean;
+}
+
+/** IncomeSource is a RecurringItem of kind 'income'; one engine handles both. */
+export type IncomeSource = RecurringItem & { kind: 'income' };
+
+// ---------- Transactions ----------
+
+export type TransactionType = 'expense' | 'income' | 'transfer' | 'refund';
+// 'skipped' keeps a generated occurrence's originKey so it is never regenerated, but it counts for nothing.
+export type TransactionStatus = 'posted' | 'pending' | 'skipped';
+
+export interface Split {
+  categoryId: Id;
+  amountCents: Cents; // positive; splits sum to the transaction amount
 }
 
 export interface Transaction extends BaseRecord {
-  date: ISODate;
-  /** Signed minor units: negative = expense, positive = income. */
-  amountCents: number;
-  accountId: string;
-  categoryId: string | null;
-  /** Cleaned display name. */
-  merchant: string;
-  /** What was originally typed or imported, before cleanup. */
-  rawDescriptor: string;
-  note: string;
-  needsReview: boolean;
-  /**
-   * Set when this transaction pays (or receives) one occurrence of a
-   * recurring item. Such transactions are not "variable spend".
-   */
-  recurringId?: string | null;
-  recurringDate?: ISODate | null;
+  type: TransactionType;
+  amountCents: Cents; // positive magnitude; direction comes from type
+  date: LocalDate;
+  accountId: Id; // source account for transfers
+  toAccountId?: Id; // transfers only
+  categoryId?: Id; // absent for transfers
+  splits?: Split[];
+  merchant?: string;
+  merchantKey?: string;
+  note?: string;
+  status: TransactionStatus;
+  needsReview: boolean; // auto-categorised and not yet confirmed
+  // Unique key for generated transactions, so generation is idempotent:
+  // 'rec:<recurringId>:<date>' or 'int:<accountId>:<date>'.
+  originKey?: string;
+  recurringId?: Id;
+  goalId?: Id; // transfers that count toward a goal
+  enteredAt?: string; // ISO timestamp of manual entry (for time-of-day suggestions)
 }
 
-export interface MerchantRule extends BaseRecord {
-  /** A `merchantKey`; see domain/merchant.ts for matching semantics. */
-  pattern: string;
-  cleanName: string;
-  categoryId: string;
-}
+// ---------- Categories & plan ----------
 
-export interface Budget extends BaseRecord {
-  categoryId: string;
-  monthlyCents: number;
-}
+export type CategoryGroup = 'essentials' | 'lifestyle' | 'savings' | 'system';
+export type BudgetBehaviour = 'reset' | 'rollover' | 'fund';
 
-export interface Schedule {
-  /** semimonthly: twice a month, on the anchor's day and 15 days from it. */
-  freq: 'weekly' | 'biweekly' | 'semimonthly' | 'monthly' | 'yearly';
-  /** A date the item is known to fall on; occurrences repeat from here. */
-  anchorDate: ISODate;
-}
-
-export interface Recurring extends BaseRecord {
+export interface Category extends BaseRecord {
   name: string;
-  /** Positive magnitude; `kind` gives the direction. */
-  amountCents: number;
-  schedule: Schedule;
-  kind: 'bill' | 'income';
-  categoryId: string | null;
-  /** Account or card this is charged to (bills) or deposited into (income). */
-  accountId?: string | null;
-  /**
-   * Income whose amount changes from one payday to the next. amountCents is
-   * then a cautious estimate; what actually arrives is entered when received.
-   */
-  variable?: boolean;
-  /**
-   * Stable key for items created by a flow ("bill:rent", "fee:<accountId>"),
-   * so saving again updates the same record instead of adding another.
-   */
-  origin?: string | null;
+  group: CategoryGroup;
+  behaviour: BudgetBehaviour;
+  isBuffer: boolean;
+  sortOrder: number;
+  archived: boolean;
+  systemKey?: 'income' | 'interest' | 'transfer' | 'fees';
 }
 
-export type GoalKind = 'emergency' | 'debt' | 'trip' | 'purchase' | 'invest' | 'custom';
+export type PeriodConfig =
+  | { kind: 'monthly'; startDay: number } // 1–28
+  | { kind: 'payday'; recurringId: Id };
 
-/** What a goal looked like before an edit. */
-export interface GoalRevision {
-  at: ISOTimestamp;
-  targetCents: number;
-  monthlyContributionCents: number;
-  targetDate: ISODate | null;
+export interface Plan extends BaseRecord {
+  period: PeriodConfig;
+  startDate: LocalDate; // first day budgets are tracked from
+  templateAllocations: Record<Id, Cents>; // categoryId → per-period amount
+  goalContributions: Record<Id, Cents>; // goalId → per-period amount
+  reasons?: Record<string, PlanReason[]>; // from the generator, keyed by categoryId/goalId
 }
+
+export interface PlanReason {
+  code: string;
+  params?: Record<string, string | number>;
+}
+
+/** Per-period allocation; overrides the plan template for that period. */
+export interface Allocation extends BaseRecord {
+  periodStart: LocalDate;
+  categoryId: Id;
+  amountCents: Cents;
+}
+
+/** Money moved to cover an overspend. from 'next_period' borrows from the next allocation. */
+export interface BudgetMove extends BaseRecord {
+  periodStart: LocalDate;
+  fromCategoryId: Id | 'next_period';
+  toCategoryId: Id;
+  amountCents: Cents;
+}
+
+/** A fresh start restarts budgeting part-way through a period. */
+export interface PeriodSegment extends BaseRecord {
+  periodStart: LocalDate;
+  segmentStart: LocalDate;
+}
+
+// ---------- Goals ----------
 
 export interface Goal extends BaseRecord {
   name: string;
-  kind?: GoalKind;
-  /** For "pay off a card": the card. */
-  linkedAccountId?: string | null;
-  /** Earlier versions, oldest first. Appended whenever the numbers change. */
-  revisions?: GoalRevision[];
-  targetCents: number;
-  savedCents: number;
-  monthlyContributionCents: number;
-  targetDate: ISODate | null;
+  targetCents: Cents;
+  targetDate?: LocalDate;
+  accountId?: Id;
+  startingProgressCents: Cents;
+  archived: boolean;
 }
 
-/** How the columns of one bank's CSV export map onto transactions. */
-export interface CsvMapping {
-  hasHeader: boolean;
-  dateColumn: number;
-  dateFormat: 'YMD' | 'MDY' | 'DMY';
-  descriptionColumn: number;
-  /** Single signed amount column, or -1 when using debit/credit columns. */
-  amountColumn: number;
-  debitColumn: number;
-  creditColumn: number;
-  /** Flip the sign of the amount column (cards that list purchases as positive). */
-  invertAmount: boolean;
+// ---------- Learning ----------
+
+export interface MerchantRule extends BaseRecord {
+  merchantKey: string;
+  categoryId: Id;
+  confirmations: number;
+  pendingCategoryId?: Id;
+  pendingCount: number;
 }
 
-export interface ImportProfile extends BaseRecord {
-  name: string;
-  /** Identifies the file layout; see csvSignature. */
-  signature: string;
-  mapping: CsvMapping;
+// ---------- History ----------
+
+export type EventType =
+  | 'plan_changed'
+  | 'goal_changed'
+  | 'fresh_start'
+  | 'onboarding_complete'
+  | 'period_closed'
+  | 'data_imported';
+
+export interface EventLogEntry {
+  id: Id;
+  at: string;
+  date: LocalDate;
+  type: EventType;
+  payload: Record<string, unknown>;
 }
 
-export interface Setting extends BaseRecord {
-  key: string;
-  value: unknown;
+export interface PeriodSnapshot extends BaseRecord {
+  periodStart: LocalDate;
+  periodEnd: LocalDate;
+  perCategory: Record<Id, { allocatedCents: Cents; spentCents: Cents; remainingCents: Cents }>;
 }
 
-/** Settings rows assembled into one object, with defaults applied. */
-export interface AppSettings {
-  currency: string;
-  onboardedAt: ISOTimestamp | null;
-  defaultAccountId: string | null;
-  /** What to call the user. Optional, never leaves the device. */
-  userName: string;
-  /** Where the user is in onboarding (see src/onboarding/machine.ts); null once not in a flow. */
-  onboarding: unknown;
-  debtStrategy: 'avalanche' | 'snowball';
+// ---------- Quick transactions ----------
+
+/** A one-tap preset for something bought often but not on a schedule (coffee, parking). */
+export interface QuickAction extends BaseRecord {
+  slot: number; // position on Home, 0-based
+  label: string;
+  icon: string; // key into the app's icon set
+  amountCents: Cents;
+  categoryId?: Id;
+  merchant?: string;
+  accountId: Id | 'ask'; // 'ask' = choose the account each time
 }
 
-/** Fields the caller supplies when creating a record. */
-export type NewRecord<T extends BaseRecord> = Omit<T, keyof BaseRecord>;
+// ---------- Settings ----------
+
+export interface Settings {
+  id: 'settings';
+  autoPostRecurring: boolean;
+  subtractCardBalances: boolean;
+  bufferCents: Cents;
+  freshStartDays: number;
+  freshStartBacklog: number;
+  lastOpenedDate?: LocalDate;
+  onboardedAt?: string;
+  debugToday?: LocalDate;
+  defaultCurrency: string;
+  // Rough weekly spending per category from onboarding; seeds forecasts with no history.
+  habitWeeklyCents?: Record<Id, Cents>;
+  dismissedDetections: string[]; // merchantKeys the user declined
+  onboarding?: OnboardingState; // in-progress answers, so quitting resumes on the same question
+  userName?: string;
+  customInstitutions?: CustomInstitution[]; // optional, only used for the initials avatar
+  notificationsEnabled: boolean;
+  sentNoticeIds: string[]; // most recent first, capped
+}

@@ -1,73 +1,107 @@
-import type { ISODate } from './types';
+// Local calendar date arithmetic on 'YYYY-MM-DD' strings.
+// Internally uses UTC so daylight-saving changes never shift a day.
 
-const pad = (n: number) => String(n).padStart(2, '0');
+import type { LocalDate } from './types';
 
-/** Local calendar date of a Date, as `YYYY-MM-DD`. */
-export function toISODate(d: Date): ISODate {
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+const RE = /^(\d{4})-(\d{2})-(\d{2})$/;
+const DAY_MS = 86_400_000;
+
+export function parts(d: LocalDate): { y: number; m: number; day: number } {
+  const match = RE.exec(d);
+  if (!match) throw new Error(`Invalid LocalDate: ${d}`);
+  return { y: Number(match[1]), m: Number(match[2]), day: Number(match[3]) };
 }
 
-export function todayISO(now: Date = new Date()): ISODate {
-  return toISODate(now);
+export function isLocalDate(s: unknown): s is LocalDate {
+  if (typeof s !== 'string' || !RE.test(s)) return false;
+  const { y, m, day } = parts(s);
+  return m >= 1 && m <= 12 && day >= 1 && day <= daysInMonth(y, m);
 }
 
-/** Local midnight of an ISO date. */
-export function parseISODate(iso: ISODate): Date {
-  const [y = 1970, m = 1, d = 1] = iso.split('-').map(Number);
-  return new Date(y, m - 1, d);
+export function make(y: number, m: number, day: number): LocalDate {
+  return `${String(y).padStart(4, '0')}-${String(m).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
 }
 
-export function isISODate(value: string): boolean {
-  return /^\d{4}-\d{2}-\d{2}$/.test(value) && toISODate(parseISODate(value)) === value;
+function toEpochDay(d: LocalDate): number {
+  const { y, m, day } = parts(d);
+  return Math.round(Date.UTC(y, m - 1, day) / DAY_MS);
 }
 
-export function addDays(iso: ISODate, days: number): ISODate {
-  const d = parseISODate(iso);
-  d.setDate(d.getDate() + days);
-  return toISODate(d);
+function fromEpochDay(n: number): LocalDate {
+  const dt = new Date(n * DAY_MS);
+  return make(dt.getUTCFullYear(), dt.getUTCMonth() + 1, dt.getUTCDate());
 }
 
-/** "Today", "Yesterday", or a short date ("Mon, Oct 5"; year added if not this year). */
-export function dayLabel(iso: ISODate, today: ISODate, locale?: string): string {
-  if (iso === today) return 'Today';
-  if (iso === addDays(today, -1)) return 'Yesterday';
-  const sameYear = iso.slice(0, 4) === today.slice(0, 4);
-  return new Intl.DateTimeFormat(locale, {
-    weekday: 'short',
-    month: 'short',
-    day: 'numeric',
-    year: sameYear ? undefined : 'numeric',
-  }).format(parseISODate(iso));
+export function isLeapYear(y: number): boolean {
+  return (y % 4 === 0 && y % 100 !== 0) || y % 400 === 0;
 }
 
-/** Whole days from `a` to `b` (positive when `b` is later). DST-safe. */
-export function daysBetween(a: ISODate, b: ISODate): number {
-  const utc = (iso: ISODate) => {
-    const [y = 1970, m = 1, d = 1] = iso.split('-').map(Number);
-    return Date.UTC(y, m - 1, d);
-  };
-  return Math.round((utc(b) - utc(a)) / 86_400_000);
+export function daysInMonth(y: number, m: number): number {
+  return [31, isLeapYear(y) ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][m - 1]!;
 }
 
-export function daysInMonth(year: number, month1: number): number {
-  return new Date(year, month1, 0).getDate();
+export function addDays(d: LocalDate, n: number): LocalDate {
+  return fromEpochDay(toEpochDay(d) + n);
 }
 
-/** First and last day of the month containing `iso`. */
-export function monthRange(iso: ISODate): { start: ISODate; end: ISODate } {
-  const [y = 1970, m = 1] = iso.split('-').map(Number);
-  const prefix = iso.slice(0, 8);
-  return { start: `${prefix}01`, end: `${prefix}${String(daysInMonth(y, m)).padStart(2, '0')}` };
+/** b − a in days. */
+export function diffDays(a: LocalDate, b: LocalDate): number {
+  return toEpochDay(b) - toEpochDay(a);
 }
 
-/** Days left in the month, counting today. */
-export function daysLeftInMonth(today: ISODate): number {
-  return daysBetween(today, monthRange(today).end) + 1;
+/** Same day-of-month n months later, clamped to the month's last day. */
+export function addMonths(d: LocalDate, n: number, dayOfMonth?: number): LocalDate {
+  const { y, m, day } = parts(d);
+  const idx = y * 12 + (m - 1) + n;
+  const ny = Math.floor(idx / 12);
+  const nm = (idx % 12) + 1;
+  return make(ny, nm, Math.min(dayOfMonth ?? day, daysInMonth(ny, nm)));
 }
 
-/** Short date without weekday ("Oct 5"). */
-export function shortDate(iso: ISODate, locale?: string): string {
-  return new Intl.DateTimeFormat(locale, { month: 'short', day: 'numeric' }).format(
-    parseISODate(iso),
-  );
+/** Day `day` in the given month, clamped (31 → 30 in April, 28/29 in February). */
+export function clampedDay(y: number, m: number, day: number): LocalDate {
+  return make(y, m, Math.min(day, daysInMonth(y, m)));
+}
+
+export function startOfMonth(d: LocalDate): LocalDate {
+  const { y, m } = parts(d);
+  return make(y, m, 1);
+}
+
+export function endOfMonth(d: LocalDate): LocalDate {
+  const { y, m } = parts(d);
+  return make(y, m, daysInMonth(y, m));
+}
+
+/** 0 = Sunday … 6 = Saturday. */
+export function dayOfWeek(d: LocalDate): number {
+  return (((toEpochDay(d) + 4) % 7) + 7) % 7; // 1970-01-01 was a Thursday
+}
+
+export function compare(a: LocalDate, b: LocalDate): number {
+  return a < b ? -1 : a > b ? 1 : 0;
+}
+
+export const minDate = (a: LocalDate, b: LocalDate): LocalDate => (a < b ? a : b);
+export const maxDate = (a: LocalDate, b: LocalDate): LocalDate => (a > b ? a : b);
+
+/** Inclusive range from..to. */
+export function eachDay(from: LocalDate, to: LocalDate): LocalDate[] {
+  const out: LocalDate[] = [];
+  for (let n = toEpochDay(from), end = toEpochDay(to); n <= end; n++) out.push(fromEpochDay(n));
+  return out;
+}
+
+export function inRange(d: LocalDate, from: LocalDate, to: LocalDate): boolean {
+  return d >= from && d <= to;
+}
+
+/** The device's local calendar day for a JS Date. */
+export function localDateOf(dt: Date): LocalDate {
+  return make(dt.getFullYear(), dt.getMonth() + 1, dt.getDate());
+}
+
+/** Days in the year containing d. */
+export function daysInYear(d: LocalDate): number {
+  return isLeapYear(parts(d).y) ? 366 : 365;
 }

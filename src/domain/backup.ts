@@ -1,125 +1,71 @@
-import type {
-  Account,
-  Budget,
-  Category,
-  Goal,
-  ImportProfile,
-  MerchantRule,
-  Recurring,
-  Setting,
-  Transaction,
-} from './types';
+// Full JSON backup format: versioned, validated on import, migratable.
 
-export const BACKUP_APP_ID = 'tameru';
-// v2 added importProfiles. Older backups simply lack the newer tables.
-export const BACKUP_FORMAT_VERSION = 2;
+export const BACKUP_FORMAT = 1;
 
-export const TABLE_NAMES = [
-  'accounts',
-  'categories',
-  'transactions',
-  'merchantRules',
-  'budgets',
-  'recurring',
-  'goals',
-  'settings',
-  'importProfiles',
-] as const;
-
-export type TableName = (typeof TABLE_NAMES)[number];
-
-export interface BackupData {
-  accounts: Account[];
-  categories: Category[];
-  transactions: Transaction[];
-  merchantRules: MerchantRule[];
-  budgets: Budget[];
-  recurring: Recurring[];
-  goals: Goal[];
-  settings: Setting[];
-  importProfiles: ImportProfile[];
-}
-
-export interface Backup {
-  app: typeof BACKUP_APP_ID;
-  formatVersion: number;
+export interface BackupFile<T = Record<string, unknown[]>> {
+  app: 'tameru';
+  format: number;
+  schemaVersion: number;
   exportedAt: string;
-  data: BackupData;
+  tables: T;
 }
 
-export type BackupValidation =
-  { ok: true; backup: Backup; counts: Record<TableName, number> } | { ok: false; error: string };
-
-const isObject = (v: unknown): v is Record<string, unknown> =>
-  typeof v === 'object' && v !== null && !Array.isArray(v);
-
-function hasBaseFields(row: unknown): boolean {
-  return (
-    isObject(row) &&
-    typeof row.id === 'string' &&
-    row.id !== '' &&
-    typeof row.createdAt === 'string' &&
-    typeof row.updatedAt === 'string' &&
-    (row.deletedAt === null || typeof row.deletedAt === 'string')
-  );
+export function makeBackup<T>(tables: T, schemaVersion: number, exportedAt: string): BackupFile<T> {
+  return { app: 'tameru', format: BACKUP_FORMAT, schemaVersion, exportedAt, tables };
 }
 
-/** Check that parsed JSON is a Tameru backup this version can read. */
-export function validateBackup(json: unknown): BackupValidation {
-  if (!isObject(json) || json.app !== BACKUP_APP_ID) {
-    return { ok: false, error: 'This file is not a Tameru backup.' };
-  }
-  if (typeof json.formatVersion !== 'number' || json.formatVersion < 1) {
-    return { ok: false, error: 'This backup is missing its format version.' };
-  }
-  if (json.formatVersion > BACKUP_FORMAT_VERSION) {
-    return {
-      ok: false,
-      error: 'This backup was made by a newer version of Tameru. Update the app and try again.',
-    };
-  }
-  if (!isObject(json.data)) {
-    return { ok: false, error: 'This backup has no data section.' };
-  }
+/** Upgrades older backup formats in order. Add an entry when BACKUP_FORMAT changes. */
+const FORMAT_MIGRATIONS: Record<number, (b: BackupFile) => BackupFile> = {
+  // 1 → 2: (example) (b) => ({ ...b, format: 2, tables: { ...b.tables, newTable: [] } }),
+};
 
-  const data = {} as Record<TableName, unknown[]>;
-  const counts = {} as Record<TableName, number>;
-  for (const table of TABLE_NAMES) {
-    const rows = json.data[table] ?? [];
-    if (!Array.isArray(rows) || !rows.every(hasBaseFields)) {
-      return { ok: false, error: `The "${table}" section of this backup is damaged.` };
-    }
-    const ids = new Set(rows.map((row: { id: string }) => row.id));
-    if (ids.size !== rows.length) {
-      return { ok: false, error: `The "${table}" section of this backup has duplicate records.` };
-    }
-    data[table] = rows;
-    counts[table] = rows.filter(
-      (row: { deletedAt: string | null }) => row.deletedAt === null,
-    ).length;
-  }
+export type ParseResult<T> = { ok: true; backup: BackupFile<T> } | { ok: false; error: string };
 
-  for (const tx of data.transactions as Record<string, unknown>[]) {
-    if (!Number.isSafeInteger(tx.amountCents) || typeof tx.date !== 'string') {
-      return {
-        ok: false,
-        error: 'This backup contains a transaction with an invalid amount or date.',
-      };
+// Fields that must be integer cents wherever they appear.
+const CENT_FIELDS = /Cents$/;
+
+function findFloatMoney(v: unknown, path: string): string | null {
+  if (Array.isArray(v)) {
+    for (let i = 0; i < v.length; i++) {
+      const r = findFloatMoney(v[i], `${path}[${i}]`);
+      if (r) return r;
+    }
+  } else if (v && typeof v === 'object') {
+    for (const [k, x] of Object.entries(v)) {
+      if (CENT_FIELDS.test(k) && (typeof x === 'number' || typeof x === 'string') && !Number.isSafeInteger(x)) return `${path}.${k}`;
+      const r = findFloatMoney(x, `${path}.${k}`);
+      if (r) return r;
     }
   }
-
-  return {
-    ok: true,
-    backup: {
-      app: BACKUP_APP_ID,
-      formatVersion: json.formatVersion,
-      exportedAt: typeof json.exportedAt === 'string' ? json.exportedAt : '',
-      data: data as unknown as BackupData,
-    },
-    counts,
-  };
+  return null;
 }
 
-export function backupFileName(date: string, encrypted = false): string {
-  return `tameru-backup-${date}.${encrypted ? 'encrypted.json' : 'json'}`;
+export function parseBackup<T>(json: string, tableNames: readonly string[]): ParseResult<T> {
+  let data: unknown;
+  try {
+    data = JSON.parse(json);
+  } catch {
+    return { ok: false, error: 'not JSON' };
+  }
+  if (!data || typeof data !== 'object') return { ok: false, error: 'not a backup' };
+  let b = data as BackupFile;
+  if (b.app !== 'tameru' || typeof b.format !== 'number' || !b.tables || typeof b.tables !== 'object')
+    return { ok: false, error: 'not a Tameru backup' };
+  if (b.format > BACKUP_FORMAT) return { ok: false, error: 'made by a newer version of Tameru' };
+  while (b.format < BACKUP_FORMAT) {
+    const m = FORMAT_MIGRATIONS[b.format];
+    if (!m) return { ok: false, error: `no upgrade from format ${b.format}` };
+    b = m(b);
+  }
+  const tables: Record<string, unknown[]> = {};
+  for (const n of tableNames) {
+    const t = (b.tables as Record<string, unknown>)[n] ?? [];
+    if (!Array.isArray(t)) return { ok: false, error: `${n} is not a list` };
+    if (t.some((r) => !r || typeof r !== 'object' || typeof (r as { id?: unknown }).id !== 'string'))
+      return { ok: false, error: `${n} has a row without an id` };
+    tables[n] = t;
+  }
+  const bad = findFloatMoney(tables, 'tables');
+  if (bad) return { ok: false, error: `${bad} is not whole cents` };
+  return { ok: true, backup: { ...b, tables: tables as T } };
 }
