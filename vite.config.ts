@@ -30,12 +30,15 @@ const MOUNTS: { url: string; dir: string; include?: (file: string) => boolean }[
 
 function staticMounts(): Plugin {
   let outDir = 'dist';
+  let copy = false;
   // Longest prefix first so /ocr/core wins over /ocr.
   const mounts = [...MOUNTS].sort((a, b) => b.url.length - a.url.length);
   return {
     name: 'tameru-static-mounts',
     configResolved(c) {
       outDir = resolve(c.root, c.build.outDir);
+      // Vitest resolves a throwaway build config; only real builds get the copies.
+      copy = c.command === 'build' && !process.env.VITEST;
     },
     configureServer(server) {
       server.middlewares.use((req, res, next) => {
@@ -50,6 +53,7 @@ function staticMounts(): Plugin {
       });
     },
     closeBundle() {
+      if (!copy) return;
       for (const m of MOUNTS) {
         if (!existsSync(m.dir)) continue;
         const include = m.include;
