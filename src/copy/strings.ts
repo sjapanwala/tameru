@@ -246,6 +246,13 @@ export const S = {
   },
 
   transactions: {
+    chart: {
+      open: 'Show spending breakdown',
+      close: 'Hide spending breakdown',
+      average: (c: Cents) => `avg ${$(c)}/day`,
+      other: 'Other',
+      empty: 'No spending in the last two weeks.',
+    },
     title: 'Activity',
     search: 'Search',
     filters: { all: 'All', spent: 'Spent', income: 'Income', transfer: 'Transfers' },

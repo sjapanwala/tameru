@@ -2,7 +2,7 @@
 // summary of this period. Tap a row for details. Upload or photograph a receipt to scan it.
 
 import { useMemo, useRef, useState } from 'preact/hooks';
-import { fmtDate, fmtWeekday, money, S } from '../../copy/strings';
+import { fmtDate, fmtWeekday, S } from '../../copy/strings';
 import { addDays, diffDays } from '../../domain/dates';
 import { isBudgetCategory } from '../../domain/defaults';
 import { merchantKey } from '../../domain/merchant';
@@ -15,6 +15,7 @@ import { useApp, useLoad } from '../hooks';
 import { ArrowDownLeft, CameraIcon, PencilIcon, PlusIcon, SearchIcon, SwapIcon, TrashIcon, UploadIcon } from '../Icons';
 import { ReceiptScanner } from '../ReceiptScanner';
 import { Sheet } from '../Sheet';
+import { SpendCard } from '../SpendCard';
 import { SwipeRow } from '../SwipeRow';
 import { toast } from '../toast';
 import { orderedAccounts } from '../../services/accounts';
@@ -67,17 +68,13 @@ export function Transactions() {
     [groups, filter, q, categories.length, accounts.length],
   );
 
-  // This period's totals and a 14-day spending sparkline for the summary card.
+  // This period's totals for the spending card (its 14-day chart works from the day groups).
   const summary = useMemo(() => {
     const txs = (periodTxs ?? []).filter((t) => t.status === 'posted');
     const spent = txs.reduce((s, t) => s + (t.type === 'expense' ? t.amountCents : t.type === 'refund' ? -t.amountCents : 0), 0);
     const received = txs.reduce((s, t) => s + (t.type === 'income' ? t.amountCents : 0), 0);
-    const bars = Array.from({ length: 14 }, (_, i) => {
-      const d = addDays(today, i - 13);
-      return (groups ?? []).find((g) => g.date === d)?.spentCents ?? 0;
-    });
-    return { spent, received, bars, max: Math.max(1, ...bars) };
-  }, [periodTxs, groups, today]);
+    return { spent, received };
+  }, [periodTxs]);
 
   const run = async (fn: () => Promise<unknown>, done?: string) => {
     try {
@@ -138,25 +135,13 @@ export function Transactions() {
       <input ref={uploadRef} type="file" accept={RECEIPT_TYPES} hidden onChange={(e) => onReceipt(e.target as HTMLInputElement, 'upload')} />
       <input ref={cameraRef} type="file" accept="image/*" capture="environment" hidden onChange={(e) => onReceipt(e.target as HTMLInputElement, 'camera')} />
 
-      <div class="summary-card">
-        <div class="summary-card__nums">
-          <div>
-            <p class="summary-card__label">{S.transactions.periodSpent}</p>
-            <p class="summary-card__amount">
-              <Amount c={summary.spent} />
-            </p>
-          </div>
-          <div class="summary-card__in">
-            <p class="summary-card__label">{S.transactions.periodIn}</p>
-            <p class="num">+{money(summary.received)}</p>
-          </div>
-        </div>
-        <div class="spark" aria-hidden="true">
-          {summary.bars.map((v, i) => (
-            <span key={i} class={i === 13 ? 'today' : ''} style={{ height: `${Math.max(6, (v / summary.max) * 100)}%`, animationDelay: `${i * 25}ms` }} />
-          ))}
-        </div>
-      </div>
+      <SpendCard
+        spentCents={summary.spent}
+        receivedCents={summary.received}
+        transactions={groups.flatMap((g) => g.transactions)}
+        today={today}
+        catName={catName}
+      />
 
       <label class="search">
         <SearchIcon />
