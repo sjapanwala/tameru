@@ -4015,3 +4015,37 @@ main .spend-card__legend > li {
 .spend-card--animate .spark__seg {
   transition: opacity var(--t-mid) var(--glide);
 }
+
+
+/* ---------- iOS status-bar blur reset (see pwa/iosBlurReset.ts) ---------- */
+
+.blur-reset {
+  position: fixed;
+  pointer-events: none;
+  background: rgb(255 255 255 / 0.01);
+}
+
+.blur-reset__cover {
+  display: none;
+  inset: 0;
+  z-index: 2147483646;
+}
+
+.blur-reset__cover.on {
+  display: block;
+  animation: fade-in 0.3s;
+}
+
+.blur-reset__panel {
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 90%;
+  z-index: 2147483647;
+  transform: translateX(110%);
+  transition: transform 0.3s;
+}
+
+.blur-reset__panel.on {
+  transform: translateX(0);
+}

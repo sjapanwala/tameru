@@ -8,11 +8,13 @@ import '@fontsource/geist-mono/latin-500.css';
 import './styles/tokens.css';
 import './styles/app.css';
 import { registerSW } from 'virtual:pwa-register';
+import { resetIosBlur } from '../pwa/iosBlurReset';
 import { listenForInstallPrompt } from '../pwa/install';
 import { runAppInThisWindow } from '../pwa/standalone';
 import { InstallGate } from './gate/InstallGate';
 
 registerSW({ immediate: true });
+resetIosBlur();
 
 const root = document.getElementById('app')!;
 
