@@ -46,7 +46,8 @@
   color-scheme: light;
 }
 *, *::before, *::after { box-sizing: border-box; }
-html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; }
+/* Nothing may widen the page sideways: iPhone Safari zooms out to fit it, shifting everything left. */
+html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; overflow-x: clip; }
 body { margin: 0; background: var(--paper); color: var(--ink); font: 400 1rem/1.5 var(--font); -webkit-font-smoothing: antialiased; overflow-x: clip; }
 h1, h2, h3, p { margin: 0; }
 h1, h2 { font-weight: 600; letter-spacing: -0.045em; text-wrap: balance; }
@@ -103,14 +104,6 @@ mark.on { --swipe: 1; }
 .ruler { margin: 40px auto 0; width: min(420px, 80%); height: 14px; color: var(--ink); background: repeating-linear-gradient(90deg, currentColor 0 1.5px, transparent 1.5px 8px); opacity: 0.25; mask: linear-gradient(90deg, transparent, #000 15%, #000 85%, transparent); -webkit-mask: linear-gradient(90deg, transparent, #000 15%, #000 85%, transparent); }
 @media (max-width: 600px) { .hero { padding-top: calc(118px + env(safe-area-inset-top, 0px)); } }
 
-/* The till roll: real entries from the screenshots, running past. */
-.tape { border-block: 1px dashed var(--rule); overflow: hidden; background: var(--sheet); }
-.tape__run { display: flex; width: max-content; animation: run 48s linear infinite; }
-.tape span { font: 500 0.85rem var(--mono); letter-spacing: 0.04em; text-transform: uppercase; padding: 14px 22px; white-space: nowrap; color: var(--ink-2); }
-.tape span b { font-weight: 500; color: var(--ink); margin-left: 10px; }
-.tape span b.in { color: var(--plus); }
-.tape span::after { content: "✳"; margin-left: 44px; color: var(--ink-3); }
-@keyframes run { to { transform: translateX(-50%); } }
 
 /* ---------- phone ---------- */
 .phone {
@@ -181,7 +174,6 @@ mark.on { --swipe: 1; }
 .step p { color: var(--ink-2); font-size: 1.05rem; text-wrap: pretty; }
 .step__art { background: var(--bg); border-radius: 12px; display: flex; align-items: flex-start; justify-content: center; overflow: hidden; padding-top: 56px; position: relative; box-shadow: inset 0 0 0 1px rgb(18 18 17 / 0.06); }
 .step__art .phone { --w: min(320px, 29vw); }
-.step__art .stamp { position: absolute; left: 22px; bottom: 22px; font: 600 0.75rem var(--mono); letter-spacing: 0.14em; text-transform: uppercase; padding: 8px 12px; border: 1.5px solid var(--ink); border-radius: 6px; rotate: -6deg; background: rgb(251 250 246 / 0.7); }
 @media (max-width: 860px) {
   .step { position: relative; top: 0; grid-template-columns: 1fr; gap: 24px; padding: 20px; min-height: 0; }
   .step h3 { margin-top: 20px; }
@@ -203,8 +195,10 @@ mark.on { --swipe: 1; }
 .planner h2 { font-size: clamp(2rem, 4vw, 3.4rem); }
 .planner mark { color: var(--ink); }
 .planner .lede { color: rgb(243 240 232 / 0.62); font-size: 1.02rem; }
-.planner__dial { min-height: 0; display: grid; place-items: center; }
-.planner__dial svg { width: 100%; height: 100%; max-height: 520px; overflow: visible; }
+/* The dial scales to whatever room is left in its slot. Positioned absolutely so every
+   browser fits it to the box (Safari otherwise sizes an SVG from its width alone). */
+.planner__dial { position: relative; min-height: 0; }
+.planner__dial svg { position: absolute; inset: 0; width: 100%; height: 100%; max-height: 520px; margin: auto; overflow: visible; }
 .planner__dial line { stroke-width: 5; stroke-linecap: round; transition: stroke 250ms; }
 .planner__dial .lbl { opacity: 0; transform: translateX(var(--dx, 0)); transition: opacity 500ms var(--glide), transform 500ms var(--glide); }
 .planner__dial .lbl.on { opacity: 1; transform: none; }
@@ -222,9 +216,12 @@ mark.on { --swipe: 1; }
 .legend i { width: 10px; height: 10px; border-radius: 3px; background: var(--c); }
 .legend b { grid-column: 2; font: 500 0.75rem var(--mono); color: rgb(243 240 232 / 0.6); }
 @media (max-width: 900px) {
-  .planner__sticky { padding-top: 76px; }
-  .planner__card { grid-template-columns: 1fr; grid-template-rows: auto minmax(0, 1fr) auto; height: calc(100svh - 92px); }
-  .planner__copy { grid-template-columns: 1fr; }
+  .planner__sticky { padding-top: 72px; }
+  .planner__card { grid-template-columns: 1fr; grid-template-rows: auto minmax(120px, 1fr) auto; gap: 14px; height: calc(100svh - 88px); padding: 22px 20px; border-radius: 24px; }
+  .planner__copy { grid-template-columns: 1fr; gap: 8px; }
+  .planner h2 { font-size: clamp(1.7rem, 7.6vw, 2.2rem); }
+  .legend { gap: 8px 14px; }
+  .legend li { font-size: 0.82rem; line-height: 1.25; }
   .planner__copy .lede { display: none; }
   .planner__phone { display: none; }
   .planner__dial .lbl { display: none; }
@@ -245,7 +242,7 @@ mark.on { --swipe: 1; }
 @media (max-width: 900px) { .trio { grid-template-columns: 1fr; } }
 
 /* ---------- scan: the phone moves over a receipt and takes its picture ---------- */
-.scan { --p: 0; height: 300vh; position: relative; }
+.scan { --p: 0; height: 300vh; position: relative; overflow-x: clip; } /* the phone waits off-screen to the right */
 .scan__sticky { position: sticky; top: 0; height: 100vh; display: grid; grid-template-columns: 0.8fr 1.2fr; align-items: center; gap: 40px; padding-top: 56px; }
 .scan__steps { list-style: none; margin: 32px 0 0; padding: 0; display: grid; gap: 4px; }
 .scan__steps li { display: grid; grid-template-columns: 34px 1fr; gap: 0 12px; padding: 14px 0; border-top: 1px solid var(--rule); color: var(--ink-3); transition: color 400ms var(--glide); }
@@ -302,7 +299,8 @@ mark.on { --swipe: 1; }
   .scan__steps li b { font-size: 0.9rem; }
   .scan__stage { height: auto; min-height: 0; }
   .slipr { width: min(260px, 70vw); font-size: 0.7rem; }
-  .scan__phone .phone { --w: min(200px, 30vh); }
+  .scan__stage { align-self: stretch; overflow: clip; }
+  .scan__phone .phone { --w: min(200px, calc((100svh - 300px) / 2.25)); } /* fits under the steps on short screens */
 }
 
 /* ---------- free ---------- */
@@ -313,19 +311,34 @@ mark.on { --swipe: 1; }
 .tag p { color: rgb(243 240 232 / 0.6); }
 .tag .big { font: 600 clamp(3.5rem, 6vw, 5rem) var(--mono); letter-spacing: -0.06em; margin: 36px 0 30px; }
 .tag .big small { font: 400 1rem var(--font); letter-spacing: 0; color: rgb(243 240 232 / 0.6); margin-left: 8px; }
-.tag .btn { margin-top: auto; }
+.tag__fine { margin-top: auto; font: 500 0.8rem var(--mono); letter-spacing: 0.04em; }
 .included { background: var(--sheet); border: 1px solid var(--rule); border-radius: 18px; padding: 32px; }
 .included h3 { font-size: 1.3rem; margin-bottom: 18px; }
 .included ul { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: 1fr 1fr; column-gap: 24px; }
 .included li { display: flex; gap: 12px; padding: 11px 0; border-bottom: 1px solid var(--rule-soft); color: var(--ink-2); }
 .included li::before { content: "✓"; font: 600 0.8rem var(--mono); color: var(--ink); background: var(--lime); width: 20px; height: 20px; border-radius: 4px; display: grid; place-items: center; flex: none; margin-top: 2px; }
-.howto { counter-reset: s; list-style: none; padding: 0; margin: 40px 0 0; display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
-.howto li { counter-increment: s; border-top: 1.5px solid var(--ink); padding-top: 18px; display: grid; gap: 8px; align-content: start; }
-.howto li::before { content: "Step " counter(s, decimal-leading-zero); font: 500 0.75rem var(--mono); letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-3); }
-.howto h3 { font-size: 1.2rem; }
-.howto p { color: var(--ink-2); }
+/* The floating bar travels down with you and lands here, opening into the download button. */
+.landing { display: grid; justify-items: center; gap: 14px; margin-top: 56px; }
+.landing__fine { margin: 0; font: 500 0.78rem var(--mono); letter-spacing: 0.06em; color: var(--ink-3); text-align: center; }
+.land {
+  position: relative; display: block; width: 100%; max-width: var(--dock-w, 300px); height: 52px;
+  border-radius: 999px; background: var(--ink); color: var(--ink); text-decoration: none; visibility: hidden;
+  box-shadow: 0 20px 40px -14px rgb(18 18 17 / 0.55);
+  transition: max-width 700ms var(--glide), height 700ms var(--glide), border-radius 700ms var(--glide), background 450ms var(--glide), box-shadow 700ms;
+}
+.land.on { visibility: visible; }
+.land.big { max-width: 760px; height: 96px; border-radius: 24px; background: var(--lime); box-shadow: 0 30px 50px -28px rgb(18 18 17 / 0.5); }
+.land.big:hover { background: #e6f77c; }
+.land__small { position: absolute; inset: 5px; display: flex; gap: 4px; transition: opacity 180ms; }
+.land__small .btn { min-height: 42px; border: 0; }
+.land__small .btn--line { color: var(--paper); }
+.land__big { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; gap: 16px; opacity: 0; font: 600 clamp(1.35rem, 3vw, 1.9rem) var(--font); letter-spacing: -0.035em; transition: opacity 400ms var(--glide) 220ms; white-space: nowrap; }
+.land__big i { width: 52px; height: 52px; border-radius: 50%; background: var(--ink); color: var(--lime); display: grid; place-items: center; }
+.land__big svg { width: 24px; height: 24px; }
+.land.big .land__small { opacity: 0; }
+.land.big .land__big { opacity: 1; }
 kbd { font: 500 0.85em var(--mono); background: var(--paper-2); border: 1px solid var(--rule); border-radius: 5px; padding: 0 6px; }
-@media (max-width: 900px) { .free, .howto { grid-template-columns: 1fr; } .included ul { grid-template-columns: 1fr; } }
+@media (max-width: 900px) { .free { grid-template-columns: 1fr; } .included ul { grid-template-columns: 1fr; } }
 
 /* ---------- faq ---------- */
 .faq { display: grid; grid-template-columns: 1fr 1.5fr; gap: 48px; padding-block: 18vh 10vh; }
@@ -361,6 +374,7 @@ footer { background: var(--ink); color: var(--paper); padding: 72px 0 calc(110px
 }
 .dock.on { translate: -50% 0; opacity: 1; }
 .dock .btn { min-height: 42px; border: 0; }
+.dock.snap { transition: none; } /* hands over to the landing spot without sliding */
 .dock .btn--line { color: var(--paper); }
 
 .up { opacity: 0; transform: translateY(28px); transition: opacity 800ms var(--glide), transform 800ms var(--glide); }
@@ -368,7 +382,6 @@ footer { background: var(--ink); color: var(--paper); padding: 72px 0 calc(110px
 
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
-  .tape__run { animation: none; }
   .stage { height: auto; --p: 1 !important; }
   .stage__sticky { position: relative; height: 100vh; }
   .slip { opacity: 1; }
@@ -417,12 +430,6 @@ footer { background: var(--ink); color: var(--paper); padding: 72px 0 calc(110px
     <div class="ruler" aria-hidden="true"></div>
   </section>
 
-  <div class="tape" aria-hidden="true">
-    <div class="tape__run">
-      <span>No Frills #3121<b>−$53.22</b></span><span>Tim Hortons #4412<b>−$3.30</b></span><span>Presto<b>−$20.00</b></span><span>Spotify<b>−$6.99</b></span><span>Coffee<b>−$2.45</b></span><span>Paycheque<b class="in">+$980.00</b></span><span>Safe to spend<b>$1,380.21</b></span><span>Amex Gold<b>$167.77 owing</b></span><span>Emergency fund<b>25%</b></span>
-      <span>No Frills #3121<b>−$53.22</b></span><span>Tim Hortons #4412<b>−$3.30</b></span><span>Presto<b>−$20.00</b></span><span>Spotify<b>−$6.99</b></span><span>Coffee<b>−$2.45</b></span><span>Paycheque<b class="in">+$980.00</b></span><span>Safe to spend<b>$1,380.21</b></span><span>Amex Gold<b>$167.77 owing</b></span><span>Emergency fund<b>25%</b></span>
-    </div>
-  </div>
 
   <section class="stage" data-progress="sticky" aria-label="Tameru on a phone">
     <div class="stage__sticky">
@@ -444,21 +451,21 @@ footer { background: var(--ink); color: var(--paper); padding: 72px 0 calc(110px
         <div><span class="step__n">No.<b>01</b></span><h3>One number, every time you open it</h3></div>
         <p>Home shows what’s safe to spend after everything coming up before your next pay, split into a daily amount. Your cards sit right underneath, and the things you buy every week are one tap away.</p>
       </div>
-      <div class="step__art"><div class="phone"><img src="/screens/home.png" alt="Home: safe to spend, an Amex Gold card, quick adds for coffee and transit, and recent spending" width="780" height="1688" loading="lazy"></div><span class="stamp">Balanced</span></div>
+      <div class="step__art"><div class="phone"><img src="/screens/home.png" alt="Home: safe to spend, an Amex Gold card, quick adds for coffee and transit, and recent spending" width="780" height="1688" loading="lazy"></div></div>
     </article>
     <article class="step" style="--i:1; --bg: var(--hatch)">
       <div class="step__copy">
         <div><span class="step__n">No.<b>02</b></span><h3>Every dollar, by day</h3></div>
         <p>Activity lists what you spent and received this period, grouped by day with a running total. Search it, filter it, add from a receipt photo, or export it all as a CSV.</p>
       </div>
-      <div class="step__art"><div class="phone"><img src="/screens/activity.png" alt="Activity: $1,393.46 spent this period, $980 received, with transactions grouped by day" width="780" height="1688" loading="lazy"></div><span class="stamp">Logged</span></div>
+      <div class="step__art"><div class="phone"><img src="/screens/activity.png" alt="Activity: $1,393.46 spent this period, $980 received, with transactions grouped by day" width="780" height="1688" loading="lazy"></div></div>
     </article>
     <article class="step" style="--i:2; --bg: var(--engrave)">
       <div class="step__copy">
         <div><span class="step__n">No.<b>03</b></span><h3>Every card and account in one place</h3></div>
         <p>Chequing, savings with interest, credit cards with their real card art, due dates and statement days. See what you owe, which way it’s trending, and when the next payment lands.</p>
       </div>
-      <div class="step__art"><div class="phone"><img src="/screens/accounts.png" alt="Accounts: an Amex Gold with $167.77 owing, a 30-day balance chart, payment due in 8 days" width="780" height="1688" loading="lazy"></div><span class="stamp">Due in 8 days</span></div>
+      <div class="step__art"><div class="phone"><img src="/screens/accounts.png" alt="Accounts: an Amex Gold with $167.77 owing, a 30-day balance chart, payment due in 8 days" width="780" height="1688" loading="lazy"></div></div>
     </article>
   </section>
 
@@ -548,7 +555,7 @@ footer { background: var(--ink); color: var(--paper); padding: 72px 0 calc(110px
         <h3>Tameru</h3>
         <p>For your phone · no account</p>
         <div class="big">$0.00<small>forever</small></div>
-        <a class="btn btn--lime" href="https://app.tameru.cc" rel="noopener">Open Tameru</a>
+        <p class="tag__fine">No account · No bank login · Works offline</p>
       </div>
       <div class="included up">
         <h3>Everything included</h3>
@@ -564,11 +571,13 @@ footer { background: var(--ink); color: var(--paper); padding: 72px 0 calc(110px
         </ul>
       </div>
     </div>
-    <ol class="howto">
-      <li class="up"><h3>Open Tameru in Safari</h3><p>On iPhone, use Safari. On Android, Chrome works.</p></li>
-      <li class="up"><h3>Add it to your Home Screen</h3><p>Tap <kbd>Share</kbd>, then <kbd>Add to Home Screen</kbd>. On Android, tap <kbd>Install</kbd>.</p></li>
-      <li class="up"><h3>Answer a few questions</h3><p>Your pay, your bills, what you’re saving for. You get your first plan and your number right away.</p></li>
-    </ol>
+    <div class="landing" id="landing">
+      <a class="land" href="https://app.tameru.cc" rel="noopener" aria-label="Download Tameru">
+        <span class="land__small" aria-hidden="true"><span class="btn btn--lime"><svg><use href="#arrow"/></svg>Open Tameru</span><span class="btn btn--line">It’s free</span></span>
+        <span class="land__big"><i aria-hidden="true"><svg viewBox="0 0 20 20"><path d="M10 3v11M5 9.5l5 5 5-5M4 17h12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></i>Download Tameru</span>
+      </a>
+      <p class="landing__fine">Free · No account · Adds to your Home Screen in seconds</p>
+    </div>
   </section>
 
   <section class="wrap faq" id="faq">
@@ -695,7 +704,7 @@ footer { background: var(--ink); color: var(--paper); padding: 72px 0 calc(110px
       const stage = p < 0.5 ? 'cam' : p < 0.78 ? 'found' : 'add';
       for (const k in show) show[k].classList.toggle('on', k === stage);
       flash.style.opacity = clamp(1 - Math.abs(p - 0.5) / 0.045).toFixed(3);
-      phone.style.setProperty('--lift', (clamp((p - 0.5) / 0.3) * 36).toFixed(1));
+      phone.style.setProperty('--lift', narrow.matches ? '0' : (clamp((p - 0.5) / 0.3) * 36).toFixed(1)); // phones: no room above
       const cur = stage === 'cam' ? 0 : stage === 'found' ? 1 : 2;
       steps.forEach((li, i) => li.classList.toggle('on', i <= cur));
     };
@@ -733,7 +742,24 @@ footer { background: var(--ink); color: var(--paper); padding: 72px 0 calc(110px
   const nav = document.getElementById('nav');
   const dock = document.getElementById('dock');
   const hero = document.getElementById('hero');
-  const foot = document.querySelector('footer');
+    const pins = [document.getElementById('plan'), document.getElementById('scan')];
+  const landing = document.getElementById('landing');
+  const land = landing.querySelector('.land');
+  const sizeLand = () => land.style.setProperty('--dock-w', dock.offsetWidth + 'px');
+  sizeLand(); addEventListener('resize', sizeLand);
+  let landed = false, growTimer;
+  // When the landing spot reaches the bar's place, the bar stays there and opens up.
+  const setLanded = (v) => {
+    if (v === landed) return;
+    landed = v;
+    dock.classList.add('snap');
+    land.classList.toggle('on', v);
+    clearTimeout(growTimer);
+    if (v) growTimer = setTimeout(() => land.classList.add('big'), 140);
+    else land.classList.remove('big');
+    requestAnimationFrame(() => requestAnimationFrame(() => dock.classList.remove('snap')));
+  };
+  const narrow = matchMedia('(max-width: 900px)');
 
   let queued = false;
   const frame = () => {
@@ -753,7 +779,12 @@ footer { background: var(--ink); color: var(--paper); padding: 72px 0 calc(110px
       if (mark) mark.classList.toggle('on', p >= 1);
     }
     nav.classList.toggle('scrolled', scrollY > 24);
-    dock.classList.toggle('on', hero.getBoundingClientRect().bottom < 0 && foot.getBoundingClientRect().top > vh);
+    // On phones the pinned scenes fill the screen, so the bar steps aside while one is on.
+    const pinned = narrow.matches && pins.some((el) => { const r = el.getBoundingClientRect(); return r.top <= 0 && r.bottom >= vh; });
+    // The bar's centre is fixed near the bottom; the small pill sits at the top of the landing spot.
+    const dockMid = vh - parseFloat(getComputedStyle(dock).bottom) - dock.offsetHeight / 2;
+    setLanded(landing.getBoundingClientRect().top + 26 <= dockMid);
+    dock.classList.toggle('on', hero.getBoundingClientRect().bottom < 0 && !landed && !pinned);
   };
   const ask = () => { if (!queued) { queued = true; requestAnimationFrame(frame); } };
   addEventListener('scroll', ask, { passive: true });
