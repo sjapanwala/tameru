@@ -13,7 +13,7 @@
     "jsxImportSource": "preact",
     "skipLibCheck": true,
     "isolatedModules": true,
-    "types": ["vite/client", "vite-plugin-pwa/client", "node"]
+    "types": ["vite/client", "vite-plugin-pwa/client", "node", "dom-chromium-installation-events"]
   },
   "include": ["src", "tests", "vite.config.ts"]
 }

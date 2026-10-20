@@ -77,9 +77,11 @@ export default defineConfig({
       injectRegister: false,
       includeAssets: ['favicon.svg', 'icons/apple-touch-icon.png'],
       manifest: {
+        id: './',
         name: 'Tameru',
         short_name: 'Tameru',
-        description: 'Local-first budgeting. Your data stays on this device.',
+        description: 'A calm budget that lives on your phone.',
+        categories: ['finance', 'productivity'],
         start_url: './',
         scope: './',
         display: 'standalone',
@@ -91,10 +93,18 @@ export default defineConfig({
           { src: 'icons/icon-512.png', sizes: '512x512', type: 'image/png' },
           { src: 'icons/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
         ],
+        // Shown in the install sheet's gallery (pwa-install, and Chrome's richer install UI).
+        screenshots: [
+          { src: 'screenshots/home.png', sizes: '780x1688', type: 'image/png', form_factor: 'narrow', label: 'Safe to spend today' },
+          { src: 'screenshots/activity.png', sizes: '780x1688', type: 'image/png', form_factor: 'narrow', label: 'Every transaction, by day' },
+          { src: 'screenshots/accounts.png', sizes: '780x1688', type: 'image/png', form_factor: 'narrow', label: 'Cards and accounts at a glance' },
+        ],
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,svg,png,webmanifest,woff2}'],
-        globIgnores: ['card-art/**', 'ocr/**'], // fetched on demand (art per card; OCR on first scan), never at install
+        // Fetched on demand (art per card; OCR on first scan), never at install. The screenshots
+        // and the install sheet are only for the browser-tab install page, never the installed app.
+        globIgnores: ['card-art/**', 'ocr/**', 'screenshots/**', 'assets/pwa-install*'],
         navigateFallback: 'index.html',
         // Card art: keep each image once it's been shown; refresh the manifest quietly.
         runtimeCaching: [

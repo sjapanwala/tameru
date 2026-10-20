@@ -3050,3 +3050,131 @@ main ul.txlist > li:has(> .txrow) {
   -webkit-mask-image: linear-gradient(to right, transparent, #000 56px, #000 calc(100% - 56px), transparent);
   mask-image: linear-gradient(to right, transparent, #000 56px, #000 calc(100% - 56px), transparent);
 }
+
+/* ---------- install page (browser tab, before the app is installed) ---------- */
+
+.install {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  margin: calc(-1 * (var(--safe-t) + var(--s4))) calc(-1 * var(--s5)) calc(-1 * (var(--safe-b) + var(--s7)));
+}
+
+.install__hero {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  padding: calc(var(--safe-t) + 72px) var(--s5) var(--s7);
+  border-radius: 0 0 36px 36px;
+  background: var(--hero-bg);
+  color: var(--hero-text);
+  text-align: center;
+}
+
+.install__hero::before {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  inset: -20% -10% auto;
+  height: 80%;
+  background: radial-gradient(60% 60% at 50% 30%, rgb(255 255 255 / 0.12), transparent 70%);
+}
+
+.install__icon {
+  display: block;
+  margin: 0 auto var(--s5);
+  border-radius: 22px;
+  box-shadow: 0 0 0 1px rgb(255 255 255 / 0.12), 0 18px 40px -12px rgb(0 0 0 / 0.8);
+  animation: install-rise var(--t-slow) var(--glide) both;
+}
+
+.install__hero h1 {
+  margin: 0;
+  font-size: var(--fs-hero);
+  letter-spacing: -0.04em;
+  line-height: 1;
+  animation: install-rise var(--t-slow) var(--glide) 80ms both;
+}
+
+.install__tagline {
+  margin: var(--s3) auto 0;
+  max-width: 18em;
+  color: var(--hero-dim);
+  font-size: var(--fs-lg);
+  line-height: 1.3;
+  animation: install-rise var(--t-slow) var(--glide) 160ms both;
+}
+
+.install__points {
+  list-style: none;
+  margin: 0;
+  padding: var(--s6) var(--s5) var(--s4);
+  display: grid;
+  gap: var(--s5);
+}
+
+.install__points li {
+  display: flex;
+  gap: var(--s4);
+  align-items: flex-start;
+  animation: install-rise var(--t-slow) var(--glide) both;
+}
+
+.install__points li:nth-child(1) { animation-delay: 240ms; }
+.install__points li:nth-child(2) { animation-delay: 300ms; }
+.install__points li:nth-child(3) { animation-delay: 360ms; }
+
+.install__points strong {
+  display: block;
+  font-weight: 600;
+}
+
+.install__points small {
+  display: block;
+  color: var(--text-2);
+  font-size: var(--fs-sm);
+  line-height: 1.4;
+}
+
+/* a small receipt-style tick, the app's stand-in for icons */
+.install__tick {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  margin-top: 1px;
+  border-radius: 50%;
+  background: var(--accent);
+  position: relative;
+}
+
+.install__tick::after {
+  content: '';
+  position: absolute;
+  left: 7.5px;
+  top: 4.5px;
+  width: 5px;
+  height: 9px;
+  border: solid var(--accent-text);
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+
+.install__cta {
+  margin-top: auto;
+  padding: var(--s4) var(--s5) calc(var(--safe-b) + var(--s5));
+  animation: install-rise var(--t-slow) var(--glide) 420ms both;
+}
+
+.install__fine {
+  margin: var(--s3) 0 0;
+  text-align: center;
+  color: var(--text-2);
+  font-size: var(--fs-xs);
+}
+
+@keyframes install-rise {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+}

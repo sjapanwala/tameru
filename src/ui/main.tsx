@@ -21,6 +21,9 @@ if (runAppInThisWindow()) {
   import('./App').then(({ mountApp }) => mountApp(root));
 } else {
   listenForInstallPrompt();
+  // The install page opens on the dark hero, so the status bar and top overscroll match it.
+  document.documentElement.classList.add('hero-top');
+  document.querySelectorAll<HTMLMetaElement>('meta[name="theme-color"]').forEach((m) => (m.content = '#1c1c1c'));
   render(
     <div class="shell shell--bare">
       <InstallGate />

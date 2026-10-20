@@ -16,13 +16,16 @@ export const S = {
   appName: 'Tameru',
 
   gate: {
-    title: 'Add Tameru to your home screen',
-    intro: 'Tameru runs as an app on your phone. Your data stays on this device, and it works offline.',
-    iosSteps: ['Open this page in Safari.', 'Tap the Share button.', 'Choose "Add to Home Screen".', 'Open Tameru from your home screen.'],
-    androidSteps: ['Tap "Install" below, or open the browser menu and choose "Install app".', 'Open Tameru from your home screen.'],
-    otherSteps: ['Open this page on your phone to install it.', 'On desktop Chrome or Edge, use the install icon in the address bar.'],
-    installButton: 'Install',
-    devHint: 'Developer? Add ?dev=1 to the address to use it in the browser.',
+    name: 'Tameru',
+    tagline: 'A calm budget that lives on your phone.',
+    points: [
+      ['Know what’s safe to spend', 'One number for today, after bills, goals and a buffer.'],
+      ['Private by design', 'No account and no bank login. Everything stays on this device.'],
+      ['Works offline', 'Log a coffee on the subway; it’s all there when you’re back.'],
+    ] as [string, string][],
+    installButton: 'Install Tameru',
+    installDescription: 'Add it to your home screen. It opens full screen and works offline.',
+    fine: 'Free. Takes a few seconds. Nothing to sign up for.',
   },
 
   nav: {
