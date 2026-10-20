@@ -1,0 +1,727 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Tameru</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="description" content="Tameru is a private budgeting app for your phone. It shows how much is safe to spend today, after bills, goals and a buffer. No account, no bank login, works offline.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 64 64%22%3E%3Crect width=%2264%22 height=%2264%22 rx=%2214%22 fill=%22%23111%22/%3E%3Cpath d=%22M14.68 47.00A20 20 0 0 1 12.02 37.90%22 stroke=%22%23fff%22 stroke-width=%226%22 fill=%22none%22/%3E%3Cpath d=%22M12.09 35.11A20 20 0 0 1 15.20 26.15%22 stroke=%22%23fff%22 stroke-width=%226%22 fill=%22none%22/%3E%3Cpath d=%22M16.87 23.92A20 20 0 0 1 24.60 18.42%22 stroke=%22%23fff%22 stroke-width=%226%22 fill=%22none%22/%3E%3Cpath d=%22M27.26 17.57A20 20 0 0 1 36.74 17.57%22 stroke=%22%23fff%22 stroke-width=%226%22 fill=%22none%22/%3E%3Cpath d=%22M39.40 18.42A20 20 0 0 1 47.13 23.92%22 stroke=%22%23fff%22 stroke-width=%226%22 fill=%22none%22/%3E%3Cpath d=%22M48.80 26.15A20 20 0 0 1 51.91 35.11%22 stroke=%22%23fff%22 stroke-opacity=%22.24%22 stroke-width=%226%22 fill=%22none%22/%3E%3Cpath d=%22M51.98 37.90A20 20 0 0 1 49.32 47.00%22 stroke=%22%23fff%22 stroke-opacity=%22.24%22 stroke-width=%226%22 fill=%22none%22/%3E%3Cg transform=%22translate%2832 37%29 scale%280.62%29 translate%28-32.5 -32.25%29%22 stroke=%22%23fff%22 stroke-width=%224.6%22 stroke-linecap=%22round%22 fill=%22none%22%3E%3Cpath d=%22M39 25.5c-1.3-2-3.6-3-6.6-3c-3.9 0-6.4 1.9-6.4 4.6c0 6.4 13.6 3.2 13.6 10c0 2.9-2.8 4.9-7 4.9c-3.3 0-5.9-1.2-7.3-3.4%22/%3E%3Cpath d=%22M32.5 18.5v4M32.5 42v4%22/%3E%3C/g%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800&family=Geist+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: the app's own monochrome "ledger" system, scaled up. One dark hero band (the app's
+   Home hero), then alternating text + phone rows, a receipt-style breakdown, and a quiet footer. */
+:root {
+  --bg: #ffffff;
+  --surface: #f5f5f4;
+  --text: #111111;
+  --text-2: #66625f;
+  --text-3: #a3a09c;
+  --line: #e9e7e4;
+  --accent: #111111;
+  --accent-text: #ffffff;
+  --phone-frame: #1a1a1a;
+  --hero-bg: radial-gradient(120% 140% at 0% 0%, #2b2b2b 0%, #141414 45%, #050505 100%);
+  --hero-text: #f5f5f5;
+  --hero-dim: rgb(255 255 255 / 0.55);
+  --hero-faint: rgb(255 255 255 / 0.16);
+  --hero-line: rgb(255 255 255 / 0.12);
+  --good: #1f9d55;
+  --font: 'Geist', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-num: 'Geist Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  --shadow-phone: 0 40px 80px -24px rgb(0 0 0 / 0.35), 0 8px 24px -8px rgb(0 0 0 / 0.18);
+  --page-max: 1120px;
+  --glide: cubic-bezier(0.22, 1, 0.36, 1);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0c0c0c; --surface: #181818; --text: #f2f2f2; --text-2: #9a9692; --text-3: #5c5a58;
+    --line: #242322; --accent: #f2f2f2; --accent-text: #0c0c0c; --phone-frame: #2a2a2a;
+    --hero-bg: radial-gradient(120% 140% at 0% 0%, #2e2e2e 0%, #1a1a1a 45%, #121212 100%);
+    --good: #4ade80;
+    --shadow-phone: 0 0 0 1px rgb(255 255 255 / 0.06), 0 40px 80px -24px rgb(0 0 0 / 0.9);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0c0c0c; --surface: #181818; --text: #f2f2f2; --text-2: #9a9692; --text-3: #5c5a58;
+  --line: #242322; --accent: #f2f2f2; --accent-text: #0c0c0c; --phone-frame: #2a2a2a;
+  --hero-bg: radial-gradient(120% 140% at 0% 0%, #2e2e2e 0%, #1a1a1a 45%, #121212 100%);
+  --good: #4ade80;
+  --shadow-phone: 0 0 0 1px rgb(255 255 255 / 0.06), 0 40px 80px -24px rgb(0 0 0 / 0.9);
+  color-scheme: dark;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 1rem;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } html { scroll-behavior: auto; } }
+
+.wrap {
+  max-width: var(--page-max);
+  margin: 0 auto;
+  padding-left: max(20px, env(safe-area-inset-left, 0px));
+  padding-right: max(20px, env(safe-area-inset-right, 0px));
+}
+.num { font-family: var(--font-num); font-variant-numeric: tabular-nums; }
+.eyebrow {
+  font-family: var(--font-num);
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-2);
+  margin: 0;
+}
+h1, h2, h3 { margin: 0; text-wrap: balance; letter-spacing: -0.035em; }
+h2 { font-size: clamp(1.9rem, 4.2vw, 2.9rem); font-weight: 700; line-height: 1.05; }
+h3 { font-size: 1.125rem; font-weight: 650; letter-spacing: -0.015em; }
+p { margin: 0; }
+.lede { font-size: 1.125rem; color: var(--text-2); max-width: 34em; text-wrap: pretty; }
+a { color: inherit; }
+:focus-visible { outline: 2px solid var(--text); outline-offset: 3px; border-radius: 6px; }
+
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 10px;
+  min-height: 52px; padding: 0 26px; border-radius: 999px;
+  font: 600 1rem var(--font); text-decoration: none; letter-spacing: -0.01em;
+  transition: transform 240ms var(--glide), opacity 240ms;
+}
+.btn:active { transform: scale(0.97); }
+.btn--light { background: var(--hero-text); color: #0c0c0c; }
+.btn--ghost { color: var(--hero-text); border: 1px solid var(--hero-line); }
+.btn--solid { background: var(--accent); color: var(--accent-text); }
+
+/* ---------- top bar ---------- */
+.top {
+  position: absolute; inset: 0 0 auto; z-index: 5;
+  padding-top: max(18px, env(safe-area-inset-top, 0px));
+}
+.top .wrap { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.brand { display: inline-flex; align-items: center; gap: 10px; text-decoration: none; color: var(--hero-text); font-weight: 700; font-size: 1.125rem; letter-spacing: -0.03em; }
+.brand svg { width: 34px; height: 34px; display: block; }
+.top nav { display: flex; gap: 24px; align-items: center; }
+.top nav a { color: var(--hero-dim); text-decoration: none; font-size: 0.9375rem; transition: color 240ms; }
+.top nav a:hover { color: var(--hero-text); }
+.top nav a.pill { color: var(--hero-text); border: 1px solid var(--hero-line); padding: 8px 16px; border-radius: 999px; }
+@media (max-width: 720px) { .top nav a:not(.pill) { display: none; } }
+
+/* ---------- hero ---------- */
+.hero {
+  background: var(--hero-bg);
+  color: var(--hero-text);
+  border-radius: 0 0 40px 40px;
+  padding-block: 120px 0;
+  overflow: visible;
+}
+.hero__grid { display: grid; grid-template-columns: 1.05fr 0.95fr; gap: 48px; align-items: end; }
+.hero__copy { padding-bottom: 96px; display: grid; gap: 28px; min-width: 0; }
+.hero .eyebrow { color: var(--hero-dim); }
+.hero h1 { font-size: clamp(2.75rem, 7vw, 5.25rem); font-weight: 800; line-height: 0.98; letter-spacing: -0.05em; }
+.hero h1 span { color: var(--hero-dim); }
+.hero .lede { color: var(--hero-dim); }
+.hero__actions { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+.hero__fine { font-size: 0.875rem; color: var(--hero-dim); display: flex; flex-wrap: wrap; gap: 6px 18px; }
+.hero__fine span::before { content: ""; display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--hero-dim); margin-right: 8px; vertical-align: 2px; }
+.hero__phone { display: flex; justify-content: center; align-self: end; min-width: 0; }
+.hero__phone .phone { margin-bottom: -150px; transform: rotate(-2deg); }
+@media (max-width: 860px) {
+  .hero { padding-block: 104px 0; }
+  .hero__grid { grid-template-columns: 1fr; gap: 8px; }
+  .hero__copy { padding-bottom: 32px; }
+  .hero__phone .phone { margin-bottom: -260px; transform: none; }
+}
+
+/* ---------- phone mockup ---------- */
+.phone {
+  width: 300px; max-width: 100%;
+  aspect-ratio: 300 / 640;
+  background: var(--phone-frame);
+  border-radius: 48px;
+  padding: 9px;
+  box-shadow: var(--shadow-phone);
+  flex: none;
+}
+.screen {
+  position: relative;
+  height: 100%;
+  border-radius: 40px;
+  overflow: hidden;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 11px;
+  line-height: 1.35;
+  display: flex; flex-direction: column;
+}
+.island { position: absolute; top: 9px; left: 50%; width: 82px; height: 24px; margin-left: -41px; background: #000; border-radius: 999px; z-index: 3; }
+.status { display: flex; justify-content: space-between; align-items: center; padding: 13px 26px 0 30px; height: 40px; font-weight: 600; font-size: 12px; position: relative; z-index: 2; }
+.status i { display: inline-flex; gap: 4px; align-items: center; font-style: normal; }
+.status i b { display: block; width: 18px; height: 9px; border: 1.3px solid currentColor; border-radius: 3px; position: relative; }
+.status i b::after { content: ""; position: absolute; inset: 1.2px; right: 4px; background: currentColor; border-radius: 1px; }
+.status i em { display: block; width: 14px; height: 9px; background: linear-gradient(to right, currentColor 0 2.5px, transparent 2.5px 3.8px, currentColor 3.8px 6.3px, transparent 6.3px 7.6px, currentColor 7.6px 10.1px, transparent 10.1px 11.4px, currentColor 11.4px); clip-path: polygon(0 100%, 100% 0, 100% 100%); }
+.tabbar {
+  position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%);
+  display: flex; gap: 6px; align-items: center; padding: 5px;
+  background: color-mix(in srgb, var(--bg) 82%, transparent);
+  backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+  border-radius: 999px; box-shadow: 0 6px 20px -6px rgb(0 0 0 / 0.25), 0 0 0 1px var(--line);
+  z-index: 2;
+}
+.tabbar span { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; color: var(--text-2); }
+.tabbar span.on { background: var(--accent); color: var(--accent-text); }
+.tabbar svg { width: 15px; height: 15px; }
+
+/* home screen */
+.s-hero { background: var(--hero-bg); color: var(--hero-text); border-radius: 0 0 30px 30px; padding-bottom: 0; position: relative; margin-top: -40px; padding-top: 40px; }
+.s-hero .status { color: var(--hero-text); }
+.s-hero__row { display: flex; justify-content: space-between; padding: 6px 16px 0; }
+.avatar { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; font-weight: 600; font-size: 10.5px; background: rgb(255 255 255 / 0.1); border: 1px solid var(--hero-line); }
+.s-hero__label { text-align: center; color: var(--hero-dim); font-size: 11.5px; margin-top: 6px; }
+.s-hero__big { text-align: center; font-size: 47px; font-weight: 700; letter-spacing: -0.055em; line-height: 1.05; margin-top: 2px; }
+.s-hero__big small { font-size: inherit; color: rgb(255 255 255 / 0.38); }
+.s-hero__chip { display: table; margin: 9px auto 0; padding: 5px 11px; border: 1px solid var(--hero-line); border-radius: 999px; font-size: 10.5px; background: rgb(255 255 255 / 0.05); }
+.ticks { display: flex; gap: 2px; justify-content: center; align-items: center; margin: 13px auto 0; height: 10px; }
+.ticks span { width: 4px; height: 4px; border-radius: 1px; background: var(--hero-faint); }
+.ticks span.on { background: rgb(255 255 255 / 0.45); }
+.ticks span.now { height: 10px; width: 3px; background: var(--hero-text); }
+.mini-card { margin: 16px 18px 0; height: 62px; border-radius: 12px 12px 0 0; background: linear-gradient(135deg, #1d5c55 0%, #0f3a36 60%, #0b2b28 100%); position: relative; overflow: hidden; color: #e7f3f1; padding: 10px 12px; font-size: 10px; }
+.mini-card::after { content: ""; position: absolute; right: -30px; top: -40px; width: 120px; height: 120px; border-radius: 50%; border: 18px solid rgb(255 255 255 / 0.06); }
+.mini-card b { font-weight: 600; font-size: 11px; display: block; }
+.mini-card span { font-family: var(--font-num); opacity: 0.7; }
+.s-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; padding: 12px 14px 0; }
+.s-actions span { background: var(--surface); border-radius: 999px; height: 36px; display: flex; align-items: center; justify-content: center; gap: 6px; font-weight: 600; font-size: 12px; }
+.s-quick { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; padding: 13px 10px 0; text-align: center; }
+.s-quick div { display: grid; gap: 3px; justify-items: center; }
+.s-quick i { width: 40px; height: 40px; border-radius: 50%; background: var(--surface); display: grid; place-items: center; font-style: normal; }
+.s-quick i.add { background: none; border: 1.3px dashed var(--text-3); color: var(--text-3); font-size: 16px; }
+.s-quick svg { width: 16px; height: 16px; }
+.s-quick b { font-weight: 500; font-size: 10px; }
+.s-quick small { font-family: var(--font-num); font-size: 9px; color: var(--text-2); }
+.s-note { margin: 12px 16px 0; padding-left: 9px; border-left: 2px solid var(--text); font-size: 10.5px; }
+.s-head { display: flex; justify-content: space-between; align-items: baseline; padding: 14px 16px 4px; }
+.s-head b { font-size: 14px; font-weight: 700; letter-spacing: -0.02em; }
+.s-head span { color: var(--text-2); font-size: 10.5px; }
+.tx { display: flex; align-items: center; gap: 9px; padding: 6px 16px; }
+.tx i { width: 30px; height: 30px; border-radius: 50%; background: var(--surface); display: grid; place-items: center; font-style: normal; font-size: 9px; font-weight: 600; color: var(--text-2); flex: none; }
+.tx div { flex: 1; min-width: 0; }
+.tx b { display: block; font-weight: 500; font-size: 11.5px; }
+.tx small { color: var(--text-2); font-size: 9.5px; }
+.tx .amt { font-family: var(--font-num); font-size: 12px; }
+.tx .amt sup { font-size: 8.5px; color: var(--text-2); vertical-align: 0; }
+.tx .amt.in { color: var(--good); }
+
+/* plan screen */
+.s-page { padding: 4px 16px 0; display: flex; flex-direction: column; gap: 10px; }
+.s-title { font-size: 22px; font-weight: 700; letter-spacing: -0.035em; }
+.s-sub { color: var(--text-2); font-size: 10.5px; margin-top: -6px; }
+.dial { position: relative; width: 196px; height: 196px; margin: 4px auto 0; }
+.dial svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+.dial__c { position: absolute; inset: 0; display: grid; place-content: center; text-align: center; gap: 1px; }
+.dial__c small { color: var(--text-2); font-size: 9.5px; }
+.dial__c b { font-size: 22px; font-weight: 700; letter-spacing: -0.04em; }
+.dial__c span { font-family: var(--font-num); font-size: 9px; color: var(--text-2); }
+.legend { display: grid; gap: 0; }
+.legend div { display: grid; grid-template-columns: 9px 1fr auto auto; gap: 8px; align-items: center; padding: 5.5px 0; border-bottom: 1px solid var(--line); font-size: 11px; }
+.legend i { width: 9px; height: 9px; border-radius: 3px; }
+.legend span { font-family: var(--font-num); font-size: 10px; color: var(--text-2); min-width: 28px; text-align: right; }
+.legend em { font-style: normal; font-family: var(--font-num); font-size: 10.5px; min-width: 48px; text-align: right; }
+
+/* upcoming screen */
+.up-sum { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; }
+.up-sum div { background: var(--surface); border-radius: 14px; padding: 10px 11px; display: grid; gap: 2px; }
+.up-sum small { color: var(--text-2); font-size: 9.5px; }
+.up-sum b { font-family: var(--font-num); font-weight: 500; font-size: 15px; letter-spacing: -0.02em; }
+.up-day { display: grid; gap: 2px; }
+.up-day > small { font-family: var(--font-num); text-transform: uppercase; letter-spacing: 0.1em; font-size: 8.5px; color: var(--text-2); padding-top: 6px; }
+.up-item { display: flex; align-items: center; gap: 9px; padding: 5px 0; }
+.up-item i { width: 28px; height: 28px; border-radius: 9px; background: var(--surface); display: grid; place-items: center; flex: none; }
+.up-item i svg { width: 14px; height: 14px; }
+.up-item div { flex: 1; min-width: 0; }
+.up-item b { display: block; font-weight: 500; font-size: 11.5px; }
+.up-item small { color: var(--text-2); font-size: 9.5px; }
+.up-item .amt { font-family: var(--font-num); font-size: 11.5px; }
+.up-item .amt.in { color: var(--good); }
+.cal-btn { margin-top: 4px; border: 1px solid var(--line); border-radius: 14px; padding: 9px 11px; display: flex; gap: 9px; align-items: center; font-size: 10.5px; }
+.cal-btn b { display: block; font-weight: 600; font-size: 11px; }
+.cal-btn small { color: var(--text-2); font-size: 9.5px; }
+.cal-btn svg { width: 18px; height: 18px; flex: none; }
+
+/* receipt screen */
+.s-receipt { background: #0d0d0d; color: #f2f2f2; flex: 1; position: relative; display: flex; flex-direction: column; }
+.s-receipt .status { color: #f2f2f2; }
+.paper {
+  margin: 12px 34px 0; background: #fbfaf7; color: #2a2826; font-family: var(--font-num); font-size: 8.5px; line-height: 1.55;
+  padding: 14px 14px 18px; transform: rotate(-1.5deg);
+  box-shadow: 0 14px 30px -8px rgb(0 0 0 / 0.6);
+  -webkit-mask: radial-gradient(4px at 50% 100%, transparent 98%, #000) 0 0 / 8px 100% repeat-x;
+  mask: radial-gradient(4px at 50% 100%, transparent 98%, #000) 0 0 / 8px 100% repeat-x;
+}
+.paper h4 { margin: 0 0 2px; text-align: center; font-size: 11px; letter-spacing: 0.08em; font-weight: 500; }
+.paper p { text-align: center; color: #7a7672; margin-bottom: 8px; }
+.paper .ln { display: flex; justify-content: space-between; }
+.paper hr { border: 0; border-top: 1px dashed #b9b5b0; margin: 6px 0; }
+.paper .hit { outline: 1.5px solid #1f9d55; outline-offset: 2px; border-radius: 2px; background: rgb(31 157 85 / 0.1); }
+.paper .tot { font-size: 10px; font-weight: 500; }
+.scan-corners { position: absolute; inset: 52px 22px 205px; pointer-events: none; }
+.scan-corners i { position: absolute; width: 18px; height: 18px; border: 2px solid rgb(255 255 255 / 0.85); }
+.scan-corners i:nth-child(1) { top: 0; left: 0; border-right: 0; border-bottom: 0; border-radius: 6px 0 0 0; }
+.scan-corners i:nth-child(2) { top: 0; right: 0; border-left: 0; border-bottom: 0; border-radius: 0 6px 0 0; }
+.scan-corners i:nth-child(3) { bottom: 0; left: 0; border-right: 0; border-top: 0; border-radius: 0 0 0 6px; }
+.scan-corners i:nth-child(4) { bottom: 0; right: 0; border-left: 0; border-top: 0; border-radius: 0 0 6px 0; }
+.found {
+  margin-top: auto; background: var(--bg); color: var(--text); border-radius: 24px 24px 0 0; padding: 14px 16px 22px; display: grid; gap: 8px;
+}
+.found .grab { width: 34px; height: 4px; border-radius: 4px; background: var(--line); margin: -4px auto 2px; }
+.found .eyebrow { font-size: 8.5px; }
+.found__total { font-size: 30px; font-weight: 700; letter-spacing: -0.05em; line-height: 1; }
+.found__total small { font-size: inherit; color: var(--text-3); }
+.found dl { margin: 0; display: grid; grid-template-columns: auto 1fr; gap: 3px 12px; font-size: 10.5px; }
+.found dt { color: var(--text-2); }
+.found dd { margin: 0; text-align: right; }
+.found .btn-s { background: var(--accent); color: var(--accent-text); border-radius: 999px; height: 34px; display: grid; place-items: center; font-weight: 600; font-size: 11.5px; margin-top: 2px; }
+
+/* ---------- sections ---------- */
+section { padding-block: 120px; }
+.intro { padding-block: 210px 40px; }
+@media (max-width: 860px) { .intro { padding-block: 300px 24px; } section { padding-block: 80px; } }
+.intro .wrap { display: grid; grid-template-columns: 1fr 1fr; gap: 64px; align-items: start; }
+.intro .wrap > * { min-width: 0; }
+.intro__text { display: grid; gap: 20px; align-content: start; position: sticky; top: 40px; }
+@media (max-width: 860px) { .intro .wrap { grid-template-columns: 1fr; gap: 40px; } .intro__text { position: static; } }
+
+/* the breakdown, set like a till receipt */
+.tally {
+  background: var(--surface);
+  border-radius: 24px;
+  padding: 28px 28px 24px;
+  font-family: var(--font-num);
+  font-variant-numeric: tabular-nums;
+  font-size: 0.9375rem;
+}
+.tally__head { display: flex; justify-content: space-between; color: var(--text-2); font-size: 0.75rem; letter-spacing: 0.12em; text-transform: uppercase; padding-bottom: 14px; border-bottom: 1px dashed var(--text-3); }
+.tally__row { display: grid; grid-template-columns: 1.5em 1fr auto; gap: 8px; padding: 12px 0; border-bottom: 1px solid var(--line); align-items: baseline; }
+.tally__row span:first-child { color: var(--text-2); }
+.tally__row span:nth-child(2) { font-family: var(--font); color: var(--text); }
+.tally__row small { display: block; font-family: var(--font); color: var(--text-2); font-size: 0.8125rem; margin-top: 2px; }
+.tally__total { display: grid; grid-template-columns: 1fr auto; gap: 8px; padding-top: 18px; border-top: 1px dashed var(--text-3); margin-top: -1px; align-items: end; }
+.tally__total b { font-family: var(--font); font-size: 1.0625rem; }
+.tally__total strong { font-size: clamp(1.75rem, 4vw, 2.25rem); font-weight: 500; letter-spacing: -0.04em; }
+.tally__day { grid-column: 1 / -1; color: var(--text-2); font-size: 0.8125rem; }
+
+/* feature rows */
+.feature .wrap { display: grid; grid-template-columns: 1fr 1fr; gap: 64px; align-items: center; }
+.feature .wrap > * { min-width: 0; }
+.feature--flip .feature__phone { order: -1; }
+.feature__text { display: grid; gap: 18px; max-width: 30rem; }
+.feature__phone { display: flex; justify-content: center; padding: 48px 16px; border-radius: 32px; background: var(--surface); }
+.feature__phone .phone { width: 280px; }
+.points { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 12px; }
+.points li { display: grid; grid-template-columns: 22px 1fr; gap: 10px; color: var(--text-2); }
+.points li b { color: var(--text); font-weight: 600; }
+.points svg { width: 18px; height: 18px; margin-top: 3px; color: var(--text); }
+@media (max-width: 860px) {
+  .feature .wrap { grid-template-columns: 1fr; gap: 36px; }
+  .feature--flip .feature__phone { order: 0; }
+  .feature__phone { padding: 32px 12px; }
+}
+.feature + .feature { padding-top: 0; }
+
+/* small things grid */
+.extras h2 { max-width: 16em; }
+.extras__grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: 24px; overflow: hidden; margin-top: 48px; }
+.extras__grid div { background: var(--bg); padding: 28px 26px 30px; display: grid; gap: 8px; align-content: start; }
+.extras__grid svg { width: 22px; height: 22px; margin-bottom: 8px; }
+.extras__grid p { color: var(--text-2); font-size: 0.9375rem; }
+@media (max-width: 860px) { .extras__grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 560px) { .extras__grid { grid-template-columns: 1fr; } }
+
+/* privacy band */
+.private { padding-block: 0; }
+.private__band {
+  background: var(--hero-bg); color: var(--hero-text); border-radius: 40px;
+  padding: clamp(40px, 7vw, 88px) clamp(24px, 6vw, 80px);
+  display: grid; grid-template-columns: 1.1fr 0.9fr; gap: 48px; align-items: center;
+}
+.private__band > * { min-width: 0; }
+.private__band .eyebrow, .private__band .lede { color: var(--hero-dim); }
+.private__band .text { display: grid; gap: 20px; }
+.private__list { list-style: none; margin: 0; padding: 0; display: grid; }
+.private__list li { display: flex; justify-content: space-between; gap: 16px; padding: 15px 0; border-bottom: 1px solid var(--hero-line); }
+.private__list li:last-child { border-bottom: 0; }
+.private__list span { color: var(--hero-dim); }
+.private__list b { font-family: var(--font-num); font-weight: 500; text-align: right; }
+@media (max-width: 860px) { .private__band { grid-template-columns: 1fr; border-radius: 28px; } }
+
+/* install */
+.install .wrap { display: grid; gap: 48px; }
+.install__head { display: grid; gap: 18px; max-width: 40rem; }
+.steps { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; counter-reset: step; }
+.steps li { counter-increment: step; border-top: 2px solid var(--text); padding-top: 18px; display: grid; gap: 8px; align-content: start; }
+.steps li::before { content: "Step " counter(step); font-family: var(--font-num); font-size: 0.75rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-2); }
+.steps p { color: var(--text-2); }
+.steps kbd { font-family: var(--font); font-weight: 600; color: var(--text); background: var(--surface); padding: 1px 7px; border-radius: 6px; white-space: nowrap; }
+@media (max-width: 760px) { .steps { grid-template-columns: 1fr; gap: 28px; } }
+.install__cta { display: flex; flex-wrap: wrap; gap: 14px 22px; align-items: center; }
+.install__cta span { color: var(--text-2); font-size: 0.9375rem; }
+
+footer { border-top: 1px solid var(--line); padding-block: 36px 48px; }
+footer .wrap { display: flex; flex-wrap: wrap; gap: 16px 32px; justify-content: space-between; align-items: center; color: var(--text-2); font-size: 0.875rem; }
+footer .brand { color: var(--text); font-size: 1rem; }
+footer .brand svg { width: 28px; height: 28px; }
+.jp { font-family: 'Hiragino Sans', 'Noto Sans JP', var(--font); }
+
+/* hero entrance: everything is visible at rest; this only adds a short lift */
+@keyframes lift { from { transform: translateY(14px); opacity: 0.001; } }
+.hero__copy > * { animation: lift 700ms var(--glide) both; }
+.hero__copy > *:nth-child(2) { animation-delay: 60ms; }
+.hero__copy > *:nth-child(3) { animation-delay: 120ms; }
+.hero__copy > *:nth-child(4) { animation-delay: 180ms; }
+.hero__copy > *:nth-child(5) { animation-delay: 240ms; }
+@keyframes tick { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
+.ticks span.now { animation: tick 2.4s ease-in-out infinite; }
+</style>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="logo" viewBox="0 0 64 64"><rect width="64" height="64" rx="14" fill="#111"/><path d="M14.68 47.00A20 20 0 0 1 12.02 37.90" stroke="#fff" stroke-width="6" fill="none"/><path d="M12.09 35.11A20 20 0 0 1 15.20 26.15" stroke="#fff" stroke-width="6" fill="none"/><path d="M16.87 23.92A20 20 0 0 1 24.60 18.42" stroke="#fff" stroke-width="6" fill="none"/><path d="M27.26 17.57A20 20 0 0 1 36.74 17.57" stroke="#fff" stroke-width="6" fill="none"/><path d="M39.40 18.42A20 20 0 0 1 47.13 23.92" stroke="#fff" stroke-width="6" fill="none"/><path d="M48.80 26.15A20 20 0 0 1 51.91 35.11" stroke="#fff" stroke-opacity=".24" stroke-width="6" fill="none"/><path d="M51.98 37.90A20 20 0 0 1 49.32 47.00" stroke="#fff" stroke-opacity=".24" stroke-width="6" fill="none"/><g transform="translate(32 37) scale(0.62) translate(-32.5 -32.25)" stroke="#fff" stroke-width="4.6" stroke-linecap="round" fill="none"><path d="M39 25.5c-1.3-2-3.6-3-6.6-3c-3.9 0-6.4 1.9-6.4 4.6c0 6.4 13.6 3.2 13.6 10c0 2.9-2.8 4.9-7 4.9c-3.3 0-5.9-1.2-7.3-3.4"/><path d="M32.5 18.5v4M32.5 42v4"/></g></symbol>
+    <symbol id="i-home" viewBox="0 0 24 24"><path d="M4 10.5 12 4l8 6.5V20h-5v-6H9v6H4z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></symbol>
+    <symbol id="i-list" viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h10" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+    <symbol id="i-pie" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 4v8l5.7 5.7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+    <symbol id="i-card" viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="13" rx="3" fill="none" stroke="currentColor" stroke-width="2"/><path d="M3 10.5h18M7 15h4" fill="none" stroke="currentColor" stroke-width="2"/></symbol>
+    <symbol id="i-dots" viewBox="0 0 24 24"><circle cx="6" cy="12" r="1.7" fill="currentColor"/><circle cx="12" cy="12" r="1.7" fill="currentColor"/><circle cx="18" cy="12" r="1.7" fill="currentColor"/></symbol>
+    <symbol id="i-cup" viewBox="0 0 24 24"><path d="M5 9h11v5a5 5 0 0 1-5 5h-1a5 5 0 0 1-5-5zM16 10.5h1.5a2.5 2.5 0 0 1 0 5H16M9 3.5v2M12 3.5v2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-park" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="4" fill="none" stroke="currentColor" stroke-width="2"/><path d="M10 16V8h3a2.5 2.5 0 0 1 0 5h-3" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></symbol>
+    <symbol id="i-food" viewBox="0 0 24 24"><path d="M7 3v8M5 3v5a2 2 0 0 0 4 0V3M7 11v10M16 21V3c-2 1.5-3 4-3 7h3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-home2" viewBox="0 0 24 24"><path d="M4 11 12 4l8 7v9H4z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></symbol>
+    <symbol id="i-phone" viewBox="0 0 24 24"><rect x="7" y="3" width="10" height="18" rx="2.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M11 17.5h2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+    <symbol id="i-wifi" viewBox="0 0 24 24"><path d="M3.5 9.5a12 12 0 0 1 17 0M6.5 12.8a7.5 7.5 0 0 1 11 0M9.5 16a3 3 0 0 1 5 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="19" r="1.3" fill="currentColor"/></symbol>
+    <symbol id="i-in" viewBox="0 0 24 24"><path d="M17 7 7 17M7 9v8h8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-out" viewBox="0 0 24 24"><path d="M7 17 17 7M9 7h8v8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-cal" viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="15" rx="3" fill="none" stroke="currentColor" stroke-width="2"/><path d="M3.5 10h17M8 3v4M16 3v4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7.5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-bolt" viewBox="0 0 24 24"><path d="M13 3 5 13.5h6L10 21l8-10.5h-6z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></symbol>
+    <symbol id="i-cloudoff" viewBox="0 0 24 24"><path d="M7 18h10.5a3.5 3.5 0 0 0 .6-6.95A6 6 0 0 0 7.2 9.1 4.5 4.5 0 0 0 7 18zM4 4l16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-lock" viewBox="0 0 24 24"><rect x="5" y="10.5" width="14" height="10" rx="2.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M8 10.5V8a4 4 0 0 1 8 0v2.5" fill="none" stroke="currentColor" stroke-width="2"/></symbol>
+    <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M19.5 12a7.5 7.5 0 1 1-2.2-5.3M19.5 4.5v4h-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-download" viewBox="0 0 24 24"><path d="M12 4v11M7.5 10.5 12 15l4.5-4.5M5 19.5h14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-repeat" viewBox="0 0 24 24"><path d="M4 11V9.5A3.5 3.5 0 0 1 7.5 6H19m0 0-3-3m3 3-3 3M20 13v1.5a3.5 3.5 0 0 1-3.5 3.5H5m0 0 3 3m-3-3 3-3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  </defs>
+</svg>
+
+<header class="top">
+  <div class="wrap">
+    <a class="brand" href="#top" aria-label="Tameru home"><svg aria-hidden="true"><use href="#logo"/></svg>Tameru</a>
+    <nav aria-label="Sections">
+      <a href="#how">How it works</a>
+      <a href="#private">Privacy</a>
+      <a class="pill" href="#install">Get the app</a>
+    </nav>
+  </div>
+</header>
+
+<main id="top">
+  <div class="hero">
+    <div class="wrap hero__grid">
+      <div class="hero__copy">
+        <p class="eyebrow">A budget for your phone</p>
+        <h1>Know what’s safe to spend. <span>Today, after everything.</span></h1>
+        <p class="lede">Tameru takes your pay, bills, card balances and savings goals and turns them into one number: how much you can spend right now without coming up short.</p>
+        <div class="hero__actions">
+          <a class="btn btn--light" href="https://tameru.pages.dev" rel="noopener">Open Tameru</a>
+          <a class="btn btn--ghost" href="#how">See how it works</a>
+        </div>
+        <p class="hero__fine"><span>Free</span><span>No account</span><span>No bank login</span><span>Works offline</span></p>
+      </div>
+
+      <div class="hero__phone">
+        <!-- Home screen: sample data -->
+        <div class="phone" role="img" aria-label="Tameru Home screen showing $842.95 safe to spend, $64.84 a day for 13 days">
+          <div class="screen">
+            <div class="island"></div>
+            <div class="s-hero">
+              <div class="status"><span>9:41</span><i><em></em><b></b></i></div>
+              <div class="s-hero__row"><span class="avatar">MR</span><span class="avatar" aria-hidden="true">
+                <svg width="13" height="13" viewBox="0 0 24 24"><path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15zM10 20.5h4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span></div>
+              <div class="s-hero__label">Safe to spend</div>
+              <div class="s-hero__big">$842<small>.95</small></div>
+              <div class="s-hero__chip"><span class="num">$64.84</span> a day · 13 days left</div>
+              <div class="ticks" aria-hidden="true">
+                <span class="on"></span><span class="on"></span><span class="on"></span><span class="on"></span><span class="on"></span><span class="on"></span><span class="on"></span><span class="on"></span><span class="on"></span><span class="on"></span><span class="on"></span><span class="on"></span><span class="on"></span><span class="now"></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span>
+              </div>
+              <div class="mini-card"><b>Everyday chequing</b><span>•• 2207</span></div>
+            </div>
+            <div class="s-actions"><span><svg width="12" height="12"><use href="#i-out"/></svg>Spent</span><span><svg width="12" height="12"><use href="#i-in"/></svg>Income</span></div>
+            <div class="s-quick">
+              <div><i><svg><use href="#i-cup"/></svg></i><b>Coffee</b><small>$4.75</small></div>
+              <div><i><svg><use href="#i-park"/></svg></i><b>Parking</b><small>$6.00</small></div>
+              <div><i><svg><use href="#i-food"/></svg></i><b>Lunch</b><small>$13.50</small></div>
+              <div><i class="add">+</i></div>
+            </div>
+            <p class="s-note">Japan trip is 40% of the way there.</p>
+            <div class="s-head"><b>Recent</b><span>View all</span></div>
+            <div class="tx"><i>FB</i><div><b>Farm Boy</b><small>Oct 18</small></div><span class="amt">−$38<sup>.12</sup></span></div>
+            <div class="tx"><i>ES</i><div><b>Esso</b><small>Oct 17</small></div><span class="amt">−$52<sup>.40</sup></span></div>
+            <div class="tx"><i>PA</i><div><b>Paycheque</b><small>Oct 9</small></div><span class="amt in">+$1,640<sup>.00</sup></span></div>
+            <div class="tabbar" aria-hidden="true"><span class="on"><svg><use href="#i-home"/></svg></span><span><svg><use href="#i-list"/></svg></span><span><svg><use href="#i-pie"/></svg></span><span><svg><use href="#i-card"/></svg></span><span><svg><use href="#i-dots"/></svg></span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- The number, explained -->
+  <section class="intro" id="how">
+    <div class="wrap">
+      <div class="intro__text">
+        <p class="eyebrow">The number on Home</p>
+        <h2>Your balance isn’t what you can spend. This is.</h2>
+        <p class="lede">A bank balance doesn’t know rent is due on the 1st. Tameru does the subtraction for you, every time you open it, and splits what’s left across the days until your next pay.</p>
+        <p class="lede">Tap the number in the app to see this same breakdown with your own figures.</p>
+      </div>
+      <div class="tally" aria-label="Example breakdown of safe to spend">
+        <div class="tally__head"><span>Where it comes from</span><span>Oct 19 – Nov 1</span></div>
+        <div class="tally__row"><span>+</span><span>In chequing and cash</span><span>$1,505.55</span></div>
+        <div class="tally__row"><span>+</span><span>Pay still coming<small>Paycheque, Oct 23</small></span><span>$1,640.00</span></div>
+        <div class="tally__row"><span>−</span><span>Bills still to come<small>Phone, internet, rent</small></span><span>$1,270.00</span></div>
+        <div class="tally__row"><span>−</span><span>Card balances<small>Everyday Visa</small></span><span>$412.60</span></div>
+        <div class="tally__row"><span>−</span><span>Goal contributions left<small>Japan trip, emergency fund</small></span><span>$420.00</span></div>
+        <div class="tally__row"><span>−</span><span>Buffer<small>Held back for the unexpected</small></span><span>$200.00</span></div>
+        <div class="tally__total">
+          <b>Safe to spend</b><strong>$842.95</strong>
+          <span class="tally__day">÷ 13 days left = $64.84 a day</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Plan -->
+  <section class="feature">
+    <div class="wrap">
+      <div class="feature__text">
+        <p class="eyebrow">Plan</p>
+        <h2>Give every dollar of your pay a job.</h2>
+        <p class="lede">Your income is a dial. Each colour is a category you made: groceries, eating out, a trip. Slide the ticks to set each one’s share and see right away whether the plan fits your pay.</p>
+        <ul class="points">
+          <li><svg><use href="#i-check"/></svg><span><b>A plan to start from.</b> Tameru suggests one from your income, bills and recent spending. Nothing changes until you use it.</span></li>
+          <li><svg><use href="#i-check"/></svg><span><b>Leftovers go somewhere.</b> Each category resets, rolls over, or builds up as a fund when the period ends.</span></li>
+          <li><svg><use href="#i-check"/></svg><span><b>Your period, your way.</b> Run it by calendar month or payday to payday.</span></li>
+        </ul>
+      </div>
+      <div class="feature__phone">
+        <div class="phone" role="img" aria-label="Tameru Plan screen with an income dial split into categories">
+          <div class="screen">
+            <div class="island"></div>
+            <div class="status"><span>9:41</span><i><em></em><b></b></i></div>
+            <div class="s-page">
+              <div class="s-title">Plan</div>
+              <div class="s-sub num">Oct 19 – Nov 1</div>
+              <div class="dial">
+                <svg viewBox="0 0 200 200" aria-hidden="true">
+                  <circle cx="100" cy="100" r="78" fill="none" stroke="var(--line)" stroke-width="18"/>
+                  <g fill="none" stroke-width="18">
+                    <circle cx="100" cy="100" r="78" pathLength="100" stroke="#94a3b8" stroke-dasharray="43 57" stroke-dashoffset="0"/>
+                    <circle cx="100" cy="100" r="78" pathLength="100" stroke="#4ade80" stroke-dasharray="13 87" stroke-dashoffset="-44"/>
+                    <circle cx="100" cy="100" r="78" pathLength="100" stroke="#ffb547" stroke-dasharray="6 94" stroke-dashoffset="-58"/>
+                    <circle cx="100" cy="100" r="78" pathLength="100" stroke="#38bdf8" stroke-dasharray="5 95" stroke-dashoffset="-65"/>
+                    <circle cx="100" cy="100" r="78" pathLength="100" stroke="#a78bfa" stroke-dasharray="4 96" stroke-dashoffset="-71"/>
+                    <circle cx="100" cy="100" r="78" pathLength="100" stroke="#d6b98c" stroke-dasharray="3 97" stroke-dashoffset="-76"/>
+                    <circle cx="100" cy="100" r="78" pathLength="100" stroke="#f472b6" stroke-dasharray="12 88" stroke-dashoffset="-80"/>
+                  </g>
+                  <circle cx="100" cy="100" r="64" fill="none" stroke="var(--text-3)" stroke-width="3" stroke-dasharray="0.6 2.53" pathLength="100" opacity=".7"/>
+                </svg>
+                <div class="dial__c"><small>Income planned</small><b class="num">$3,050</b><span>of $3,280</span></div>
+              </div>
+              <div class="legend">
+                <div><i style="background:#94a3b8"></i>Bills<span>44%</span><em>$1,445</em></div>
+                <div><i style="background:#4ade80"></i>Groceries<span>14%</span><em>$460</em></div>
+                <div><i style="background:#ffb547"></i>Eating out<span>7%</span><em>$230</em></div>
+                <div><i style="background:#38bdf8"></i>Transport<span>6%</span><em>$195</em></div>
+                <div><i style="background:#a78bfa"></i>Fun<span>5%</span><em>$165</em></div>
+                <div><i style="background:#d6b98c"></i>Irregular<span>4%</span><em>$130</em></div>
+                <div><i style="background:#f472b6"></i>Japan trip<span>13%</span><em>$425</em></div>
+                <div><i style="background:var(--line)"></i>Unplanned<span>7%</span><em>$230</em></div>
+              </div>
+            </div>
+            <div class="tabbar" aria-hidden="true"><span><svg><use href="#i-home"/></svg></span><span><svg><use href="#i-list"/></svg></span><span class="on"><svg><use href="#i-pie"/></svg></span><span><svg><use href="#i-card"/></svg></span><span><svg><use href="#i-dots"/></svg></span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Upcoming -->
+  <section class="feature feature--flip">
+    <div class="wrap">
+      <div class="feature__text">
+        <p class="eyebrow">Upcoming</p>
+        <h2>See the next two weeks before they happen.</h2>
+        <p class="lede">Rent, your phone bill, card payments and paydays, in order. Tameru notices charges that repeat and offers to track them, and works with pay that changes from cheque to cheque.</p>
+        <ul class="points">
+          <li><svg><use href="#i-check"/></svg><span><b>Into your calendar.</b> One tap adds every bill and payday, with a reminder the day before.</span></li>
+          <li><svg><use href="#i-check"/></svg><span><b>Card due dates too.</b> Statement and payment dates for each credit card, two days’ notice.</span></li>
+          <li><svg><use href="#i-check"/></svg><span><b>Bills you confirm.</b> Bills can record themselves or wait for you to confirm them.</span></li>
+        </ul>
+      </div>
+      <div class="feature__phone">
+        <div class="phone" role="img" aria-label="Tameru Upcoming screen listing bills and paydays for the next 14 days">
+          <div class="screen">
+            <div class="island"></div>
+            <div class="status"><span>9:41</span><i><em></em><b></b></i></div>
+            <div class="s-page" style="gap:8px">
+              <p class="eyebrow" style="font-size:8.5px">Bills &amp; paydays</p>
+              <div class="s-title" style="margin-top:-6px">Upcoming</div>
+              <div class="up-sum">
+                <div><small>Going out</small><b>$1,682.60</b></div>
+                <div><small>Coming in</small><b>$1,640.00</b></div>
+              </div>
+              <div class="up-day"><small>Tomorrow</small>
+                <div class="up-item"><i><svg><use href="#i-phone"/></svg></i><div><b>Phone</b><small>Everyday Visa</small></div><span class="amt">$55.00</span></div>
+              </div>
+              <div class="up-day"><small>Fri, Oct 23</small>
+                <div class="up-item"><i><svg><use href="#i-in"/></svg></i><div><b>Paycheque</b><small>Every two weeks</small></div><span class="amt in">+$1,640.00</span></div>
+              </div>
+              <div class="up-day"><small>Mon, Oct 26</small>
+                <div class="up-item"><i><svg><use href="#i-wifi"/></svg></i><div><b>Internet</b><small>Chequing</small></div><span class="amt">$65.00</span></div>
+              </div>
+              <div class="up-day"><small>Wed, Oct 28</small>
+                <div class="up-item"><i><svg><use href="#i-card"/></svg></i><div><b>Everyday Visa payment due</b><small>Statement balance</small></div><span class="amt">$412.60</span></div>
+              </div>
+              <div class="up-day"><small>Sun, Nov 1</small>
+                <div class="up-item"><i><svg><use href="#i-home2"/></svg></i><div><b>Rent</b><small>Monthly on the 1st</small></div><span class="amt">$1,150.00</span></div>
+              </div>
+              <div class="cal-btn"><svg><use href="#i-cal"/></svg><div><b>Add bills &amp; paydays to Calendar</b><small>A reminder the day before each one</small></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Receipts -->
+  <section class="feature">
+    <div class="wrap">
+      <div class="feature__text">
+        <p class="eyebrow">Logging spending</p>
+        <h2>One tap for coffee. A photo for groceries.</h2>
+        <p class="lede">Put the things you buy every week on Home as quick adds, and log them with a single tap. For a bigger shop, take a photo of the receipt. Tameru reads the store, total, date and card on your phone, without uploading it anywhere.</p>
+        <ul class="points">
+          <li><svg><use href="#i-check"/></svg><span><b>Matched to your card.</b> The last four digits on the receipt pick the right account.</span></li>
+          <li><svg><use href="#i-check"/></svg><span><b>Categories that learn.</b> Change one once and Tameru remembers it for that store.</span></li>
+          <li><svg><use href="#i-check"/></svg><span><b>Split it.</b> One receipt can count toward groceries and household at once.</span></li>
+        </ul>
+      </div>
+      <div class="feature__phone">
+        <div class="phone" role="img" aria-label="Tameru reading a grocery receipt and finding a $38.12 total">
+          <div class="screen">
+            <div class="island"></div>
+            <div class="s-receipt">
+              <div class="status"><span>9:41</span><i><em></em><b></b></i></div>
+              <div class="paper">
+                <h4>FARM BOY</h4>
+                <p>#118 · 2026-10-18 · 17:42</p>
+                <div class="ln"><span>BANANAS</span><span>1.42</span></div>
+                <div class="ln"><span>GREEK YOGURT 750G</span><span>5.99</span></div>
+                <div class="ln"><span>SOURDOUGH LOAF</span><span>4.49</span></div>
+                <div class="ln"><span>BABY SPINACH</span><span>3.99</span></div>
+                <div class="ln"><span>CHICKEN THIGHS</span><span>14.87</span></div>
+                <div class="ln"><span>OAT MILK 1.75L</span><span>4.79</span></div>
+                <hr>
+                <div class="ln"><span>SUBTOTAL</span><span>35.55</span></div>
+                <div class="ln"><span>HST</span><span>2.57</span></div>
+                <div class="ln tot hit"><span>TOTAL</span><span>38.12</span></div>
+                <hr>
+                <div class="ln"><span>VISA DEBIT</span><span class="hit">**** 2207</span></div>
+              </div>
+              <div class="scan-corners" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+              <div class="found">
+                <div class="grab"></div>
+                <p class="eyebrow">Found on the receipt</p>
+                <div class="found__total num">$38<small>.12</small></div>
+                <dl>
+                  <dt>Vendor</dt><dd>Farm Boy</dd>
+                  <dt>Date</dt><dd>Oct 18</dd>
+                  <dt>Card</dt><dd>Everyday chequing •• 2207</dd>
+                  <dt>Category</dt><dd>Groceries</dd>
+                </dl>
+                <div class="btn-s">Review and add</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- The rest -->
+  <section class="extras">
+    <div class="wrap">
+      <p class="eyebrow">And the rest</p>
+      <h2 style="margin-top:16px">Built for people who don’t want to think about budgeting every day.</h2>
+      <div class="extras__grid">
+        <div><svg><use href="#i-bolt"/></svg><h3>Quick adds</h3><p>Four slots on Home for the things you buy all the time. Tap once and it’s logged, with undo.</p></div>
+        <div><svg><use href="#i-repeat"/></svg><h3>Spots repeat charges</h3><p>Pays for the same thing every month? Tameru notices and offers to track it as a bill.</p></div>
+        <div><svg><use href="#i-refresh"/></svg><h3>Fresh start</h3><p>Been away a while? Accept the suggestions, start again from today’s balances, and keep your history.</p></div>
+        <div><svg><use href="#i-card"/></svg><h3>Every account</h3><p>Chequing, savings with interest, credit cards with fees and due dates, a TFSA, cash.</p></div>
+        <div><svg><use href="#i-lock"/></svg><h3>Passcode and Face ID</h3><p>Lock the app on your phone so nobody else opening it can see your balances.</p></div>
+        <div><svg><use href="#i-download"/></svg><h3>Your data, exportable</h3><p>Back up everything to a file, or export transactions as a CSV for your spreadsheet.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Privacy -->
+  <section class="private" id="private">
+    <div class="wrap">
+      <div class="private__band">
+        <div class="text">
+          <p class="eyebrow">Private by design</p>
+          <h2>Your money stays on your phone.</h2>
+          <p class="lede">Tameru has no servers holding your data and no sign-up. You don’t connect a bank. Everything you enter lives on this device, and it keeps working on the subway with no signal.</p>
+        </div>
+        <ul class="private__list">
+          <li><span>Account to create</span><b>None</b></li>
+          <li><span>Bank logins asked for</span><b>None</b></li>
+          <li><span>Where your data lives</span><b>This device</b></li>
+          <li><span>Receipts uploaded</span><b>None, read on the phone</b></li>
+          <li><span>Works without signal</span><b>Yes</b></li>
+          <li><span>Price</span><b>Free</b></li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- Install -->
+  <section class="install" id="install">
+    <div class="wrap">
+      <div class="install__head">
+        <p class="eyebrow">Get the app</p>
+        <h2>On your Home Screen in under a minute.</h2>
+        <p class="lede">Tameru is a web app you install from the browser. No app store, nothing to sign up for. Once it’s on your Home Screen it opens full screen like any other app.</p>
+      </div>
+      <ol class="steps">
+        <li><h3>Open Tameru in Safari</h3><p>On iPhone, use Safari. On Android, Chrome works.</p></li>
+        <li><h3>Add it to your Home Screen</h3><p>Tap <kbd>Share</kbd>, then <kbd>Add to Home Screen</kbd>. On Android, tap <kbd>Install</kbd>.</p></li>
+        <li><h3>Answer a few questions</h3><p>Your pay, your bills, what you’re saving for. Skip anything you’re unsure of. You get your first plan and your number right away.</p></li>
+      </ol>
+      <div class="install__cta">
+        <a class="btn btn--solid" href="https://tameru.pages.dev" rel="noopener">Open Tameru</a>
+        <span>Free. Takes a few seconds.</span>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <a class="brand" href="#top"><svg aria-hidden="true"><use href="#logo"/></svg>Tameru</a>
+    <span><span class="jp" lang="ja">貯める</span> (tameru): to save up, to set aside.</span>
+    <span>Stays on your device.</span>
+  </div>
+</footer>
+</html>
