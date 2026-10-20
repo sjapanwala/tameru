@@ -1,10 +1,23 @@
-import { cpSync, createReadStream, existsSync, statSync } from 'node:fs';
+import { execSync } from 'node:child_process';
+import { cpSync, createReadStream, existsSync, readFileSync, statSync } from 'node:fs';
 import { extname, join, normalize, resolve } from 'node:path';
 import { defineConfig, type Plugin } from 'vitest/config';
 import preact from '@preact/preset-vite';
 import { VitePWA } from 'vite-plugin-pwa';
 
 const CARD_ART_DIR = resolve(__dirname, 'cards/card-art');
+
+/** Shown in the app (More) so it's clear which build is running: package version + commit. */
+const APP_VERSION: string = JSON.parse(readFileSync(resolve(__dirname, 'package.json'), 'utf8')).version;
+const APP_BUILD = (() => {
+  const sha = process.env.CF_PAGES_COMMIT_SHA; // set on Cloudflare Pages builds
+  if (sha) return sha.slice(0, 7);
+  try {
+    return execSync('git rev-parse --short HEAD', { stdio: ['ignore', 'pipe', 'ignore'] }).toString().trim();
+  } catch {
+    return 'dev';
+  }
+})();
 const MIME: Record<string, string> = {
   '.png': 'image/png',
   '.jpeg': 'image/jpeg',
@@ -69,6 +82,10 @@ function staticMounts(): Plugin {
 
 export default defineConfig({
   base: './',
+  define: {
+    __APP_VERSION__: JSON.stringify(APP_VERSION),
+    __APP_BUILD__: JSON.stringify(APP_BUILD),
+  },
   plugins: [
     preact(),
     staticMounts(),

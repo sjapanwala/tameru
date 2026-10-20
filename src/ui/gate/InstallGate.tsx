@@ -9,6 +9,7 @@ import type { PWAInstallElement } from '@khmyznikov/pwa-install';
 import { S } from '../../copy/strings';
 import { takeInstallPrompt } from '../../pwa/install';
 import { StatusTint } from '../StatusTint';
+import { versionLabel } from '../version';
 
 declare module 'preact' {
   namespace JSX {
@@ -69,6 +70,7 @@ export function InstallGate() {
           {S.gate.installButton}
         </button>
         <p class="install__fine">{S.gate.fine}</p>
+        <p class="install__fine">{versionLabel}</p>
       </div>
 
       <pwa-install

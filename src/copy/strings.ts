@@ -218,6 +218,7 @@ export const S = {
 
   more: {
     colophon: 'Tameru · stays on this device',
+    updated: (v: string) => `Updated to v${v}`,
   },
 
   freshStart: {

@@ -24,6 +24,7 @@ import { QuickEditor } from './screens/QuickEditor';
 import { Sheet } from './Sheet';
 import { TabBar } from './TabBar';
 import { ToastHost } from './toast';
+import { announceUpdate } from './version';
 
 const addType = (t: string | null): TransactionType => (t === 'income' || t === 'refund' || t === 'transfer' ? t : 'expense');
 
@@ -35,6 +36,8 @@ function Screens({ offer, setOffer }: { offer: FreshStartOffer | null; setOffer:
   const settings = useLoad((a) => a.repos.settings.get());
   const [celebration, setCelebration] = useState<string>();
   useEffect(() => on('onboardingComplete', () => setCelebration(S.onboarding.complete)), []);
+  // Runs once the app (and so the toast host) has rendered.
+  useEffect(() => void (settings && announceUpdate()), [!!settings]);
   if (!settings) return <div class="placeholder" />;
   // Debug stays reachable before onboarding so the sample data can be seeded.
   if (!settings.onboardedAt && route.path !== '/debug') {

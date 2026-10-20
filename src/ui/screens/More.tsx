@@ -1,6 +1,7 @@
 import { S } from '../../copy/strings';
 import { devMode } from '../../pwa/standalone';
 import { PageHeader } from '../components';
+import { versionLabel } from '../version';
 
 export function More() {
   const links: [string, string][] = [
@@ -19,7 +20,11 @@ export function More() {
           </a>
         ))}
       </div>
-      <p class="colophon">{S.more.colophon}</p>
+      <p class="colophon">
+        {S.more.colophon}
+        <br />
+        {versionLabel}
+      </p>
     </section>
   );
 }
