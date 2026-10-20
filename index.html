@@ -18,29 +18,25 @@
       #splash { position: fixed; inset: 0; z-index: 1000; display: grid; place-items: center; background: inherit; transition: opacity 0.2s ease-out; }
       #splash.splash--out { opacity: 0; pointer-events: none; }
       /* Shown only if loading takes a moment: no fake wait on a fast start. */
-      #splash svg { width: 56px; height: 56px; opacity: 0; animation: splash-in 0.25s ease-out 0.4s forwards; }
-      #splash path { stroke: currentColor; stroke-width: 6; fill: none; opacity: 0.2; animation: splash-sweep 1.4s ease-in-out infinite; }
-      #splash path:nth-child(2) { animation-delay: 0.1s; }
-      #splash path:nth-child(3) { animation-delay: 0.2s; }
-      #splash path:nth-child(4) { animation-delay: 0.3s; }
-      #splash path:nth-child(5) { animation-delay: 0.4s; }
-      #splash path:nth-child(6) { animation-delay: 0.5s; }
-      #splash path:nth-child(7) { animation-delay: 0.6s; }
+      #splash svg { width: 64px; height: 64px; opacity: 0; animation: splash-in 0.25s ease-out 0.4s forwards; }
+      #splash path { fill: none; stroke-width: 5; stroke-linecap: round; }
+      #splash .track { stroke: currentColor; opacity: 0.18; }
+      #splash .t { stroke: currentColor; stroke-linejoin: round; }
+      /* The gauge fills and empties while loading. */
+      #splash .fill { stroke: #c9d86a; stroke-dasharray: 104 200; animation: splash-gauge 1.6s ease-in-out infinite; }
       @keyframes splash-in { to { opacity: 1; } }
-      @keyframes splash-sweep { 0%, 100% { opacity: 0.2; } 30% { opacity: 1; } }
-      @media (prefers-reduced-motion: reduce) { #splash path { animation: none; opacity: 1; } }
+      @keyframes splash-gauge { 0% { stroke-dashoffset: 104; } 55% { stroke-dashoffset: 30; } 100% { stroke-dashoffset: 104; } }
+      @media (prefers-reduced-motion: reduce) { #splash .fill { animation: none; stroke-dashoffset: 30; } }
     </style>
   </head>
   <body>
     <div id="splash" aria-hidden="true">
-      <svg viewBox="8 12 48 40">
-        <path d="M14.68 47.00A20 20 0 0 1 12.02 37.90" />
-        <path d="M12.09 35.11A20 20 0 0 1 15.20 26.15" />
-        <path d="M16.87 23.92A20 20 0 0 1 24.60 18.42" />
-        <path d="M27.26 17.57A20 20 0 0 1 36.74 17.57" />
-        <path d="M39.40 18.42A20 20 0 0 1 47.13 23.92" />
-        <path d="M48.80 26.15A20 20 0 0 1 51.91 35.11" />
-        <path d="M51.98 37.90A20 20 0 0 1 49.32 47.00" />
+      <svg viewBox="6 6 52 52">
+        <g transform="translate(0 3)">
+          <path class="track" d="M16.44 47.56A22 22 0 1 1 47.56 47.56" />
+          <path class="fill" d="M16.44 47.56A22 22 0 1 1 47.56 47.56" />
+          <path class="t" d="M30.75 19.5V35a5 5 0 0 0 5 5H38M24.75 26.5H38" />
+        </g>
       </svg>
     </div>
     <div id="app"></div>

@@ -1,0 +1,191 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Privacy policy · Tameru</title>
+<meta name="description" content="How Tameru handles your information: it stays on your phone. No accounts, no servers holding your data, no analytics.">
+<link rel="icon" href="/logo.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="canonical" href="https://tameru.cc/privacy/">
+<meta name="theme-color" content="#f3f0e8">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap">
+<style>
+/* The product site's paper-and-ink look, set as a document: one readable column,
+   section numbers in mono like a ledger, the lime highlighter on the title. */
+:root {
+  --paper: #f3f0e8; --sheet: #fbfaf6; --ink: #121211; --ink-2: #57534b; --ink-3: #8d887d;
+  --rule: #d9d3c4; --lime: #dcf065;
+  --font: 'Geist', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --mono: 'Geist Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+  color-scheme: light;
+}
+*, *::before, *::after { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; }
+body { margin: 0; background: var(--paper); color: var(--ink); font: 400 1rem/1.65 var(--font); -webkit-font-smoothing: antialiased; }
+a { color: inherit; text-underline-offset: 3px; text-decoration-color: var(--ink-3); }
+a:hover { text-decoration-color: var(--ink); }
+:focus-visible { outline: 2px solid var(--ink); outline-offset: 3px; border-radius: 6px; }
+.wrap { max-width: 1184px; margin: 0 auto; padding-inline: max(16px, env(safe-area-inset-left, 0px)) max(16px, env(safe-area-inset-right, 0px)); }
+@media (min-width: 720px) { .wrap { padding-inline: 32px; } }
+.nav { position: sticky; top: 0; z-index: 5; background: rgb(243 240 232 / 0.85); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); box-shadow: 0 1px 0 var(--rule); padding-top: env(safe-area-inset-top, 0px); }
+.nav .wrap { display: flex; align-items: center; justify-content: space-between; height: 64px; gap: 16px; }
+.brand { display: inline-flex; align-items: center; gap: 10px; text-decoration: none; font-weight: 600; font-size: 1.25rem; letter-spacing: -0.045em; }
+.brand img { width: 30px; height: 30px; border-radius: 8px; }
+.btn { display: inline-flex; align-items: center; min-height: 40px; padding: 0 18px; border-radius: 999px; background: var(--ink); color: var(--paper); text-decoration: none; font-weight: 500; font-size: 0.95rem; white-space: nowrap; }
+.doc { max-width: 720px; margin: 0 auto; padding: 72px 0 96px; }
+.eyebrow { font: 500 0.75rem var(--mono); letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-3); margin: 0; }
+h1 { font-size: clamp(2.6rem, 7vw, 4.4rem); font-weight: 600; letter-spacing: -0.05em; line-height: 1; margin: 14px 0 0; text-wrap: balance; }
+mark { background: linear-gradient(var(--lime), var(--lime)) 0 85% / 100% 0.72em no-repeat; color: inherit; padding: 0 0.06em; }
+.meta { margin: 22px 0 0; font: 500 0.85rem var(--mono); color: var(--ink-2); }
+.summary { margin: 40px 0 0; background: var(--sheet); border: 1px solid var(--rule); border-radius: 16px; padding: 24px 26px; }
+.summary p { margin: 0 0 10px; font-weight: 600; letter-spacing: -0.02em; }
+.summary ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 8px; }
+.summary li { display: flex; gap: 10px; color: var(--ink-2); }
+.summary li::before { content: "✓"; flex: none; width: 20px; height: 20px; margin-top: 3px; display: grid; place-items: center; border-radius: 4px; background: var(--lime); color: var(--ink); font: 600 0.75rem var(--mono); }
+section { margin-top: 48px; padding-top: 22px; border-top: 1.5px solid var(--ink); counter-increment: sec; }
+.doc { counter-reset: sec; }
+h2 { font-size: 1.45rem; font-weight: 600; letter-spacing: -0.03em; line-height: 1.2; margin: 0 0 12px; }
+h2::before { content: counter(sec, decimal-leading-zero); display: block; font: 500 0.75rem var(--mono); letter-spacing: 0.14em; color: var(--ink-3); margin-bottom: 6px; }
+h3 { font-size: 1.05rem; font-weight: 600; letter-spacing: -0.02em; margin: 22px 0 6px; }
+p, li { color: var(--ink-2); }
+p { margin: 0 0 14px; }
+ul { padding-left: 1.2em; margin: 0 0 14px; }
+li { margin-bottom: 6px; }
+strong { color: var(--ink); font-weight: 600; }
+code { font: 500 0.88em var(--mono); background: var(--sheet); border: 1px solid var(--rule); border-radius: 5px; padding: 0 5px; }
+footer { background: var(--ink); color: var(--paper); padding: 56px 0 calc(40px + env(safe-area-inset-bottom, 0px)); }
+.footer__row { display: flex; justify-content: space-between; gap: 24px; flex-wrap: wrap; font-size: 0.95rem; color: rgb(243 240 232 / 0.6); }
+.footer__row .brand { color: var(--paper); }
+.footer__row nav { display: flex; gap: 10px 24px; flex-wrap: wrap; }
+.footer__row nav a { text-decoration: none; }
+.footer__row nav a:hover, .footer__row nav a[aria-current] { color: var(--paper); }
+.footer__fine { margin-top: 40px; font: 500 0.75rem var(--mono); letter-spacing: 0.06em; color: rgb(243 240 232 / 0.4); }
+</style>
+</head>
+<body>
+<header class="nav">
+  <div class="wrap">
+    <a class="brand" href="/"><img src="/logo.svg" alt="" width="30" height="30">tameru</a>
+    <a class="btn" href="https://app.tameru.cc" rel="noopener">Open the app</a>
+  </div>
+</header>
+<main class="wrap"><article class="doc">
+
+<p class="eyebrow">Privacy policy</p>
+<h1>Your money stays on <mark>your phone.</mark></h1>
+<p class="meta">Effective October 20, 2026</p>
+
+<div class="summary">
+  <p>The short version</p>
+  <ul>
+    <li>Tameru has no accounts and no servers that hold your data. We can’t see your balances, transactions or plans.</li>
+    <li>Everything you enter is stored on your device, in your browser’s storage for the app.</li>
+    <li>Receipt photos are read on your phone and never uploaded or kept.</li>
+    <li>No analytics, no ads, no tracking cookies, and we don’t sell or share anything.</li>
+  </ul>
+</div>
+
+<section>
+  <h2>Who this covers</h2>
+  <p>This policy covers the Tameru web app at <strong>app.tameru.cc</strong> (“the app”) and the website at <strong>tameru.cc</strong> (“the site”). “We” and “us” mean the people who make Tameru.</p>
+</section>
+
+<section>
+  <h2>What the app stores, and where</h2>
+  <p>Tameru works without an account. Everything you put into it stays in your browser’s storage on the device you’re using (IndexedDB and a few small local settings). That includes:</p>
+  <ul>
+    <li>Accounts and cards you add: names, balances, interest rates, fees, due dates, the card design you pick and, if you choose to enter them, a card’s last four digits.</li>
+    <li>Transactions, recurring bills and income, categories, your plan, goals and quick adds.</li>
+    <li>Settings, including your name if you enter one during setup.</li>
+    <li>If you turn on the lock: your passcode, stored only as a salted, stretched hash, never as the code itself.</li>
+  </ul>
+  <p>None of this is sent to us or to anyone else. Because it never leaves your device, we can’t recover it for you. Make a backup from <strong>More → Settings</strong> if you want a copy.</p>
+  <h3>Small local settings</h3>
+  <p>The app also keeps a few small values in your browser’s local storage: which version you last saw (to show an “Updated” note), any colours you set for custom banks, and, for this browser session only, when the app was last put in the background while unlocked (so an update doesn’t lock you out early). These are not cookies and are never sent anywhere.</p>
+</section>
+
+<section>
+  <h2>Receipt photos</h2>
+  <p>When you scan a receipt, the photo is read by a text reader that runs entirely on your phone and ships with the app. The photo is not uploaded and not saved. Only the details you choose to keep, like the store, total and date, are saved, and only when you add the transaction.</p>
+  <p>The app asks for camera access only when you tap to take a photo, through your phone’s own permission prompt.</p>
+</section>
+
+<section>
+  <h2>Face ID and passcode</h2>
+  <p>If you turn on Face ID or Touch ID, the app uses your phone’s built-in passkey system. Your face or fingerprint is checked by your phone and never reaches the app or us. The app only keeps an identifier your phone gives it for that unlock.</p>
+</section>
+
+<section>
+  <h2>What reaches the internet</h2>
+  <p>Tameru is hosted on <strong>Cloudflare</strong>. When you load the app or the site, your browser downloads files from Cloudflare’s servers, like any website. As part of serving and protecting the site, Cloudflare processes technical information such as your IP address, browser type and the pages requested. We don’t add analytics or tracking to this, and we don’t use it to identify you. See <a href="https://www.cloudflare.com/privacypolicy/" rel="noopener">Cloudflare’s privacy policy</a>.</p>
+  <p>The app’s own files, the card artwork and the receipt reader are all served from app.tameru.cc and kept on your device after first use, so the app works offline. The app makes no other network requests.</p>
+  <h3>The website’s fonts</h3>
+  <p>The site at tameru.cc loads its typefaces from <strong>Google Fonts</strong>, so your browser contacts Google’s servers, which receive your IP address and browser details. See <a href="https://policies.google.com/privacy" rel="noopener">Google’s privacy policy</a>. The app itself carries its fonts and doesn’t contact Google.</p>
+</section>
+
+<section>
+  <h2>Things you choose to share</h2>
+  <p>Some features hand information to another app or service, and only when you tap them:</p>
+  <ul>
+    <li><strong>Add to Google Calendar</strong> opens Google Calendar with a reminder already filled in: the bill or payday’s name, amount, date and how often it repeats. That information goes to Google in the link, and Google’s privacy policy applies to it.</li>
+    <li><strong>Calendar files, backups and CSV exports</strong> are created on your device and saved wherever you choose. What happens to them after that is up to you and the app or service you save them to.</li>
+  </ul>
+</section>
+
+<section>
+  <h2>What we don’t do</h2>
+  <ul>
+    <li>We don’t have user accounts or a database of users.</li>
+    <li>We don’t connect to your bank or ask for bank passwords.</li>
+    <li>We don’t use analytics, advertising or tracking cookies.</li>
+    <li>We don’t sell, rent or share personal information, because we don’t collect it.</li>
+  </ul>
+</section>
+
+<section>
+  <h2>Your control over your data</h2>
+  <ul>
+    <li><strong>See it:</strong> it’s all in the app.</li>
+    <li><strong>Take it with you:</strong> export a full backup or a CSV of your transactions from <strong>More → Settings</strong>.</li>
+    <li><strong>Delete it:</strong> use <strong>Erase all data on this device</strong> in <strong>More → Settings</strong>, or remove Tameru from your Home Screen and clear its website data in your browser settings.</li>
+  </ul>
+  <p>Because we don’t hold your data, there’s nothing for us to look up, correct or delete on our side. If you have a question about this, get in touch below.</p>
+</section>
+
+<section>
+  <h2>Children</h2>
+  <p>Tameru isn’t directed at children under 13, and we don’t knowingly collect information from anyone, including children.</p>
+</section>
+
+<section>
+  <h2>Changes</h2>
+  <p>If we change how Tameru handles information, we’ll update this page and the date at the top. If a change means data would leave your device in a new way, the app will tell you before it happens.</p>
+</section>
+
+<section>
+  <h2>Contact</h2>
+  <p>Questions about privacy? Reach us by <a href="https://github.com/sjapanwala/tameru/issues" rel="noopener">opening an issue on GitHub</a>.</p>
+</section>
+</article></main>
+<footer>
+  <div class="wrap">
+    <div class="footer__row">
+      <a class="brand" href="/"><img src="/logo.svg" alt="" width="30" height="30">tameru</a>
+      <nav aria-label="Footer">
+        <a href="/#how">How it works</a>
+        <a href="/#plan">Plan</a>
+        <a href="/#faq">FAQ</a>
+        <a href="/privacy/" aria-current="page">Privacy</a>
+        <a href="/terms/">Terms</a>
+        <a href="https://github.com/sjapanwala/tameru" rel="noopener">GitHub</a>
+        <a href="https://app.tameru.cc" rel="noopener">Open the app</a>
+      </nav>
+    </div>
+    <p class="footer__fine">© 2026 Tameru · 貯める · Not financial advice</p>
+  </div>
+</footer>
+</body>
+</html>

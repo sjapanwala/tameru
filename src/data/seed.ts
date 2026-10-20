@@ -1,5 +1,5 @@
-// Realistic sample data: a student with part-time biweekly pay, rent, phone,
-// subscriptions, a credit card with a fee, savings with interest, and a goal.
+// Realistic sample data: someone with biweekly pay, rent, phone,
+// subscriptions, an Amex Gold with a fee, savings with interest, and a goal.
 // Includes 12 weeks of history so averages, rollover and detection have something to work with.
 
 import { addDays, dayOfWeek, eachDay, parts } from '../domain/dates';
@@ -34,7 +34,7 @@ export async function seedSampleData(ctx: AppContext, seed = 42): Promise<void> 
   const between = (lo: number, hi: number) => Math.round(lo + rand() * (hi - lo));
   const today = ctx.clock.today();
   const opening = addDays(today, -SEED_HISTORY_DAYS);
-  // The student's own categories (a new install has only Bills and the Irregular fund).
+  // Their own categories (a new install has only Bills and the Irregular fund).
   await ctx.repos.categories.bulkPut(suggestedCategories(['groceries', 'eating_out', 'transport', 'fun', 'personal'], ctx.clock.now().toISOString()));
 
   // Card faces use the bundled art in cards/card-art.
@@ -53,12 +53,12 @@ export async function seedSampleData(ctx: AppContext, seed = 42): Promise<void> 
     interest: { rateBps: 300, kind: 'apy', compounding: 'monthly' },
   });
   const card = await createAccount(ctx, {
-    name: 'Student Visa',
+    name: 'Amex Gold',
     type: 'credit_card',
     openingBalanceCents: -15000,
     openingDate: opening,
     card: { monthlyFeeCents: 499, statementDay: 5, dueDay: 28 },
-    face: { artId: 'bmo/mcgill-student-mastercard', institutionId: 'bmo', last4: '4821' },
+    face: { artId: 'american-express/gold', institutionId: 'american-express', last4: '1005' },
   });
   await createAccount(ctx, { name: 'TFSA', type: 'investing', openingBalanceCents: 50000, openingDate: opening });
 
@@ -72,9 +72,9 @@ export async function seedSampleData(ctx: AppContext, seed = 42): Promise<void> 
   };
 
   const pay = await createRecurring(ctx, {
-    name: 'Bookstore pay',
+    name: 'Paycheque',
     kind: 'income',
-    range: { minCents: 78000, maxCents: 92000 },
+    range: { minCents: 92000, maxCents: 104000 },
     freq: 'biweekly',
     nextDate: payday,
     accountIds: [chq.id],

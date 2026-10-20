@@ -24,11 +24,6 @@ if (runAppInThisWindow()) {
   import('./App').then(({ mountApp }) => mountApp(root));
 } else {
   listenForInstallPrompt();
-  render(
-    <div class="shell shell--bare">
-      <InstallGate />
-    </div>,
-    root,
-  );
+  render(<InstallGate />, root);
   hideSplash();
 }

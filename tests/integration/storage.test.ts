@@ -54,7 +54,7 @@ describe('calendar export', () => {
     const app = await testApp('2026-10-18');
     await seedSampleData(app);
     const items = await calendarItems(app);
-    expect(items.some((i) => i.kind === 'card' && i.name === 'Student Visa' && i.start === '2026-10-28')).toBe(true);
+    expect(items.some((i) => i.kind === 'card' && i.name === 'Amex Gold' && i.start === '2026-10-28')).toBe(true);
     expect(items.some((i) => i.kind === 'income')).toBe(true);
     expect(items.some((i) => i.name.includes('fee'))).toBe(false); // system card-fee items stay out
     expect(items.every((i) => i.start > '2026-10-17')).toBe(true);

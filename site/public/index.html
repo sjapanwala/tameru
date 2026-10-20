@@ -1,6 +1,9 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Tameru</title>
-<meta name="claude:viewport-fit-sides" content="cover">
 <meta name="description" content="Tameru is a private budgeting app for your phone. It shows how much is safe to spend today, after bills, goals and a buffer. No account, no bank login, works offline.">
 <link rel="icon" href="/logo.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
@@ -10,726 +13,769 @@
 <meta property="og:url" content="https://tameru.cc/">
 <meta property="og:type" content="website">
 <meta property="og:image" content="https://tameru.cc/icon-512.png">
-<meta name="theme-color" content="#0e0e0e">
+<meta name="theme-color" content="#f3f0e8">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800&family=Geist+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap">
 <style>
-/* Layout: the app's own monochrome "ledger" system, scaled up. One dark hero band (the app's
-   Home hero), then alternating text + phone rows, a receipt-style breakdown, and a quiet footer. */
+/* "Ledger", the app's own language, at page size: ink on paper, every figure in mono,
+   rules and ticks instead of colour, and the logo's lime used like a highlighter.
+   The props are a budget's: dot-grid paper, hatching, banknote engraving, a receipt,
+   the Plan dial, a camera over a receipt. Scroll drives the motion. */
 :root {
-  --bg: #ffffff;
-  --surface: #f5f5f4;
-  --text: #111111;
-  --text-2: #66625f;
-  --text-3: #a3a09c;
-  --line: #e9e7e4;
-  --accent: #111111;
-  --accent-text: #ffffff;
-  --phone-frame: #1a1a1a;
-  --hero-bg: radial-gradient(120% 140% at 0% 0%, #2b2b2b 0%, #141414 45%, #050505 100%);
-  --hero-text: #f5f5f5;
-  --hero-dim: rgb(255 255 255 / 0.55);
-  --hero-faint: rgb(255 255 255 / 0.16);
-  --hero-line: rgb(255 255 255 / 0.12);
-  --good: #1f9d55;
+  --paper: #f3f0e8;
+  --paper-2: #ebe7dc;
+  --sheet: #fbfaf6;
+  --ink: #121211;
+  --ink-2: #57534b;
+  --ink-3: #8d887d;
+  --rule: #d9d3c4;
+  --rule-soft: #e6e1d4;
+  --lime: #dcf065;
+  --plus: #2f7a4b;
   --font: 'Geist', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  --font-num: 'Geist Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
-  --shadow-phone: 0 40px 80px -24px rgb(0 0 0 / 0.35), 0 8px 24px -8px rgb(0 0 0 / 0.18);
-  --page-max: 1120px;
+  --mono: 'Geist Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+  --max: 1184px;
   --glide: cubic-bezier(0.22, 1, 0.36, 1);
+  /* props */
+  --dots: radial-gradient(circle at 50% 50%, rgb(18 18 17 / 0.2) 0 1.4px, transparent 1.9px) 0 0 / 14px 14px,
+          radial-gradient(circle at 50% 50%, rgb(18 18 17 / 0.08) 0 1px, transparent 1.5px) 7px 7px / 14px 14px, #ece7d6;
+  --hatch: repeating-linear-gradient(135deg, rgb(18 18 17 / 0.13) 0 1px, transparent 1px 8px), var(--paper-2);
+  --engrave: repeating-radial-gradient(circle at 0% 100%, transparent 0 9px, rgb(18 18 17 / 0.1) 9px 10px),
+             repeating-radial-gradient(circle at 100% 0%, transparent 0 9px, rgb(18 18 17 / 0.1) 9px 10px), #e4ead2;
+  color-scheme: light;
 }
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    --bg: #0c0c0c; --surface: #181818; --text: #f2f2f2; --text-2: #9a9692; --text-3: #5c5a58;
-    --line: #242322; --accent: #f2f2f2; --accent-text: #0c0c0c; --phone-frame: #2a2a2a;
-    --hero-bg: radial-gradient(120% 140% at 0% 0%, #2e2e2e 0%, #1a1a1a 45%, #121212 100%);
-    --good: #4ade80;
-    --shadow-phone: 0 0 0 1px rgb(255 255 255 / 0.06), 0 40px 80px -24px rgb(0 0 0 / 0.9);
-    color-scheme: dark;
-  }
-}
-:root[data-theme="dark"] {
-  --bg: #0c0c0c; --surface: #181818; --text: #f2f2f2; --text-2: #9a9692; --text-3: #5c5a58;
-  --line: #242322; --accent: #f2f2f2; --accent-text: #0c0c0c; --phone-frame: #2a2a2a;
-  --hero-bg: radial-gradient(120% 140% at 0% 0%, #2e2e2e 0%, #1a1a1a 45%, #121212 100%);
-  --good: #4ade80;
-  --shadow-phone: 0 0 0 1px rgb(255 255 255 / 0.06), 0 40px 80px -24px rgb(0 0 0 / 0.9);
-  color-scheme: dark;
-}
-
 *, *::before, *::after { box-sizing: border-box; }
-html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
-body {
-  margin: 0;
-  background: var(--bg);
-  color: var(--text);
-  font-family: var(--font);
-  font-size: 1rem;
-  line-height: 1.5;
-  -webkit-font-smoothing: antialiased;
-  overflow-x: hidden;
-}
-@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } html { scroll-behavior: auto; } }
-
-.wrap {
-  max-width: var(--page-max);
-  margin: 0 auto;
-  padding-left: max(20px, env(safe-area-inset-left, 0px));
-  padding-right: max(20px, env(safe-area-inset-right, 0px));
-}
-.num { font-family: var(--font-num); font-variant-numeric: tabular-nums; }
-.eyebrow {
-  font-family: var(--font-num);
-  font-size: 0.75rem;
-  font-weight: 500;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--text-2);
-  margin: 0;
-}
-h1, h2, h3 { margin: 0; text-wrap: balance; letter-spacing: -0.035em; }
-h2 { font-size: clamp(1.9rem, 4.2vw, 2.9rem); font-weight: 700; line-height: 1.05; }
-h3 { font-size: 1.125rem; font-weight: 650; letter-spacing: -0.015em; }
-p { margin: 0; }
-.lede { font-size: 1.125rem; color: var(--text-2); max-width: 34em; text-wrap: pretty; }
+html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; }
+body { margin: 0; background: var(--paper); color: var(--ink); font: 400 1rem/1.5 var(--font); -webkit-font-smoothing: antialiased; overflow-x: clip; }
+h1, h2, h3, p { margin: 0; }
+h1, h2 { font-weight: 600; letter-spacing: -0.045em; text-wrap: balance; }
+h2 { font-size: clamp(2.25rem, 5.4vw, 4.4rem); line-height: 1.02; }
+h3 { font-weight: 600; letter-spacing: -0.025em; }
 a { color: inherit; }
-:focus-visible { outline: 2px solid var(--text); outline-offset: 3px; border-radius: 6px; }
+img { display: block; max-width: 100%; }
+:focus-visible { outline: 2px solid var(--ink); outline-offset: 3px; border-radius: 6px; }
+.wrap { max-width: var(--max); margin: 0 auto; padding-inline: max(16px, env(safe-area-inset-left, 0px)) max(16px, env(safe-area-inset-right, 0px)); }
+@media (min-width: 720px) { .wrap { padding-inline: 32px; } }
+.lede { font-size: clamp(1.05rem, 1.6vw, 1.2rem); color: var(--ink-2); max-width: 34em; text-wrap: pretty; }
+.mono { font-family: var(--mono); font-variant-numeric: tabular-nums; letter-spacing: -0.02em; }
+.eyebrow { font: 500 0.75rem var(--mono); letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-3); }
+
+/* The highlighter: a lime swipe that draws in under the words. */
+mark { background: none; color: inherit; position: relative; z-index: 0; white-space: nowrap; }
+mark::before {
+  content: ""; position: absolute; z-index: -1; left: -0.08em; right: -0.08em; top: 0.18em; bottom: 0.06em;
+  background: var(--lime); border-radius: 0.12em 0.3em 0.16em 0.26em;
+  transform: scaleX(var(--swipe, 0)); transform-origin: left; transition: transform 700ms var(--glide);
+}
+mark.on { --swipe: 1; }
 
 .btn {
   display: inline-flex; align-items: center; justify-content: center; gap: 10px;
-  min-height: 52px; padding: 0 26px; border-radius: 999px;
-  font: 600 1rem var(--font); text-decoration: none; letter-spacing: -0.01em;
-  transition: transform 240ms var(--glide), opacity 240ms;
+  min-height: 48px; padding: 0 22px; border-radius: 999px; white-space: nowrap;
+  font: 500 1rem var(--font); text-decoration: none; letter-spacing: -0.01em;
+  background: var(--ink); color: var(--paper); border: 1px solid var(--ink);
+  transition: transform 240ms var(--glide), background 240ms, color 240ms;
 }
 .btn:active { transform: scale(0.97); }
-.btn--light { background: var(--hero-text); color: #0c0c0c; }
-.btn--ghost { color: var(--hero-text); border: 1px solid var(--hero-line); }
-.btn--solid { background: var(--accent); color: var(--accent-text); }
+.btn svg { width: 18px; height: 18px; }
+.btn--line { background: transparent; color: var(--ink); border-color: var(--rule); }
+.btn--line:hover { border-color: var(--ink); }
+.btn--lime { background: var(--lime); border-color: var(--lime); color: var(--ink); }
 
-/* ---------- top bar ---------- */
-.top {
-  position: absolute; inset: 0 0 auto; z-index: 5;
-  padding-top: max(18px, env(safe-area-inset-top, 0px));
-}
-.top .wrap { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
-.brand { display: inline-flex; align-items: center; gap: 10px; text-decoration: none; color: var(--hero-text); font-weight: 700; font-size: 1.125rem; letter-spacing: -0.03em; }
-.brand svg { width: 34px; height: 34px; display: block; }
-.top nav { display: flex; gap: 24px; align-items: center; }
-.top nav a { color: var(--hero-dim); text-decoration: none; font-size: 0.9375rem; transition: color 240ms; }
-.top nav a:hover { color: var(--hero-text); }
-.top nav a.pill { color: var(--hero-text); border: 1px solid var(--hero-line); padding: 8px 16px; border-radius: 999px; }
-@media (max-width: 720px) { .top nav a:not(.pill) { display: none; } }
+/* ---------- nav ---------- */
+.nav { position: fixed; inset: 0 0 auto; z-index: 20; padding-top: env(safe-area-inset-top, 0px); transition: background 300ms, box-shadow 300ms; }
+.nav.scrolled { background: rgb(243 240 232 / 0.82); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); box-shadow: 0 1px 0 var(--rule); }
+.nav .wrap { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; height: 68px; }
+.brand { display: inline-flex; align-items: center; gap: 10px; text-decoration: none; font-weight: 600; font-size: 1.3rem; letter-spacing: -0.045em; }
+.brand svg { width: 32px; height: 32px; }
+.nav__links { display: flex; gap: 30px; }
+.nav__links a { text-decoration: none; color: var(--ink-2); font-size: 0.95rem; transition: color 200ms; }
+.nav__links a:hover { color: var(--ink); }
+.nav__cta { justify-self: end; min-height: 40px; padding: 0 18px; font-size: 0.95rem; }
+@media (max-width: 820px) { .nav .wrap { grid-template-columns: 1fr auto; } .nav__links { display: none; } }
 
 /* ---------- hero ---------- */
-.hero {
-  background: var(--hero-bg);
-  color: var(--hero-text);
-  border-radius: 0 0 40px 40px;
-  padding-block: 120px 0;
-  overflow: visible;
-}
-.hero__grid { display: grid; grid-template-columns: 1.05fr 0.95fr; gap: 48px; align-items: end; }
-.hero__copy { padding-bottom: 96px; display: grid; gap: 28px; min-width: 0; }
-.hero .eyebrow { color: var(--hero-dim); }
-.hero h1 { font-size: clamp(2.75rem, 7vw, 5.25rem); font-weight: 800; line-height: 0.98; letter-spacing: -0.05em; }
-.hero h1 span { color: var(--hero-dim); }
-.hero .lede { color: var(--hero-dim); }
-.hero__actions { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
-.hero__fine { font-size: 0.875rem; color: var(--hero-dim); display: flex; flex-wrap: wrap; gap: 6px 18px; }
-.hero__fine span::before { content: ""; display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--hero-dim); margin-right: 8px; vertical-align: 2px; }
-.hero__phone { display: flex; justify-content: center; align-self: end; min-width: 0; }
-.hero__phone .phone { margin-bottom: -150px; transform: rotate(-2deg); }
-@media (max-width: 860px) {
-  .hero { padding-block: 104px 0; }
-  .hero__grid { grid-template-columns: 1fr; gap: 8px; }
-  .hero__copy { padding-bottom: 32px; }
-  .hero__phone .phone { margin-bottom: -260px; transform: none; }
-}
+.hero { padding: calc(148px + env(safe-area-inset-top, 0px)) 0 56px; text-align: center; }
+.hero h1 { font-size: clamp(3rem, 8.4vw, 6.9rem); line-height: 0.98; margin-top: 22px; }
+.hero .lede { margin: 30px auto 0; }
+.hero__actions { margin-top: 34px; display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; }
+.ruler { margin: 40px auto 0; width: min(420px, 80%); height: 14px; color: var(--ink); background: repeating-linear-gradient(90deg, currentColor 0 1.5px, transparent 1.5px 8px); opacity: 0.25; mask: linear-gradient(90deg, transparent, #000 15%, #000 85%, transparent); -webkit-mask: linear-gradient(90deg, transparent, #000 15%, #000 85%, transparent); }
+@media (max-width: 600px) { .hero { padding-top: calc(118px + env(safe-area-inset-top, 0px)); } }
 
-/* ---------- phone mockup ---------- */
+/* The till roll: real entries from the screenshots, running past. */
+.tape { border-block: 1px dashed var(--rule); overflow: hidden; background: var(--sheet); }
+.tape__run { display: flex; width: max-content; animation: run 48s linear infinite; }
+.tape span { font: 500 0.85rem var(--mono); letter-spacing: 0.04em; text-transform: uppercase; padding: 14px 22px; white-space: nowrap; color: var(--ink-2); }
+.tape span b { font-weight: 500; color: var(--ink); margin-left: 10px; }
+.tape span b.in { color: var(--plus); }
+.tape span::after { content: "✳"; margin-left: 44px; color: var(--ink-3); }
+@keyframes run { to { transform: translateX(-50%); } }
+
+/* ---------- phone ---------- */
 .phone {
-  width: 300px; max-width: 100%;
-  aspect-ratio: 300 / 640;
-  background: var(--phone-frame);
-  border-radius: 48px;
-  padding: 9px;
-  box-shadow: var(--shadow-phone);
-  flex: none;
+  --w: 300px;
+  position: relative; width: var(--w); flex: none;
+  padding: calc(var(--w) * 0.034); border-radius: calc(var(--w) * 0.165);
+  background: linear-gradient(145deg, #34342f, #0b0b0a 40%, #22221f);
+  box-shadow: inset 0 0 0 1.5px rgb(255 255 255 / 0.1), 0 50px 90px -34px rgb(18 18 17 / 0.55), 0 18px 34px -20px rgb(18 18 17 / 0.45);
 }
-.screen {
-  position: relative;
-  height: 100%;
-  border-radius: 40px;
+.phone img { width: 100%; height: auto; aspect-ratio: 780 / 1688; border-radius: calc(var(--w) * 0.135); background: #fff; }
+.phone::after { content: ""; position: absolute; top: calc(var(--w) * 0.058); left: 50%; translate: -50% 0; width: calc(var(--w) * 0.29); height: calc(var(--w) * 0.085); border-radius: 99px; background: #050505; }
+
+/* ---------- stage: the Home hero card opens up, the dial fills ---------- */
+.stage { --p: 0; height: 240vh; position: relative; }
+.stage__sticky { position: sticky; top: 0; height: 100vh; display: grid; place-items: center; overflow: hidden; }
+.stage__panel {
+  position: absolute; left: 50%; top: 50%;
+  width: calc(min(1120px, 100vw - 32px) + (100vw - min(1120px, 100vw - 32px)) * var(--p));
+  height: calc(80vh + 20vh * var(--p));
+  translate: -50% -50%;
+  border-radius: calc(32px * (1 - var(--p)));
+  background: radial-gradient(120% 120% at 20% 0%, #2d2d2a 0%, #141413 45%, #060606 100%);
   overflow: hidden;
-  background: var(--bg);
-  color: var(--text);
-  font-size: 11px;
-  line-height: 1.35;
-  display: flex; flex-direction: column;
 }
-.island { position: absolute; top: 9px; left: 50%; width: 82px; height: 24px; margin-left: -41px; background: #000; border-radius: 999px; z-index: 3; }
-.status { display: flex; justify-content: space-between; align-items: center; padding: 13px 26px 0 30px; height: 40px; font-weight: 600; font-size: 12px; position: relative; z-index: 2; }
-.status i { display: inline-flex; gap: 4px; align-items: center; font-style: normal; }
-.status i b { display: block; width: 18px; height: 9px; border: 1.3px solid currentColor; border-radius: 3px; position: relative; }
-.status i b::after { content: ""; position: absolute; inset: 1.2px; right: 4px; background: currentColor; border-radius: 1px; }
-.status i em { display: block; width: 14px; height: 9px; background: linear-gradient(to right, currentColor 0 2.5px, transparent 2.5px 3.8px, currentColor 3.8px 6.3px, transparent 6.3px 7.6px, currentColor 7.6px 10.1px, transparent 10.1px 11.4px, currentColor 11.4px); clip-path: polygon(0 100%, 100% 0, 100% 100%); }
-.tabbar {
-  position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%);
-  display: flex; gap: 6px; align-items: center; padding: 5px;
-  background: color-mix(in srgb, var(--bg) 82%, transparent);
-  backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
-  border-radius: 999px; box-shadow: 0 6px 20px -6px rgb(0 0 0 / 0.25), 0 0 0 1px var(--line);
-  z-index: 2;
+.stage__panel::before { /* faint figures, like the back of a ledger */
+  content: "$1,380.21  $115.01  12 days  $53.22  +$980.00  −$923.47  91%  $1,380.21  $115.01  12 days  $53.22  +$980.00";
+  position: absolute; inset: -10% -10%; font: 600 clamp(3rem, 9vw, 8rem)/1.05 var(--mono); letter-spacing: -0.05em;
+  color: rgb(255 255 255 / 0.035); word-spacing: 0.4em; transform: rotate(-8deg);
 }
-.tabbar span { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; color: var(--text-2); }
-.tabbar span.on { background: var(--accent); color: var(--accent-text); }
-.tabbar svg { width: 15px; height: 15px; }
-
-/* home screen */
-.s-hero { background: var(--hero-bg); color: var(--hero-text); border-radius: 0 0 30px 30px; padding-bottom: 0; position: relative; margin-top: -40px; padding-top: 40px; }
-.s-hero .status { color: var(--hero-text); }
-.s-hero__row { display: flex; justify-content: space-between; padding: 6px 16px 0; }
-.avatar { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; font-weight: 600; font-size: 10.5px; background: rgb(255 255 255 / 0.1); border: 1px solid var(--hero-line); }
-.s-hero__label { text-align: center; color: var(--hero-dim); font-size: 11.5px; margin-top: 6px; }
-.s-hero__big { text-align: center; font-size: 47px; font-weight: 700; letter-spacing: -0.055em; line-height: 1.05; margin-top: 2px; }
-.s-hero__big small { font-size: inherit; color: rgb(255 255 255 / 0.38); }
-.s-hero__chip { display: table; margin: 9px auto 0; padding: 5px 11px; border: 1px solid var(--hero-line); border-radius: 999px; font-size: 10.5px; background: rgb(255 255 255 / 0.05); }
-.ticks { display: flex; gap: 2px; justify-content: center; align-items: center; margin: 13px auto 0; height: 10px; }
-.ticks span { width: 4px; height: 4px; border-radius: 1px; background: var(--hero-faint); }
-.ticks span.on { background: rgb(255 255 255 / 0.45); }
-.ticks span.now { height: 10px; width: 3px; background: var(--hero-text); }
-.mini-card { margin: 16px 18px 0; height: 62px; border-radius: 12px 12px 0 0; background: linear-gradient(135deg, #1d5c55 0%, #0f3a36 60%, #0b2b28 100%); position: relative; overflow: hidden; color: #e7f3f1; padding: 10px 12px; font-size: 10px; }
-.mini-card::after { content: ""; position: absolute; right: -30px; top: -40px; width: 120px; height: 120px; border-radius: 50%; border: 18px solid rgb(255 255 255 / 0.06); }
-.mini-card b { font-weight: 600; font-size: 11px; display: block; }
-.mini-card span { font-family: var(--font-num); opacity: 0.7; }
-.s-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; padding: 12px 14px 0; }
-.s-actions span { background: var(--surface); border-radius: 999px; height: 36px; display: flex; align-items: center; justify-content: center; gap: 6px; font-weight: 600; font-size: 12px; }
-.s-quick { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; padding: 13px 10px 0; text-align: center; }
-.s-quick div { display: grid; gap: 3px; justify-items: center; }
-.s-quick i { width: 40px; height: 40px; border-radius: 50%; background: var(--surface); display: grid; place-items: center; font-style: normal; }
-.s-quick i.add { background: none; border: 1.3px dashed var(--text-3); color: var(--text-3); font-size: 16px; }
-.s-quick svg { width: 16px; height: 16px; }
-.s-quick b { font-weight: 500; font-size: 10px; }
-.s-quick small { font-family: var(--font-num); font-size: 9px; color: var(--text-2); }
-.s-note { margin: 12px 16px 0; padding-left: 9px; border-left: 2px solid var(--text); font-size: 10.5px; }
-.s-head { display: flex; justify-content: space-between; align-items: baseline; padding: 14px 16px 4px; }
-.s-head b { font-size: 14px; font-weight: 700; letter-spacing: -0.02em; }
-.s-head span { color: var(--text-2); font-size: 10.5px; }
-.tx { display: flex; align-items: center; gap: 9px; padding: 6px 16px; }
-.tx i { width: 30px; height: 30px; border-radius: 50%; background: var(--surface); display: grid; place-items: center; font-style: normal; font-size: 9px; font-weight: 600; color: var(--text-2); flex: none; }
-.tx div { flex: 1; min-width: 0; }
-.tx b { display: block; font-weight: 500; font-size: 11.5px; }
-.tx small { color: var(--text-2); font-size: 9.5px; }
-.tx .amt { font-family: var(--font-num); font-size: 12px; }
-.tx .amt sup { font-size: 8.5px; color: var(--text-2); vertical-align: 0; }
-.tx .amt.in { color: var(--good); }
-
-/* plan screen */
-.s-page { padding: 4px 16px 0; display: flex; flex-direction: column; gap: 10px; }
-.s-title { font-size: 22px; font-weight: 700; letter-spacing: -0.035em; }
-.s-sub { color: var(--text-2); font-size: 10.5px; margin-top: -6px; }
-.dial { position: relative; width: 196px; height: 196px; margin: 4px auto 0; }
-.dial svg { width: 100%; height: 100%; transform: rotate(-90deg); }
-.dial__c { position: absolute; inset: 0; display: grid; place-content: center; text-align: center; gap: 1px; }
-.dial__c small { color: var(--text-2); font-size: 9.5px; }
-.dial__c b { font-size: 22px; font-weight: 700; letter-spacing: -0.04em; }
-.dial__c span { font-family: var(--font-num); font-size: 9px; color: var(--text-2); }
-.legend { display: grid; gap: 0; }
-.legend div { display: grid; grid-template-columns: 9px 1fr auto auto; gap: 8px; align-items: center; padding: 5.5px 0; border-bottom: 1px solid var(--line); font-size: 11px; }
-.legend i { width: 9px; height: 9px; border-radius: 3px; }
-.legend span { font-family: var(--font-num); font-size: 10px; color: var(--text-2); min-width: 28px; text-align: right; }
-.legend em { font-style: normal; font-family: var(--font-num); font-size: 10.5px; min-width: 48px; text-align: right; }
-
-/* upcoming screen */
-.up-sum { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; }
-.up-sum div { background: var(--surface); border-radius: 14px; padding: 10px 11px; display: grid; gap: 2px; }
-.up-sum small { color: var(--text-2); font-size: 9.5px; }
-.up-sum b { font-family: var(--font-num); font-weight: 500; font-size: 15px; letter-spacing: -0.02em; }
-.up-day { display: grid; gap: 2px; }
-.up-day > small { font-family: var(--font-num); text-transform: uppercase; letter-spacing: 0.1em; font-size: 8.5px; color: var(--text-2); padding-top: 6px; }
-.up-item { display: flex; align-items: center; gap: 9px; padding: 5px 0; }
-.up-item i { width: 28px; height: 28px; border-radius: 9px; background: var(--surface); display: grid; place-items: center; flex: none; }
-.up-item i svg { width: 14px; height: 14px; }
-.up-item div { flex: 1; min-width: 0; }
-.up-item b { display: block; font-weight: 500; font-size: 11.5px; }
-.up-item small { color: var(--text-2); font-size: 9.5px; }
-.up-item .amt { font-family: var(--font-num); font-size: 11.5px; }
-.up-item .amt.in { color: var(--good); }
-.cal-btn { margin-top: 4px; border: 1px solid var(--line); border-radius: 14px; padding: 9px 11px; display: flex; gap: 9px; align-items: center; font-size: 10.5px; }
-.cal-btn b { display: block; font-weight: 600; font-size: 11px; }
-.cal-btn small { color: var(--text-2); font-size: 9.5px; }
-.cal-btn svg { width: 18px; height: 18px; flex: none; }
-
-/* receipt screen */
-.s-receipt { background: #0d0d0d; color: #f2f2f2; flex: 1; position: relative; display: flex; flex-direction: column; }
-.s-receipt .status { color: #f2f2f2; }
-.paper {
-  margin: 12px 34px 0; background: #fbfaf7; color: #2a2826; font-family: var(--font-num); font-size: 8.5px; line-height: 1.55;
-  padding: 14px 14px 18px; transform: rotate(-1.5deg);
-  box-shadow: 0 14px 30px -8px rgb(0 0 0 / 0.6);
-  -webkit-mask: radial-gradient(4px at 50% 100%, transparent 98%, #000) 0 0 / 8px 100% repeat-x;
-  mask: radial-gradient(4px at 50% 100%, transparent 98%, #000) 0 0 / 8px 100% repeat-x;
+.dial { position: absolute; left: 50%; top: 50%; width: min(86vh, 92vw); aspect-ratio: 1; translate: -50% -50%; rotate: calc(-30deg + 30deg * var(--p)); }
+.dial line { stroke: rgb(255 255 255 / 0.16); stroke-width: 2.2; stroke-linecap: round; transition: stroke 300ms; }
+.dial line.lit { stroke: var(--lime); }
+.stage__phone { position: relative; z-index: 1; transform: perspective(1400px) translateY(calc((1 - var(--p)) * 16vh)) rotateX(calc((1 - var(--p)) * 28deg)) scale(calc(0.92 + 0.08 * var(--p))); }
+.stage__phone .phone { --w: min(320px, 70vw, 37vh); }
+.slip {
+  position: absolute; z-index: 2; white-space: nowrap; background: var(--sheet); color: var(--ink);
+  padding: 12px 16px 14px; font-size: 0.9rem; box-shadow: 0 24px 40px -18px rgb(0 0 0 / 0.6);
+  opacity: clamp(0, (var(--p) - 0.55) * 4, 1); transform: translateY(calc((1 - var(--p)) * 40px)) rotate(var(--r));
+  -webkit-mask: radial-gradient(circle 5px at 50% 100%, #0000 98%, #000) 50% 100% / 12px 51% repeat-x, linear-gradient(#000 0 0) top / 100% calc(100% - 5px) no-repeat;
+  mask: radial-gradient(circle 5px at 50% 100%, #0000 98%, #000) 50% 100% / 12px 51% repeat-x, linear-gradient(#000 0 0) top / 100% calc(100% - 5px) no-repeat;
 }
-.paper h4 { margin: 0 0 2px; text-align: center; font-size: 11px; letter-spacing: 0.08em; font-weight: 500; }
-.paper p { text-align: center; color: #7a7672; margin-bottom: 8px; }
-.paper .ln { display: flex; justify-content: space-between; }
-.paper hr { border: 0; border-top: 1px dashed #b9b5b0; margin: 6px 0; }
-.paper .hit { outline: 1.5px solid #1f9d55; outline-offset: 2px; border-radius: 2px; background: rgb(31 157 85 / 0.1); }
-.paper .tot { font-size: 10px; font-weight: 500; }
-.scan-corners { position: absolute; inset: 52px 22px 205px; pointer-events: none; }
-.scan-corners i { position: absolute; width: 18px; height: 18px; border: 2px solid rgb(255 255 255 / 0.85); }
-.scan-corners i:nth-child(1) { top: 0; left: 0; border-right: 0; border-bottom: 0; border-radius: 6px 0 0 0; }
-.scan-corners i:nth-child(2) { top: 0; right: 0; border-left: 0; border-bottom: 0; border-radius: 0 6px 0 0; }
-.scan-corners i:nth-child(3) { bottom: 0; left: 0; border-right: 0; border-top: 0; border-radius: 0 0 0 6px; }
-.scan-corners i:nth-child(4) { bottom: 0; right: 0; border-left: 0; border-top: 0; border-radius: 0 0 6px 0; }
-.found {
-  margin-top: auto; background: var(--bg); color: var(--text); border-radius: 24px 24px 0 0; padding: 14px 16px 22px; display: grid; gap: 8px;
+.slip small { display: block; font: 500 0.68rem var(--mono); letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-3); margin-bottom: 4px; }
+.slip b { font: 600 1.15rem var(--mono); letter-spacing: -0.02em; }
+.slip--a { --r: -4deg; right: calc(50% + min(190px, 21vh)); top: 30%; }
+.slip--b { --r: 3deg; left: calc(50% + min(190px, 21vh)); top: 55%; }
+@media (max-width: 760px) { .slip { display: none; } }
+
+/* ---------- headlines that ink in word by word ---------- */
+.say { padding-block: 22vh 16vh; }
+.say h2 { max-width: 15em; }
+.say .lede { margin-top: 28px; }
+.words .w { color: var(--rule); transition: color 400ms var(--glide); }
+.words .w.lit { color: var(--ink); }
+
+/* ---------- stacking steps, each on its own paper ---------- */
+.steps { display: grid; gap: 24px; padding-bottom: 12vh; }
+.step {
+  position: sticky; top: calc(84px + var(--i) * 14px);
+  display: grid; grid-template-columns: 300px 1fr; gap: 48px;
+  background: var(--sheet); border: 1px solid var(--rule); border-radius: 18px; padding: 32px;
+  min-height: min(720px, 82vh);
+  box-shadow: 0 -18px 40px -24px rgb(18 18 17 / 0.25);
 }
-.found .grab { width: 34px; height: 4px; border-radius: 4px; background: var(--line); margin: -4px auto 2px; }
-.found .eyebrow { font-size: 8.5px; }
-.found__total { font-size: 30px; font-weight: 700; letter-spacing: -0.05em; line-height: 1; }
-.found__total small { font-size: inherit; color: var(--text-3); }
-.found dl { margin: 0; display: grid; grid-template-columns: auto 1fr; gap: 3px 12px; font-size: 10.5px; }
-.found dt { color: var(--text-2); }
-.found dd { margin: 0; text-align: right; }
-.found .btn-s { background: var(--accent); color: var(--accent-text); border-radius: 999px; height: 34px; display: grid; place-items: center; font-weight: 600; font-size: 11.5px; margin-top: 2px; }
-
-/* ---------- sections ---------- */
-section { padding-block: 120px; }
-.intro { padding-block: 210px 40px; }
-@media (max-width: 860px) { .intro { padding-block: 300px 24px; } section { padding-block: 80px; } }
-.intro .wrap { display: grid; grid-template-columns: 1fr 1fr; gap: 64px; align-items: start; }
-.intro .wrap > * { min-width: 0; }
-.intro__text { display: grid; gap: 20px; align-content: start; position: sticky; top: 40px; }
-@media (max-width: 860px) { .intro .wrap { grid-template-columns: 1fr; gap: 40px; } .intro__text { position: static; } }
-
-/* the breakdown, set like a till receipt */
-.tally {
-  background: var(--surface);
-  border-radius: 24px;
-  padding: 28px 28px 24px;
-  font-family: var(--font-num);
-  font-variant-numeric: tabular-nums;
-  font-size: 0.9375rem;
-}
-.tally__head { display: flex; justify-content: space-between; color: var(--text-2); font-size: 0.75rem; letter-spacing: 0.12em; text-transform: uppercase; padding-bottom: 14px; border-bottom: 1px dashed var(--text-3); }
-.tally__row { display: grid; grid-template-columns: 1.5em 1fr auto; gap: 8px; padding: 12px 0; border-bottom: 1px solid var(--line); align-items: baseline; }
-.tally__row span:first-child { color: var(--text-2); }
-.tally__row span:nth-child(2) { font-family: var(--font); color: var(--text); }
-.tally__row small { display: block; font-family: var(--font); color: var(--text-2); font-size: 0.8125rem; margin-top: 2px; }
-.tally__total { display: grid; grid-template-columns: 1fr auto; gap: 8px; padding-top: 18px; border-top: 1px dashed var(--text-3); margin-top: -1px; align-items: end; }
-.tally__total b { font-family: var(--font); font-size: 1.0625rem; }
-.tally__total strong { font-size: clamp(1.75rem, 4vw, 2.25rem); font-weight: 500; letter-spacing: -0.04em; }
-.tally__day { grid-column: 1 / -1; color: var(--text-2); font-size: 0.8125rem; }
-
-/* feature rows */
-.feature .wrap { display: grid; grid-template-columns: 1fr 1fr; gap: 64px; align-items: center; }
-.feature .wrap > * { min-width: 0; }
-.feature--flip .feature__phone { order: -1; }
-.feature__text { display: grid; gap: 18px; max-width: 30rem; }
-.feature__phone { display: flex; justify-content: center; padding: 48px 16px; border-radius: 32px; background: var(--surface); }
-.feature__phone .phone { width: 280px; }
-.points { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 12px; }
-.points li { display: grid; grid-template-columns: 22px 1fr; gap: 10px; color: var(--text-2); }
-.points li b { color: var(--text); font-weight: 600; }
-.points svg { width: 18px; height: 18px; margin-top: 3px; color: var(--text); }
+.step__copy { display: flex; flex-direction: column; justify-content: space-between; gap: 32px; }
+.step__n { display: inline-flex; gap: 8px; align-items: baseline; font: 500 0.8rem var(--mono); letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-3); border-bottom: 1px solid var(--ink); padding-bottom: 6px; }
+.step__n b { font: 600 1.6rem var(--mono); color: var(--ink); letter-spacing: -0.04em; }
+.step h3 { margin-top: 28px; font-size: clamp(1.75rem, 2.8vw, 2.3rem); line-height: 1.06; }
+.step p { color: var(--ink-2); font-size: 1.05rem; text-wrap: pretty; }
+.step__art { background: var(--bg); border-radius: 12px; display: flex; align-items: flex-start; justify-content: center; overflow: hidden; padding-top: 56px; position: relative; box-shadow: inset 0 0 0 1px rgb(18 18 17 / 0.06); }
+.step__art .phone { --w: min(320px, 29vw); }
+.step__art .stamp { position: absolute; left: 22px; bottom: 22px; font: 600 0.75rem var(--mono); letter-spacing: 0.14em; text-transform: uppercase; padding: 8px 12px; border: 1.5px solid var(--ink); border-radius: 6px; rotate: -6deg; background: rgb(251 250 246 / 0.7); }
 @media (max-width: 860px) {
-  .feature .wrap { grid-template-columns: 1fr; gap: 36px; }
-  .feature--flip .feature__phone { order: 0; }
-  .feature__phone { padding: 32px 12px; }
+  .step { position: relative; top: 0; grid-template-columns: 1fr; gap: 24px; padding: 20px; min-height: 0; }
+  .step h3 { margin-top: 20px; }
+  .step__art { height: 440px; padding-top: 32px; }
+  .step__art .phone { --w: min(290px, 72vw); }
 }
-.feature + .feature { padding-top: 0; }
 
-/* small things grid */
-.extras h2 { max-width: 16em; }
-.extras__grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: 24px; overflow: hidden; margin-top: 48px; }
-.extras__grid div { background: var(--bg); padding: 28px 26px 30px; display: grid; gap: 8px; align-content: start; }
-.extras__grid svg { width: 22px; height: 22px; margin-bottom: 8px; }
-.extras__grid p { color: var(--text-2); font-size: 0.9375rem; }
-@media (max-width: 860px) { .extras__grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-@media (max-width: 560px) { .extras__grid { grid-template-columns: 1fr; } }
-
-/* privacy band */
-.private { padding-block: 0; }
-.private__band {
-  background: var(--hero-bg); color: var(--hero-text); border-radius: 40px;
-  padding: clamp(40px, 7vw, 88px) clamp(24px, 6vw, 80px);
-  display: grid; grid-template-columns: 1.1fr 0.9fr; gap: 48px; align-items: center;
+/* ---------- planner: the Plan dial fills in as you scroll ---------- */
+.planner { --p: 0; height: 320vh; position: relative; }
+.planner__sticky { position: sticky; top: 0; height: 100vh; display: grid; place-items: center; padding-top: 52px; }
+.planner__card {
+  width: min(1184px, 100vw - 32px); height: min(780px, calc(100vh - 92px));
+  display: grid; grid-template-columns: 1fr auto; grid-template-rows: auto minmax(0, 1fr); gap: 8px 40px;
+  padding: clamp(24px, 4vw, 44px); border-radius: 28px; overflow: hidden;
+  background: radial-gradient(120% 120% at 20% 0%, #2d2d2a 0%, #141413 45%, #060606 100%); color: var(--paper);
 }
-.private__band > * { min-width: 0; }
-.private__band .eyebrow, .private__band .lede { color: var(--hero-dim); }
-.private__band .text { display: grid; gap: 20px; }
-.private__list { list-style: none; margin: 0; padding: 0; display: grid; }
-.private__list li { display: flex; justify-content: space-between; gap: 16px; padding: 15px 0; border-bottom: 1px solid var(--hero-line); }
-.private__list li:last-child { border-bottom: 0; }
-.private__list span { color: var(--hero-dim); }
-.private__list b { font-family: var(--font-num); font-weight: 500; text-align: right; }
-@media (max-width: 860px) { .private__band { grid-template-columns: 1fr; border-radius: 28px; } }
+.planner__copy { display: grid; grid-template-columns: 1.1fr 1fr; gap: 12px 40px; align-items: end; }
+.planner__copy .eyebrow { grid-column: 1 / -1; color: rgb(243 240 232 / 0.5); }
+.planner h2 { font-size: clamp(2rem, 4vw, 3.4rem); }
+.planner mark { color: var(--ink); }
+.planner .lede { color: rgb(243 240 232 / 0.62); font-size: 1.02rem; }
+.planner__dial { min-height: 0; display: grid; place-items: center; }
+.planner__dial svg { width: 100%; height: 100%; max-height: 520px; overflow: visible; }
+.planner__dial line { stroke-width: 5; stroke-linecap: round; transition: stroke 250ms; }
+.planner__dial .lbl { opacity: 0; transform: translateX(var(--dx, 0)); transition: opacity 500ms var(--glide), transform 500ms var(--glide); }
+.planner__dial .lbl.on { opacity: 1; transform: none; }
+.planner__dial .lbl path { fill: none; stroke: rgb(243 240 232 / 0.35); stroke-width: 1.2; }
+.planner__dial .lbl .n { font: 600 17px var(--font); fill: var(--paper); letter-spacing: -0.02em; }
+.planner__dial .lbl .d { font: 500 14px var(--mono); fill: rgb(243 240 232 / 0.6); }
+.planner__dial .c1 { font: 500 15px var(--font); fill: rgb(243 240 232 / 0.55); }
+.planner__dial .c2 { font: 600 64px var(--font); fill: var(--paper); letter-spacing: -0.05em; }
+.planner__dial .c3 { font: 500 14px var(--mono); fill: rgb(243 240 232 / 0.55); }
+.planner__phone { grid-column: 2; grid-row: 1 / 3; align-self: center; transform: translateY(calc((1 - min(1, var(--p) * 2)) * 60px)); opacity: calc(0.4 + min(1, var(--p) * 2) * 0.6); }
+.planner__phone .phone { --w: min(270px, 33vh); }
+.legend { display: none; list-style: none; margin: 0; padding: 0; grid-template-columns: 1fr 1fr; gap: 10px 16px; }
+.legend li { display: grid; grid-template-columns: 10px 1fr; gap: 2px 8px; align-items: center; font-size: 0.85rem; opacity: 0.25; transition: opacity 400ms var(--glide); }
+.legend li.on { opacity: 1; }
+.legend i { width: 10px; height: 10px; border-radius: 3px; background: var(--c); }
+.legend b { grid-column: 2; font: 500 0.75rem var(--mono); color: rgb(243 240 232 / 0.6); }
+@media (max-width: 900px) {
+  .planner__sticky { padding-top: 76px; }
+  .planner__card { grid-template-columns: 1fr; grid-template-rows: auto minmax(0, 1fr) auto; height: calc(100svh - 92px); }
+  .planner__copy { grid-template-columns: 1fr; }
+  .planner__copy .lede { display: none; }
+  .planner__phone { display: none; }
+  .planner__dial .lbl { display: none; }
+  .legend { display: grid; }
+}
 
-/* install */
-.install .wrap { display: grid; gap: 48px; }
-.install__head { display: grid; gap: 18px; max-width: 40rem; }
-.steps { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; counter-reset: step; }
-.steps li { counter-increment: step; border-top: 2px solid var(--text); padding-top: 18px; display: grid; gap: 8px; align-content: start; }
-.steps li::before { content: "Step " counter(step); font-family: var(--font-num); font-size: 0.75rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-2); }
-.steps p { color: var(--text-2); }
-.steps kbd { font-family: var(--font); font-weight: 600; color: var(--text); background: var(--surface); padding: 1px 7px; border-radius: 6px; white-space: nowrap; }
-@media (max-width: 760px) { .steps { grid-template-columns: 1fr; gap: 28px; } }
-.install__cta { display: flex; flex-wrap: wrap; gap: 14px 22px; align-items: center; }
-.install__cta span { color: var(--text-2); font-size: 0.9375rem; }
+/* ---------- feature slips ---------- */
+.trio { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
+.card { background: var(--sheet); border: 1px solid var(--rule); border-radius: 18px; padding: 28px; display: flex; flex-direction: column; gap: 14px; }
+.card__art { background: var(--bg); border-radius: 12px; padding: 34px 22px 26px; margin-bottom: 14px; display: grid; place-items: center; min-height: 230px; box-shadow: inset 0 0 0 1px rgb(18 18 17 / 0.06); }
+.crop { position: relative; width: 100%; border-radius: 12px; box-shadow: 0 18px 30px -18px rgb(18 18 17 / 0.5); background: #fff var(--src) no-repeat; background-size: 100% auto; aspect-ratio: 780 / var(--h); background-position: 0 var(--y); rotate: var(--r, 0deg); }
+.crop::before { /* a strip of tape */
+  content: ""; position: absolute; top: -12px; left: 50%; width: 76px; height: 22px; translate: -50% 0; rotate: -3deg;
+  background: rgb(220 240 101 / 0.75); box-shadow: 0 1px 2px rgb(0 0 0 / 0.08);
+}
+.card h3 { font-size: 1.6rem; }
+.card p { color: var(--ink-2); }
+@media (max-width: 900px) { .trio { grid-template-columns: 1fr; } }
 
-footer { border-top: 1px solid var(--line); padding-block: 36px 48px; }
-footer .wrap { display: flex; flex-wrap: wrap; gap: 16px 32px; justify-content: space-between; align-items: center; color: var(--text-2); font-size: 0.875rem; }
-footer .brand { color: var(--text); font-size: 1rem; }
-footer .brand svg { width: 28px; height: 28px; }
-.jp { font-family: 'Hiragino Sans', 'Noto Sans JP', var(--font); }
+/* ---------- scan: the phone moves over a receipt and takes its picture ---------- */
+.scan { --p: 0; height: 300vh; position: relative; }
+.scan__sticky { position: sticky; top: 0; height: 100vh; display: grid; grid-template-columns: 0.8fr 1.2fr; align-items: center; gap: 40px; padding-top: 56px; }
+.scan__steps { list-style: none; margin: 32px 0 0; padding: 0; display: grid; gap: 4px; }
+.scan__steps li { display: grid; grid-template-columns: 34px 1fr; gap: 0 12px; padding: 14px 0; border-top: 1px solid var(--rule); color: var(--ink-3); transition: color 400ms var(--glide); }
+.scan__steps li::before { content: attr(data-n); font: 500 0.8rem var(--mono); padding-top: 3px; }
+.scan__steps li b { font-weight: 600; font-size: 1.1rem; letter-spacing: -0.02em; }
+.scan__steps li span { grid-column: 2; font-size: 0.95rem; }
+.scan__steps li.on { color: var(--ink); }
+.scan__steps li.on span { color: var(--ink-2); }
+.scan__stage { position: relative; height: min(720px, calc(100vh - 120px)); display: grid; place-items: center; }
+.slipr {
+  width: min(340px, 78vw); background: var(--sheet); padding: 30px 26px 36px; font: 500 0.82rem/1.6 var(--mono); color: var(--ink);
+  box-shadow: 0 30px 50px -30px rgb(18 18 17 / 0.45); rotate: -3deg;
+  -webkit-mask: radial-gradient(circle 6px at 50% 0, #0000 98%, #000) 50% 0 / 14px 51% repeat-x, radial-gradient(circle 6px at 50% 100%, #0000 98%, #000) 50% 100% / 14px 51% repeat-x;
+  mask: radial-gradient(circle 6px at 50% 0, #0000 98%, #000) 50% 0 / 14px 51% repeat-x, radial-gradient(circle 6px at 50% 100%, #0000 98%, #000) 50% 100% / 14px 51% repeat-x;
+}
+.slipr header { text-align: center; padding-bottom: 10px; border-bottom: 1px dashed var(--ink-3); margin-bottom: 8px; }
+.slipr header b { display: block; font-size: 1.3rem; letter-spacing: 0.06em; }
+.slipr header span { display: block; color: var(--ink-2); }
+.slipr p { display: flex; justify-content: space-between; margin: 0; }
+.slipr .t { font-weight: 600; font-size: 1.15rem; border-top: 1px dashed var(--ink-3); margin-top: 8px; padding-top: 8px; }
+.slipr .c { justify-content: center; color: var(--ink-2); }
+/* The phone slides in from the side, settles over the receipt, then lifts a little to show it. */
+.scan__phone {
+  position: absolute; left: 50%; top: 50%; z-index: 2;
+  --in: min(1, var(--p) / 0.32);
+  transform: translate(-50%, -50%) translateX(calc((1 - var(--in)) * 62vw)) translateY(calc(var(--lift, 0) * -1px)) rotate(calc((1 - var(--in)) * 12deg + 2deg));
+}
+.scan__phone .phone { --w: min(270px, 34vh); }
+.scan__screen { position: relative; overflow: hidden; border-radius: calc(var(--w) * 0.135); aspect-ratio: 780 / 1688; background: #000; }
+.scan__screen > * { position: absolute; inset: 0; width: 100%; height: 100%; }
+.scan__screen img { border-radius: 0; aspect-ratio: auto; transition: opacity 450ms var(--glide); }
+.viewfinder { background: #000 url(/screens/receipt-photo.png) no-repeat; background-size: 150% auto; background-position: calc(50% + (1 - var(--in)) * 60%) 34%; transition: opacity 300ms; }
+.viewfinder::before { /* focus brackets */
+  content: ""; position: absolute; inset: 22% 12% 30%;
+  background: linear-gradient(var(--lime) 0 0) 0 0 / 22px 3px, linear-gradient(var(--lime) 0 0) 0 0 / 3px 22px,
+              linear-gradient(var(--lime) 0 0) 100% 0 / 22px 3px, linear-gradient(var(--lime) 0 0) 100% 0 / 3px 22px,
+              linear-gradient(var(--lime) 0 0) 0 100% / 22px 3px, linear-gradient(var(--lime) 0 0) 0 100% / 3px 22px,
+              linear-gradient(var(--lime) 0 0) 100% 100% / 22px 3px, linear-gradient(var(--lime) 0 0) 100% 100% / 3px 22px;
+  background-repeat: no-repeat;
+}
+.viewfinder::after { /* the shutter */
+  content: ""; position: absolute; left: 50%; bottom: 6%; width: 18%; aspect-ratio: 1; translate: -50% 0; border-radius: 50%;
+  background: #fff; box-shadow: 0 0 0 4px #000, 0 0 0 7px #fff;
+}
+.flash { background: #fff; opacity: 0; pointer-events: none; }
+.scan [data-show] { opacity: 0; }
+.scan [data-show].on { opacity: 1; }
+@media (max-width: 900px) {
+  .scan__sticky { grid-template-columns: 1fr; grid-template-rows: auto 1fr; gap: 8px; padding-top: 76px; }
+  .scan__copy h2 { font-size: 1.9rem; }
+  .scan__copy .lede, .scan__steps li span { display: none; }
+  .scan__steps { margin-top: 12px; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .scan__steps li { grid-template-columns: 1fr; padding: 8px 0; }
+  .scan__steps li b { font-size: 0.9rem; }
+  .scan__stage { height: auto; min-height: 0; }
+  .slipr { width: min(260px, 70vw); font-size: 0.7rem; }
+  .scan__phone .phone { --w: min(200px, 30vh); }
+}
 
-/* hero entrance: everything is visible at rest; this only adds a short lift */
-@keyframes lift { from { transform: translateY(14px); opacity: 0.001; } }
-.hero__copy > * { animation: lift 700ms var(--glide) both; }
-.hero__copy > *:nth-child(2) { animation-delay: 60ms; }
-.hero__copy > *:nth-child(3) { animation-delay: 120ms; }
-.hero__copy > *:nth-child(4) { animation-delay: 180ms; }
-.hero__copy > *:nth-child(5) { animation-delay: 240ms; }
-@keyframes tick { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
-.ticks span.now { animation: tick 2.4s ease-in-out infinite; }
+/* ---------- free ---------- */
+.free { display: grid; grid-template-columns: 1fr 1.4fr; gap: 24px; margin-top: 56px; }
+.tag { background: var(--ink); color: var(--paper); border-radius: 18px; padding: 32px; display: flex; flex-direction: column; gap: 6px; position: relative; overflow: hidden; }
+.tag::before { content: ""; position: absolute; top: 26px; right: 26px; width: 18px; height: 18px; border-radius: 50%; background: var(--paper); box-shadow: inset 0 0 0 4px #c9c3b4; }
+.tag h3 { font-size: 1.4rem; }
+.tag p { color: rgb(243 240 232 / 0.6); }
+.tag .big { font: 600 clamp(3.5rem, 6vw, 5rem) var(--mono); letter-spacing: -0.06em; margin: 36px 0 30px; }
+.tag .big small { font: 400 1rem var(--font); letter-spacing: 0; color: rgb(243 240 232 / 0.6); margin-left: 8px; }
+.tag .btn { margin-top: auto; }
+.included { background: var(--sheet); border: 1px solid var(--rule); border-radius: 18px; padding: 32px; }
+.included h3 { font-size: 1.3rem; margin-bottom: 18px; }
+.included ul { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: 1fr 1fr; column-gap: 24px; }
+.included li { display: flex; gap: 12px; padding: 11px 0; border-bottom: 1px solid var(--rule-soft); color: var(--ink-2); }
+.included li::before { content: "✓"; font: 600 0.8rem var(--mono); color: var(--ink); background: var(--lime); width: 20px; height: 20px; border-radius: 4px; display: grid; place-items: center; flex: none; margin-top: 2px; }
+.howto { counter-reset: s; list-style: none; padding: 0; margin: 40px 0 0; display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
+.howto li { counter-increment: s; border-top: 1.5px solid var(--ink); padding-top: 18px; display: grid; gap: 8px; align-content: start; }
+.howto li::before { content: "Step " counter(s, decimal-leading-zero); font: 500 0.75rem var(--mono); letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-3); }
+.howto h3 { font-size: 1.2rem; }
+.howto p { color: var(--ink-2); }
+kbd { font: 500 0.85em var(--mono); background: var(--paper-2); border: 1px solid var(--rule); border-radius: 5px; padding: 0 6px; }
+@media (max-width: 900px) { .free, .howto { grid-template-columns: 1fr; } .included ul { grid-template-columns: 1fr; } }
+
+/* ---------- faq ---------- */
+.faq { display: grid; grid-template-columns: 1fr 1.5fr; gap: 48px; padding-block: 18vh 10vh; }
+.faq details { border-top: 1px solid var(--rule); }
+.faq details:last-child { border-bottom: 1px solid var(--rule); }
+.faq summary { list-style: none; cursor: pointer; display: flex; justify-content: space-between; gap: 16px; padding: 22px 0; font-size: 1.15rem; font-weight: 500; letter-spacing: -0.02em; }
+.faq summary::-webkit-details-marker { display: none; }
+.faq summary::after { content: "+"; font: 400 1.4rem/1 var(--mono); color: var(--ink-3); transition: rotate 300ms var(--glide); }
+.faq details[open] summary::after { rotate: 45deg; }
+.faq details p { color: var(--ink-2); padding: 0 0 22px; max-width: 40em; }
+@media (max-width: 900px) { .faq { grid-template-columns: 1fr; } }
+
+/* ---------- footer ---------- */
+footer { background: var(--ink); color: var(--paper); padding: 72px 0 calc(110px + env(safe-area-inset-bottom, 0px)); }
+.footer__row { display: flex; justify-content: space-between; gap: 24px; flex-wrap: wrap; color: rgb(243 240 232 / 0.6); font-size: 0.95rem; }
+.footer__row .brand { color: var(--paper); }
+.footer__row nav { display: flex; gap: 24px; flex-wrap: wrap; }
+.footer__row a { text-decoration: none; }
+.footer__row a:hover { color: var(--paper); }
+.footer__mark { display: flex; align-items: baseline; justify-content: space-between; gap: 24px; margin-top: 56px; user-select: none; }
+.footer__mark b { font-size: clamp(5rem, 24vw, 21rem); font-weight: 600; letter-spacing: -0.07em; line-height: 0.8; color: #2a2a27; }
+.footer__mark span { font: 500 clamp(1rem, 2.4vw, 1.6rem) var(--mono); color: rgb(243 240 232 / 0.45); writing-mode: vertical-rl; }
+.footer__fine { margin: 32px 0 0; font: 500 0.75rem var(--mono); letter-spacing: 0.06em; color: rgb(243 240 232 / 0.4); }
+.footer__fine a { text-decoration: none; }
+.footer__fine a:hover { color: var(--paper); }
+
+/* ---------- floating bar ---------- */
+.dock {
+  position: fixed; left: 50%; bottom: calc(22px + env(safe-area-inset-bottom, 0px)); z-index: 30;
+  display: flex; gap: 4px; padding: 5px; border-radius: 999px; background: var(--ink);
+  box-shadow: 0 20px 40px -14px rgb(18 18 17 / 0.55);
+  translate: -50% 150%; opacity: 0; transition: translate 500ms var(--glide), opacity 300ms;
+}
+.dock.on { translate: -50% 0; opacity: 1; }
+.dock .btn { min-height: 42px; border: 0; }
+.dock .btn--line { color: var(--paper); }
+
+.up { opacity: 0; transform: translateY(28px); transition: opacity 800ms var(--glide), transform 800ms var(--glide); }
+.up.in { opacity: 1; transform: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  .tape__run { animation: none; }
+  .stage { height: auto; --p: 1 !important; }
+  .stage__sticky { position: relative; height: 100vh; }
+  .slip { opacity: 1; }
+  .words .w { color: var(--ink); }
+  mark { --swipe: 1; }
+  .up, .receipt li { opacity: 1; transform: none; transition: none; }
+  .step { position: relative; top: 0; }
+}
 </style>
-
+</head>
+<body id="top">
 <svg width="0" height="0" style="position:absolute" aria-hidden="true">
-  <defs>
-    <symbol id="logo" viewBox="0 0 64 64"><rect width="64" height="64" rx="14" fill="#111"/><path d="M14.68 47.00A20 20 0 0 1 12.02 37.90" stroke="#fff" stroke-width="6" fill="none"/><path d="M12.09 35.11A20 20 0 0 1 15.20 26.15" stroke="#fff" stroke-width="6" fill="none"/><path d="M16.87 23.92A20 20 0 0 1 24.60 18.42" stroke="#fff" stroke-width="6" fill="none"/><path d="M27.26 17.57A20 20 0 0 1 36.74 17.57" stroke="#fff" stroke-width="6" fill="none"/><path d="M39.40 18.42A20 20 0 0 1 47.13 23.92" stroke="#fff" stroke-width="6" fill="none"/><path d="M48.80 26.15A20 20 0 0 1 51.91 35.11" stroke="#fff" stroke-opacity=".24" stroke-width="6" fill="none"/><path d="M51.98 37.90A20 20 0 0 1 49.32 47.00" stroke="#fff" stroke-opacity=".24" stroke-width="6" fill="none"/><g transform="translate(32 37) scale(0.62) translate(-32.5 -32.25)" stroke="#fff" stroke-width="4.6" stroke-linecap="round" fill="none"><path d="M39 25.5c-1.3-2-3.6-3-6.6-3c-3.9 0-6.4 1.9-6.4 4.6c0 6.4 13.6 3.2 13.6 10c0 2.9-2.8 4.9-7 4.9c-3.3 0-5.9-1.2-7.3-3.4"/><path d="M32.5 18.5v4M32.5 42v4"/></g></symbol>
-    <symbol id="i-home" viewBox="0 0 24 24"><path d="M4 10.5 12 4l8 6.5V20h-5v-6H9v6H4z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></symbol>
-    <symbol id="i-list" viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h10" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
-    <symbol id="i-pie" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 4v8l5.7 5.7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
-    <symbol id="i-card" viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="13" rx="3" fill="none" stroke="currentColor" stroke-width="2"/><path d="M3 10.5h18M7 15h4" fill="none" stroke="currentColor" stroke-width="2"/></symbol>
-    <symbol id="i-dots" viewBox="0 0 24 24"><circle cx="6" cy="12" r="1.7" fill="currentColor"/><circle cx="12" cy="12" r="1.7" fill="currentColor"/><circle cx="18" cy="12" r="1.7" fill="currentColor"/></symbol>
-    <symbol id="i-cup" viewBox="0 0 24 24"><path d="M5 9h11v5a5 5 0 0 1-5 5h-1a5 5 0 0 1-5-5zM16 10.5h1.5a2.5 2.5 0 0 1 0 5H16M9 3.5v2M12 3.5v2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
-    <symbol id="i-park" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="4" fill="none" stroke="currentColor" stroke-width="2"/><path d="M10 16V8h3a2.5 2.5 0 0 1 0 5h-3" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></symbol>
-    <symbol id="i-food" viewBox="0 0 24 24"><path d="M7 3v8M5 3v5a2 2 0 0 0 4 0V3M7 11v10M16 21V3c-2 1.5-3 4-3 7h3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
-    <symbol id="i-home2" viewBox="0 0 24 24"><path d="M4 11 12 4l8 7v9H4z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></symbol>
-    <symbol id="i-phone" viewBox="0 0 24 24"><rect x="7" y="3" width="10" height="18" rx="2.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M11 17.5h2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
-    <symbol id="i-wifi" viewBox="0 0 24 24"><path d="M3.5 9.5a12 12 0 0 1 17 0M6.5 12.8a7.5 7.5 0 0 1 11 0M9.5 16a3 3 0 0 1 5 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="19" r="1.3" fill="currentColor"/></symbol>
-    <symbol id="i-in" viewBox="0 0 24 24"><path d="M17 7 7 17M7 9v8h8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
-    <symbol id="i-out" viewBox="0 0 24 24"><path d="M7 17 17 7M9 7h8v8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
-    <symbol id="i-cal" viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="15" rx="3" fill="none" stroke="currentColor" stroke-width="2"/><path d="M3.5 10h17M8 3v4M16 3v4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
-    <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7.5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
-    <symbol id="i-bolt" viewBox="0 0 24 24"><path d="M13 3 5 13.5h6L10 21l8-10.5h-6z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></symbol>
-    <symbol id="i-cloudoff" viewBox="0 0 24 24"><path d="M7 18h10.5a3.5 3.5 0 0 0 .6-6.95A6 6 0 0 0 7.2 9.1 4.5 4.5 0 0 0 7 18zM4 4l16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
-    <symbol id="i-lock" viewBox="0 0 24 24"><rect x="5" y="10.5" width="14" height="10" rx="2.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M8 10.5V8a4 4 0 0 1 8 0v2.5" fill="none" stroke="currentColor" stroke-width="2"/></symbol>
-    <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M19.5 12a7.5 7.5 0 1 1-2.2-5.3M19.5 4.5v4h-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
-    <symbol id="i-download" viewBox="0 0 24 24"><path d="M12 4v11M7.5 10.5 12 15l4.5-4.5M5 19.5h14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
-    <symbol id="i-repeat" viewBox="0 0 24 24"><path d="M4 11V9.5A3.5 3.5 0 0 1 7.5 6H19m0 0-3-3m3 3-3 3M20 13v1.5a3.5 3.5 0 0 1-3.5 3.5H5m0 0 3 3m-3-3 3-3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
-  </defs>
+  <symbol id="logo" viewBox="0 0 64 64">
+    <rect width="64" height="64" rx="15" fill="#0f0f0e"/>
+    <g transform="translate(0 3)" fill="none" stroke-width="5" stroke-linecap="round">
+      <path d="M16.44 47.56A22 22 0 1 1 47.56 47.56" stroke="#e6e3da" stroke-opacity=".2"/>
+      <path d="M16.44 47.56A22 22 0 1 1 48.5 17.45" stroke="#e6f490"/>
+      <path d="M30.75 19.5V35a5 5 0 0 0 5 5H38M24.75 26.5H38" stroke="#e6e3da" stroke-linejoin="round"/>
+    </g>
+  </symbol>
+  <symbol id="arrow" viewBox="0 0 20 20"><path d="M5 15 15 5M7 5h8v8" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
 </svg>
 
-<header class="top">
+<header class="nav" id="nav">
   <div class="wrap">
-    <a class="brand" href="#top" aria-label="Tameru home"><svg aria-hidden="true"><use href="#logo"/></svg>Tameru</a>
-    <nav aria-label="Sections">
+    <a class="brand" href="#top" aria-label="Tameru home"><svg aria-hidden="true"><use href="#logo"/></svg>tameru</a>
+    <nav class="nav__links" aria-label="Sections">
       <a href="#how">How it works</a>
-      <a href="#private">Privacy</a>
-      <a class="pill" href="#install">Get the app</a>
+      <a href="#plan">Plan</a>
+      <a href="#scan">Receipts</a>
+      <a href="#faq">FAQ</a>
     </nav>
+    <a class="btn nav__cta" href="https://app.tameru.cc" rel="noopener">Open the app</a>
   </div>
 </header>
 
-<main id="top">
-  <div class="hero">
-    <div class="wrap hero__grid">
-      <div class="hero__copy">
-        <p class="eyebrow">A budget for your phone</p>
-        <h1>Know what’s safe to spend. <span>Today, after everything.</span></h1>
-        <p class="lede">Tameru takes your pay, bills, card balances and savings goals and turns them into one number: how much you can spend right now without coming up short.</p>
-        <div class="hero__actions">
-          <a class="btn btn--light" href="https://app.tameru.cc" rel="noopener">Open Tameru</a>
-          <a class="btn btn--ghost" href="#how">See how it works</a>
-        </div>
-        <p class="hero__fine"><span>Free</span><span>No account</span><span>No bank login</span><span>Works offline</span></p>
-      </div>
+<main>
+  <section class="hero wrap" id="hero">
+    <p class="eyebrow">貯める · tameru · to save up</p>
+    <h1>Know exactly what’s safe to spend <mark class="on-load">today.</mark></h1>
+    <p class="lede">Tameru takes your pay, bills, card balances and savings goals and turns them into one number: how much you can spend right now without coming up short.</p>
+    <div class="hero__actions">
+      <a class="btn" href="https://app.tameru.cc" rel="noopener"><svg aria-hidden="true"><use href="#arrow"/></svg>Open Tameru</a>
+      <a class="btn btn--line" href="#how">How it works</a>
+    </div>
+    <div class="ruler" aria-hidden="true"></div>
+  </section>
 
-      <div class="hero__phone">
-        <!-- Home screen: sample data -->
-        <div class="phone" role="img" aria-label="Tameru Home screen showing $842.95 safe to spend, $64.84 a day for 13 days">
-          <div class="screen">
-            <div class="island"></div>
-            <div class="s-hero">
-              <div class="status"><span>9:41</span><i><em></em><b></b></i></div>
-              <div class="s-hero__row"><span class="avatar">MR</span><span class="avatar" aria-hidden="true">
-                <svg width="13" height="13" viewBox="0 0 24 24"><path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15zM10 20.5h4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span></div>
-              <div class="s-hero__label">Safe to spend</div>
-              <div class="s-hero__big">$842<small>.95</small></div>
-              <div class="s-hero__chip"><span class="num">$64.84</span> a day · 13 days left</div>
-              <div class="ticks" aria-hidden="true">
-                <span class="on"></span><span class="on"></span><span class="on"></span><span class="on"></span><span class="on"></span><span class="on"></span><span class="on"></span><span class="on"></span><span class="on"></span><span class="on"></span><span class="on"></span><span class="on"></span><span class="on"></span><span class="now"></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span>
-              </div>
-              <div class="mini-card"><b>Everyday chequing</b><span>•• 2207</span></div>
-            </div>
-            <div class="s-actions"><span><svg width="12" height="12"><use href="#i-out"/></svg>Spent</span><span><svg width="12" height="12"><use href="#i-in"/></svg>Income</span></div>
-            <div class="s-quick">
-              <div><i><svg><use href="#i-cup"/></svg></i><b>Coffee</b><small>$4.75</small></div>
-              <div><i><svg><use href="#i-park"/></svg></i><b>Parking</b><small>$6.00</small></div>
-              <div><i><svg><use href="#i-food"/></svg></i><b>Lunch</b><small>$13.50</small></div>
-              <div><i class="add">+</i></div>
-            </div>
-            <p class="s-note">Japan trip is 40% of the way there.</p>
-            <div class="s-head"><b>Recent</b><span>View all</span></div>
-            <div class="tx"><i>FB</i><div><b>Farm Boy</b><small>Oct 18</small></div><span class="amt">−$38<sup>.12</sup></span></div>
-            <div class="tx"><i>ES</i><div><b>Esso</b><small>Oct 17</small></div><span class="amt">−$52<sup>.40</sup></span></div>
-            <div class="tx"><i>PA</i><div><b>Paycheque</b><small>Oct 9</small></div><span class="amt in">+$1,640<sup>.00</sup></span></div>
-            <div class="tabbar" aria-hidden="true"><span class="on"><svg><use href="#i-home"/></svg></span><span><svg><use href="#i-list"/></svg></span><span><svg><use href="#i-pie"/></svg></span><span><svg><use href="#i-card"/></svg></span><span><svg><use href="#i-dots"/></svg></span></div>
-          </div>
-        </div>
-      </div>
+  <div class="tape" aria-hidden="true">
+    <div class="tape__run">
+      <span>No Frills #3121<b>−$53.22</b></span><span>Tim Hortons #4412<b>−$3.30</b></span><span>Presto<b>−$20.00</b></span><span>Spotify<b>−$6.99</b></span><span>Coffee<b>−$2.45</b></span><span>Paycheque<b class="in">+$980.00</b></span><span>Safe to spend<b>$1,380.21</b></span><span>Amex Gold<b>$167.77 owing</b></span><span>Emergency fund<b>25%</b></span>
+      <span>No Frills #3121<b>−$53.22</b></span><span>Tim Hortons #4412<b>−$3.30</b></span><span>Presto<b>−$20.00</b></span><span>Spotify<b>−$6.99</b></span><span>Coffee<b>−$2.45</b></span><span>Paycheque<b class="in">+$980.00</b></span><span>Safe to spend<b>$1,380.21</b></span><span>Amex Gold<b>$167.77 owing</b></span><span>Emergency fund<b>25%</b></span>
     </div>
   </div>
 
-  <!-- The number, explained -->
-  <section class="intro" id="how">
-    <div class="wrap">
-      <div class="intro__text">
-        <p class="eyebrow">The number on Home</p>
-        <h2>Your balance isn’t what you can spend. This is.</h2>
-        <p class="lede">A bank balance doesn’t know rent is due on the 1st. Tameru does the subtraction for you, every time you open it, and splits what’s left across the days until your next pay.</p>
-        <p class="lede">Tap the number in the app to see this same breakdown with your own figures.</p>
+  <section class="stage" data-progress="sticky" aria-label="Tameru on a phone">
+    <div class="stage__sticky">
+      <div class="stage__panel"></div>
+      <svg class="dial" viewBox="-100 -100 200 200" aria-hidden="true"></svg>
+      <div class="slip slip--a"><small>Safe to spend</small><b>$1,380.21</b></div>
+      <div class="slip slip--b"><small>Each day · 12 left</small><b>$115.01</b></div>
+      <div class="stage__phone"><div class="phone"><img src="/screens/home.png" alt="Tameru's Home screen showing $1,380.21 safe to spend, $115.01 a day for 12 days, with an Amex Gold card" width="780" height="1688" fetchpriority="high"></div></div>
+    </div>
+  </section>
+
+  <section class="say wrap">
+    <h2 class="words">A bank balance doesn’t know rent is due on the 1st. <mark>Tameru does.</mark></h2>
+  </section>
+
+  <section class="wrap steps" id="how" aria-label="How it works">
+    <article class="step" style="--i:0; --bg: var(--dots)">
+      <div class="step__copy">
+        <div><span class="step__n">No.<b>01</b></span><h3>One number, every time you open it</h3></div>
+        <p>Home shows what’s safe to spend after everything coming up before your next pay, split into a daily amount. Your cards sit right underneath, and the things you buy every week are one tap away.</p>
       </div>
-      <div class="tally" aria-label="Example breakdown of safe to spend">
-        <div class="tally__head"><span>Where it comes from</span><span>Oct 19 – Nov 1</span></div>
-        <div class="tally__row"><span>+</span><span>In chequing and cash</span><span>$1,505.55</span></div>
-        <div class="tally__row"><span>+</span><span>Pay still coming<small>Paycheque, Oct 23</small></span><span>$1,640.00</span></div>
-        <div class="tally__row"><span>−</span><span>Bills still to come<small>Phone, internet, rent</small></span><span>$1,270.00</span></div>
-        <div class="tally__row"><span>−</span><span>Card balances<small>Everyday Visa</small></span><span>$412.60</span></div>
-        <div class="tally__row"><span>−</span><span>Goal contributions left<small>Japan trip, emergency fund</small></span><span>$420.00</span></div>
-        <div class="tally__row"><span>−</span><span>Buffer<small>Held back for the unexpected</small></span><span>$200.00</span></div>
-        <div class="tally__total">
-          <b>Safe to spend</b><strong>$842.95</strong>
-          <span class="tally__day">÷ 13 days left = $64.84 a day</span>
+      <div class="step__art"><div class="phone"><img src="/screens/home.png" alt="Home: safe to spend, an Amex Gold card, quick adds for coffee and transit, and recent spending" width="780" height="1688" loading="lazy"></div><span class="stamp">Balanced</span></div>
+    </article>
+    <article class="step" style="--i:1; --bg: var(--hatch)">
+      <div class="step__copy">
+        <div><span class="step__n">No.<b>02</b></span><h3>Every dollar, by day</h3></div>
+        <p>Activity lists what you spent and received this period, grouped by day with a running total. Search it, filter it, add from a receipt photo, or export it all as a CSV.</p>
+      </div>
+      <div class="step__art"><div class="phone"><img src="/screens/activity.png" alt="Activity: $1,393.46 spent this period, $980 received, with transactions grouped by day" width="780" height="1688" loading="lazy"></div><span class="stamp">Logged</span></div>
+    </article>
+    <article class="step" style="--i:2; --bg: var(--engrave)">
+      <div class="step__copy">
+        <div><span class="step__n">No.<b>03</b></span><h3>Every card and account in one place</h3></div>
+        <p>Chequing, savings with interest, credit cards with their real card art, due dates and statement days. See what you owe, which way it’s trending, and when the next payment lands.</p>
+      </div>
+      <div class="step__art"><div class="phone"><img src="/screens/accounts.png" alt="Accounts: an Amex Gold with $167.77 owing, a 30-day balance chart, payment due in 8 days" width="780" height="1688" loading="lazy"></div><span class="stamp">Due in 8 days</span></div>
+    </article>
+  </section>
+
+  <section class="planner" id="plan" aria-label="Plan" data-progress="sticky">
+    <div class="planner__sticky">
+      <div class="planner__card">
+        <div class="planner__copy up">
+          <p class="eyebrow">Plan · Oct 1 – Oct 31</p>
+          <h2>Give every dollar of your pay <mark>a job.</mark></h2>
+          <p class="lede">Your income is a dial of 100 ticks. Each category and goal takes its share, in dollars or as a percentage, and comes off the top, so the number on Home is only what’s truly free.</p>
         </div>
+        <div class="planner__dial">
+          <svg viewBox="0 0 800 440" role="img" aria-label="An example plan: $1,813.47 of $1,993.33 planned across bills, groceries, transport, eating out, fun, personal, an irregular fund and an emergency fund"></svg>
+        </div>
+        <ul class="legend" aria-hidden="true"></ul>
+        <div class="planner__phone"><div class="phone"><img src="/screens/plan.png" alt="The Plan screen: 91% of income planned, $1,813.47 of $1,993.33, with the dial and categories" width="780" height="1688" loading="lazy"></div></div>
       </div>
     </div>
   </section>
 
-  <!-- Plan -->
-  <section class="feature">
-    <div class="wrap">
-      <div class="feature__text">
-        <p class="eyebrow">Plan</p>
-        <h2>Give every dollar of your pay a job.</h2>
-        <p class="lede">Your income is a dial. Each colour is a category you made: groceries, eating out, a trip. Slide the ticks to set each one’s share and see right away whether the plan fits your pay.</p>
-        <ul class="points">
-          <li><svg><use href="#i-check"/></svg><span><b>A plan to start from.</b> Tameru suggests one from your income, bills and recent spending. Nothing changes until you use it.</span></li>
-          <li><svg><use href="#i-check"/></svg><span><b>Leftovers go somewhere.</b> Each category resets, rolls over, or builds up as a fund when the period ends.</span></li>
-          <li><svg><use href="#i-check"/></svg><span><b>Your period, your way.</b> Run it by calendar month or payday to payday.</span></li>
-        </ul>
+  <section class="wrap trio" aria-label="Features">
+    <article class="card up" style="--bg: var(--dots)">
+      <div class="card__art"><div class="crop" style="--src:url(/screens/home.png); --h:250; --y:69.5%; --r:-1.5deg" role="img" aria-label="Quick adds for coffee at $2.45 and transit at $3.35"></div></div>
+      <h3>Quick adds</h3>
+      <p>Four slots on Home for the things you buy all the time. Tap once and it’s logged, with undo.</p>
+    </article>
+    <article class="card up" style="--bg: var(--hatch)">
+      <div class="card__art"><div class="crop" style="--src:url(/screens/activity.png); --h:400; --y:15.5%; --r:1deg" role="img" aria-label="Spent this period card with a daily bar chart"></div></div>
+      <h3>Spending at a glance</h3>
+      <p>What went out this period, day by day, next to what came in. Snap a receipt and Tameru reads the store, total and date on your phone.</p>
+    </article>
+    <article class="card up" style="--bg: var(--engrave)">
+      <div class="card__art"><div class="crop" style="--src:url(/screens/accounts.png); --h:420; --y:17.7%; --r:-1deg" role="img" aria-label="An Amex Gold with its real card art"></div></div>
+      <h3>Your actual cards</h3>
+      <p>Pick your card from the catalog and it shows up with its real art, its due date and what you owe on it.</p>
+    </article>
+  </section>
+
+  <section class="scan" id="scan" aria-label="Scanning a receipt" data-progress="sticky">
+    <div class="scan__sticky wrap">
+      <div class="scan__copy up">
+        <p class="eyebrow">Receipts</p>
+        <h2 style="font-size:clamp(2.2rem,4.2vw,3.6rem);margin-top:14px">Snap it. <mark>It’s logged.</mark></h2>
+        <p class="lede" style="margin-top:18px">Take a photo of the receipt. Tameru reads the store, total, card and date right on your phone. Nothing is uploaded.</p>
+        <ol class="scan__steps">
+          <li data-n="01" data-step="0"><b>Point at the receipt</b><span>From Activity, tap the camera.</span></li>
+          <li data-n="02" data-step="1"><b>Read on your phone</b><span>Store, total, card and date, found offline.</span></li>
+          <li data-n="03" data-step="2"><b>Check it and add</b><span>The amount, category and card are filled in.</span></li>
+        </ol>
       </div>
-      <div class="feature__phone">
-        <div class="phone" role="img" aria-label="Tameru Plan screen with an income dial split into categories">
-          <div class="screen">
-            <div class="island"></div>
-            <div class="status"><span>9:41</span><i><em></em><b></b></i></div>
-            <div class="s-page">
-              <div class="s-title">Plan</div>
-              <div class="s-sub num">Oct 19 – Nov 1</div>
-              <div class="dial">
-                <svg viewBox="0 0 200 200" aria-hidden="true">
-                  <circle cx="100" cy="100" r="78" fill="none" stroke="var(--line)" stroke-width="18"/>
-                  <g fill="none" stroke-width="18">
-                    <circle cx="100" cy="100" r="78" pathLength="100" stroke="#94a3b8" stroke-dasharray="43 57" stroke-dashoffset="0"/>
-                    <circle cx="100" cy="100" r="78" pathLength="100" stroke="#4ade80" stroke-dasharray="13 87" stroke-dashoffset="-44"/>
-                    <circle cx="100" cy="100" r="78" pathLength="100" stroke="#ffb547" stroke-dasharray="6 94" stroke-dashoffset="-58"/>
-                    <circle cx="100" cy="100" r="78" pathLength="100" stroke="#38bdf8" stroke-dasharray="5 95" stroke-dashoffset="-65"/>
-                    <circle cx="100" cy="100" r="78" pathLength="100" stroke="#a78bfa" stroke-dasharray="4 96" stroke-dashoffset="-71"/>
-                    <circle cx="100" cy="100" r="78" pathLength="100" stroke="#d6b98c" stroke-dasharray="3 97" stroke-dashoffset="-76"/>
-                    <circle cx="100" cy="100" r="78" pathLength="100" stroke="#f472b6" stroke-dasharray="12 88" stroke-dashoffset="-80"/>
-                  </g>
-                  <circle cx="100" cy="100" r="64" fill="none" stroke="var(--text-3)" stroke-width="3" stroke-dasharray="0.6 2.53" pathLength="100" opacity=".7"/>
-                </svg>
-                <div class="dial__c"><small>Income planned</small><b class="num">$3,050</b><span>of $3,280</span></div>
-              </div>
-              <div class="legend">
-                <div><i style="background:#94a3b8"></i>Bills<span>44%</span><em>$1,445</em></div>
-                <div><i style="background:#4ade80"></i>Groceries<span>14%</span><em>$460</em></div>
-                <div><i style="background:#ffb547"></i>Eating out<span>7%</span><em>$230</em></div>
-                <div><i style="background:#38bdf8"></i>Transport<span>6%</span><em>$195</em></div>
-                <div><i style="background:#a78bfa"></i>Fun<span>5%</span><em>$165</em></div>
-                <div><i style="background:#d6b98c"></i>Irregular<span>4%</span><em>$130</em></div>
-                <div><i style="background:#f472b6"></i>Japan trip<span>13%</span><em>$425</em></div>
-                <div><i style="background:var(--line)"></i>Unplanned<span>7%</span><em>$230</em></div>
-              </div>
-            </div>
-            <div class="tabbar" aria-hidden="true"><span><svg><use href="#i-home"/></svg></span><span><svg><use href="#i-list"/></svg></span><span class="on"><svg><use href="#i-pie"/></svg></span><span><svg><use href="#i-card"/></svg></span><span><svg><use href="#i-dots"/></svg></span></div>
-          </div>
+      <div class="scan__stage">
+        <div class="slipr" aria-hidden="true">
+          <header><b>NO FRILLS</b><span>123 Bloor St W · Toronto</span><span>2026-10-20 · 18:42</span></header>
+          <p><span>BANANAS</span><span>1.29</span></p>
+          <p><span>2% MILK 4L</span><span>6.49</span></p>
+          <p><span>EGGS LARGE 12</span><span>4.29</span></p>
+          <p><span>WW BREAD</span><span>3.49</span></p>
+          <p><span>CHICKEN THIGHS</span><span>12.87</span></p>
+          <p><span>BROCCOLI</span><span>5.03</span></p>
+          <p><span>GREEK YOGURT</span><span>5.99</span></p>
+          <p><span>PENNE</span><span>2.49</span></p>
+          <p><span>TOMATO SAUCE</span><span>3.29</span></p>
+          <p><span>OLD CHEDDAR</span><span>7.99</span></p>
+          <p class="t"><span>TOTAL</span><span>53.22</span></p>
+          <p><span>AMEX ••••1005</span><span>53.22</span></p>
+          <p class="c">APPROVED</p>
         </div>
+        <div class="scan__phone"><div class="phone"><div class="scan__screen">
+          <div class="viewfinder" data-show="cam"></div>
+          <img src="/screens/scan-found.png" data-show="found" alt="Tameru found $53.22 at No Frills #3121, paid with the Amex Gold ending 1005, on Tue Oct 20" width="780" height="1688" loading="lazy">
+          <img src="/screens/scan-add.png" data-show="add" alt="The Add sheet filled in: $53.22, Groceries suggested, Amex Gold" width="780" height="1688" loading="lazy">
+          <div class="flash"></div>
+        </div></div></div>
       </div>
     </div>
   </section>
 
-  <!-- Upcoming -->
-  <section class="feature feature--flip">
-    <div class="wrap">
-      <div class="feature__text">
-        <p class="eyebrow">Upcoming</p>
-        <h2>See the next two weeks before they happen.</h2>
-        <p class="lede">Rent, your phone bill, card payments and paydays, in order. Tameru notices charges that repeat and offers to track them, and works with pay that changes from cheque to cheque.</p>
-        <ul class="points">
-          <li><svg><use href="#i-check"/></svg><span><b>Into your calendar.</b> One tap adds every bill and payday, with a reminder the day before.</span></li>
-          <li><svg><use href="#i-check"/></svg><span><b>Card due dates too.</b> Statement and payment dates for each credit card, two days’ notice.</span></li>
-          <li><svg><use href="#i-check"/></svg><span><b>Bills you confirm.</b> Bills can record themselves or wait for you to confirm them.</span></li>
-        </ul>
-      </div>
-      <div class="feature__phone">
-        <div class="phone" role="img" aria-label="Tameru Upcoming screen listing bills and paydays for the next 14 days">
-          <div class="screen">
-            <div class="island"></div>
-            <div class="status"><span>9:41</span><i><em></em><b></b></i></div>
-            <div class="s-page" style="gap:8px">
-              <p class="eyebrow" style="font-size:8.5px">Bills &amp; paydays</p>
-              <div class="s-title" style="margin-top:-6px">Upcoming</div>
-              <div class="up-sum">
-                <div><small>Going out</small><b>$1,682.60</b></div>
-                <div><small>Coming in</small><b>$1,640.00</b></div>
-              </div>
-              <div class="up-day"><small>Tomorrow</small>
-                <div class="up-item"><i><svg><use href="#i-phone"/></svg></i><div><b>Phone</b><small>Everyday Visa</small></div><span class="amt">$55.00</span></div>
-              </div>
-              <div class="up-day"><small>Fri, Oct 23</small>
-                <div class="up-item"><i><svg><use href="#i-in"/></svg></i><div><b>Paycheque</b><small>Every two weeks</small></div><span class="amt in">+$1,640.00</span></div>
-              </div>
-              <div class="up-day"><small>Mon, Oct 26</small>
-                <div class="up-item"><i><svg><use href="#i-wifi"/></svg></i><div><b>Internet</b><small>Chequing</small></div><span class="amt">$65.00</span></div>
-              </div>
-              <div class="up-day"><small>Wed, Oct 28</small>
-                <div class="up-item"><i><svg><use href="#i-card"/></svg></i><div><b>Everyday Visa payment due</b><small>Statement balance</small></div><span class="amt">$412.60</span></div>
-              </div>
-              <div class="up-day"><small>Sun, Nov 1</small>
-                <div class="up-item"><i><svg><use href="#i-home2"/></svg></i><div><b>Rent</b><small>Monthly on the 1st</small></div><span class="amt">$1,150.00</span></div>
-              </div>
-              <div class="cal-btn"><svg><use href="#i-cal"/></svg><div><b>Add bills &amp; paydays to Calendar</b><small>A reminder the day before each one</small></div></div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
+  <section class="say wrap" id="private">
+    <h2 class="words">Your money stays on your phone. <mark>No servers, no sign-up,</mark> no bank login.</h2>
+    <p class="lede up">Everything you enter lives on this device and keeps working on the subway with no signal. Lock it with a passcode or Face ID, and back it all up to a file whenever you like. <a href="/privacy/">Read the privacy policy</a>.</p>
   </section>
 
-  <!-- Receipts -->
-  <section class="feature">
-    <div class="wrap">
-      <div class="feature__text">
-        <p class="eyebrow">Logging spending</p>
-        <h2>One tap for coffee. A photo for groceries.</h2>
-        <p class="lede">Put the things you buy every week on Home as quick adds, and log them with a single tap. For a bigger shop, take a photo of the receipt. Tameru reads the store, total, date and card on your phone, without uploading it anywhere.</p>
-        <ul class="points">
-          <li><svg><use href="#i-check"/></svg><span><b>Matched to your card.</b> The last four digits on the receipt pick the right account.</span></li>
-          <li><svg><use href="#i-check"/></svg><span><b>Categories that learn.</b> Change one once and Tameru remembers it for that store.</span></li>
-          <li><svg><use href="#i-check"/></svg><span><b>Split it.</b> One receipt can count toward groceries and household at once.</span></li>
-        </ul>
+  <section class="wrap" id="free">
+    <h2 class="up">Free to use, <mark>for good.</mark></h2>
+    <div class="free">
+      <div class="tag up">
+        <h3>Tameru</h3>
+        <p>For your phone · no account</p>
+        <div class="big">$0.00<small>forever</small></div>
+        <a class="btn btn--lime" href="https://app.tameru.cc" rel="noopener">Open Tameru</a>
       </div>
-      <div class="feature__phone">
-        <div class="phone" role="img" aria-label="Tameru reading a grocery receipt and finding a $38.12 total">
-          <div class="screen">
-            <div class="island"></div>
-            <div class="s-receipt">
-              <div class="status"><span>9:41</span><i><em></em><b></b></i></div>
-              <div class="paper">
-                <h4>FARM BOY</h4>
-                <p>#118 · 2026-10-18 · 17:42</p>
-                <div class="ln"><span>BANANAS</span><span>1.42</span></div>
-                <div class="ln"><span>GREEK YOGURT 750G</span><span>5.99</span></div>
-                <div class="ln"><span>SOURDOUGH LOAF</span><span>4.49</span></div>
-                <div class="ln"><span>BABY SPINACH</span><span>3.99</span></div>
-                <div class="ln"><span>CHICKEN THIGHS</span><span>14.87</span></div>
-                <div class="ln"><span>OAT MILK 1.75L</span><span>4.79</span></div>
-                <hr>
-                <div class="ln"><span>SUBTOTAL</span><span>35.55</span></div>
-                <div class="ln"><span>HST</span><span>2.57</span></div>
-                <div class="ln tot hit"><span>TOTAL</span><span>38.12</span></div>
-                <hr>
-                <div class="ln"><span>VISA DEBIT</span><span class="hit">**** 2207</span></div>
-              </div>
-              <div class="scan-corners" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
-              <div class="found">
-                <div class="grab"></div>
-                <p class="eyebrow">Found on the receipt</p>
-                <div class="found__total num">$38<small>.12</small></div>
-                <dl>
-                  <dt>Vendor</dt><dd>Farm Boy</dd>
-                  <dt>Date</dt><dd>Oct 18</dd>
-                  <dt>Card</dt><dd>Everyday chequing •• 2207</dd>
-                  <dt>Category</dt><dd>Groceries</dd>
-                </dl>
-                <div class="btn-s">Review and add</div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- The rest -->
-  <section class="extras">
-    <div class="wrap">
-      <p class="eyebrow">And the rest</p>
-      <h2 style="margin-top:16px">Built for people who don’t want to think about budgeting every day.</h2>
-      <div class="extras__grid">
-        <div><svg><use href="#i-bolt"/></svg><h3>Quick adds</h3><p>Four slots on Home for the things you buy all the time. Tap once and it’s logged, with undo.</p></div>
-        <div><svg><use href="#i-repeat"/></svg><h3>Spots repeat charges</h3><p>Pays for the same thing every month? Tameru notices and offers to track it as a bill.</p></div>
-        <div><svg><use href="#i-refresh"/></svg><h3>Fresh start</h3><p>Been away a while? Accept the suggestions, start again from today’s balances, and keep your history.</p></div>
-        <div><svg><use href="#i-card"/></svg><h3>Every account</h3><p>Chequing, savings with interest, credit cards with fees and due dates, a TFSA, cash.</p></div>
-        <div><svg><use href="#i-lock"/></svg><h3>Passcode and Face ID</h3><p>Lock the app on your phone so nobody else opening it can see your balances.</p></div>
-        <div><svg><use href="#i-download"/></svg><h3>Your data, exportable</h3><p>Back up everything to a file, or export transactions as a CSV for your spreadsheet.</p></div>
-      </div>
-    </div>
-  </section>
-
-  <!-- Privacy -->
-  <section class="private" id="private">
-    <div class="wrap">
-      <div class="private__band">
-        <div class="text">
-          <p class="eyebrow">Private by design</p>
-          <h2>Your money stays on your phone.</h2>
-          <p class="lede">Tameru has no servers holding your data and no sign-up. You don’t connect a bank. Everything you enter lives on this device, and it keeps working on the subway with no signal.</p>
-        </div>
-        <ul class="private__list">
-          <li><span>Account to create</span><b>None</b></li>
-          <li><span>Bank logins asked for</span><b>None</b></li>
-          <li><span>Where your data lives</span><b>This device</b></li>
-          <li><span>Receipts uploaded</span><b>None, read on the phone</b></li>
-          <li><span>Works without signal</span><b>Yes</b></li>
-          <li><span>Price</span><b>Free</b></li>
+      <div class="included up">
+        <h3>Everything included</h3>
+        <ul>
+          <li>Safe to spend, per day</li>
+          <li>Plan by dollars or percent</li>
+          <li>Bills, paydays and repeat charges</li>
+          <li>Savings goals with milestones</li>
+          <li>Quick adds and receipt photos</li>
+          <li>Credit cards with due dates</li>
+          <li>Passcode and Face ID lock</li>
+          <li>Backup file and CSV export</li>
         </ul>
       </div>
     </div>
+    <ol class="howto">
+      <li class="up"><h3>Open Tameru in Safari</h3><p>On iPhone, use Safari. On Android, Chrome works.</p></li>
+      <li class="up"><h3>Add it to your Home Screen</h3><p>Tap <kbd>Share</kbd>, then <kbd>Add to Home Screen</kbd>. On Android, tap <kbd>Install</kbd>.</p></li>
+      <li class="up"><h3>Answer a few questions</h3><p>Your pay, your bills, what you’re saving for. You get your first plan and your number right away.</p></li>
+    </ol>
   </section>
 
-  <!-- Install -->
-  <section class="install" id="install">
-    <div class="wrap">
-      <div class="install__head">
-        <p class="eyebrow">Get the app</p>
-        <h2>On your Home Screen in under a minute.</h2>
-        <p class="lede">Tameru is a web app you install from the browser. No app store, nothing to sign up for. Once it’s on your Home Screen it opens full screen like any other app.</p>
-      </div>
-      <ol class="steps">
-        <li><h3>Open Tameru in Safari</h3><p>On iPhone, use Safari. On Android, Chrome works.</p></li>
-        <li><h3>Add it to your Home Screen</h3><p>Tap <kbd>Share</kbd>, then <kbd>Add to Home Screen</kbd>. On Android, tap <kbd>Install</kbd>.</p></li>
-        <li><h3>Answer a few questions</h3><p>Your pay, your bills, what you’re saving for. Skip anything you’re unsure of. You get your first plan and your number right away.</p></li>
-      </ol>
-      <div class="install__cta">
-        <a class="btn btn--solid" href="https://app.tameru.cc" rel="noopener">Open Tameru</a>
-        <span>Free. Takes a few seconds.</span>
-      </div>
+  <section class="wrap faq" id="faq">
+    <h2 class="up" style="font-size:clamp(2.25rem,4.4vw,3.5rem)">Questions</h2>
+    <div class="up">
+      <details><summary>Does it connect to my bank?</summary><p>No. You enter your balances once, then log spending with quick adds, a receipt photo or by hand. Nothing ever asks for a bank password.</p></details>
+      <details><summary>Where is my data stored?</summary><p>Only on your phone, in the app’s own storage. There are no Tameru servers holding your data and no account to sign in to.</p></details>
+      <details><summary>Is it on the App Store?</summary><p>Tameru is a web app you add to your Home Screen from the browser. Once it’s there it opens full screen and works offline, like any other app.</p></details>
+      <details><summary>What happens if I lose my phone?</summary><p>Your data lives on the device, so make a backup from More → Settings whenever you like. A backup file restores everything on a new phone.</p></details>
+      <details><summary>How is safe to spend worked out?</summary><p>Spendable balances, plus pay still coming before the period ends, minus bills, goal contributions, money still planned in categories and your buffer. Tap the number in the app to see your own breakdown.</p></details>
     </div>
   </section>
 </main>
 
 <footer>
   <div class="wrap">
-    <a class="brand" href="#top"><svg aria-hidden="true"><use href="#logo"/></svg>Tameru</a>
-    <span><span class="jp" lang="ja">貯める</span> (tameru): to save up, to set aside.</span>
-    <span>Stays on your device.</span>
+    <div class="footer__row">
+      <a class="brand" href="#top"><svg aria-hidden="true"><use href="#logo"/></svg>tameru</a>
+      <nav aria-label="Footer"><a href="#how">How it works</a><a href="#plan">Plan</a><a href="#scan">Receipts</a><a href="#faq">FAQ</a><a href="/privacy/">Privacy</a><a href="/terms/">Terms</a><a href="https://github.com/sjapanwala/tameru" rel="noopener">GitHub</a><a href="https://app.tameru.cc" rel="noopener">Open the app</a></nav>
+    </div>
+    <div class="footer__mark" aria-hidden="true"><b>tameru</b><span>貯める</span></div>
+    <p class="footer__fine">© 2026 Tameru · Free, private, not financial advice · <a href="/privacy/">Privacy</a> · <a href="/terms/">Terms</a></p>
   </div>
 </footer>
+
+<div class="dock" id="dock">
+  <a class="btn btn--lime" href="https://app.tameru.cc" rel="noopener"><svg aria-hidden="true"><use href="#arrow"/></svg>Open Tameru</a>
+  <a class="btn btn--line" href="#free">It’s free</a>
+</div>
+
+<script>
+(() => {
+  const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const clamp = (v) => Math.min(1, Math.max(0, v));
+
+  // The dial: 100 ticks, like the Plan screen. Lights up to the logo's two-thirds.
+  const dial = document.querySelector('.dial');
+  const NS = 'http://www.w3.org/2000/svg';
+  const ticks = [];
+  for (let i = 0; i < 100; i++) {
+    const a = ((i / 100) * 360 - 90) * (Math.PI / 180);
+    const l = document.createElementNS(NS, 'line');
+    const r1 = i % 10 === 0 ? 84 : 88;
+    l.setAttribute('x1', (Math.cos(a) * r1).toFixed(2)); l.setAttribute('y1', (Math.sin(a) * r1).toFixed(2));
+    l.setAttribute('x2', (Math.cos(a) * 95).toFixed(2)); l.setAttribute('y2', (Math.sin(a) * 95).toFixed(2));
+    dial.append(l); ticks.push(l);
+  }
+
+  // The Plan dial, from the sample plan in the app (Plan screen, Oct 1 – Oct 31):
+  // amounts in cents, whole ticks as the app rounds them, and the shares it shows.
+  function planScene() {
+    const INCOME = 199333;
+    const slices = [
+      ['Bills', '#94a3b8', 92347, 46, 46], ['Groceries', '#ff6b5b', 42000, 21, 21], ['Transport', '#4ade80', 9000, 5, 5],
+      ['Eating out', '#ffb547', 15000, 8, 8], ['Fun & shopping', '#38bdf8', 6000, 3, 3], ['Personal & health', '#a78bfa', 3000, 1, 2],
+      ['Irregular', '#d6b98c', 4000, 2, 2], ['Emergency fund', '#f472b6', 10000, 5, 5],
+    ].map(([name, color, cents, ticks, pct]) => ({ name, color, cents, ticks, pct }));
+    const money = (c) => '$' + (c / 100).toLocaleString('en-CA', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const svg = document.querySelector('.planner__dial svg');
+    const legend = document.querySelector('.legend');
+    const el = (tag, attrs = {}, parent = svg) => { const n = document.createElementNS(NS, tag); for (const k in attrs) n.setAttribute(k, attrs[k]); parent.append(n); return n; };
+    const CX = 440, CY = 220, R_IN = 150, R_OUT = 180;
+    const at = (tick, r) => { const a = (tick / 100) * Math.PI * 2 - Math.PI / 2; return [CX + Math.cos(a) * r, CY + Math.sin(a) * r]; };
+    const owner = [];
+    let start = 0;
+    for (const s of slices) { s.start = start; s.end = start + s.ticks; start = s.end; for (let i = 0; i < s.ticks; i++) owner.push(s); }
+    const lines = [];
+    for (let i = 0; i < 100; i++) {
+      const [x1, y1] = at(i, R_IN), [x2, y2] = at(i, R_OUT);
+      lines.push(el('line', { x1: x1.toFixed(1), y1: y1.toFixed(1), x2: x2.toFixed(1), y2: y2.toFixed(1), stroke: 'rgb(243 240 232 / 0.12)' }));
+    }
+    const c1 = el('text', { x: CX, y: CY - 44, 'text-anchor': 'middle', class: 'c1' }); c1.textContent = 'Income planned';
+    const c2 = el('text', { x: CX, y: CY + 18, 'text-anchor': 'middle', class: 'c2' });
+    const c3 = el('text', { x: CX, y: CY + 52, 'text-anchor': 'middle', class: 'c3' });
+    // Callouts in a column on each side, in the ring's order top to bottom, so no leaders cross.
+    for (const s of slices) { const [px, py] = at(s.start + s.ticks / 2, R_OUT + 10); Object.assign(s, { px, py, side: px >= CX ? 'r' : 'l' }); }
+    for (const side of ['l', 'r']) {
+      const group = slices.filter((s) => s.side === side).sort((a, b) => a.py - b.py);
+      group.forEach((s, k) => {
+        s.ly = group.length === 1 ? s.py : 44 + (k * 352) / (group.length - 1);
+        const g = el('g', { class: 'lbl', style: `--dx:${side === 'l' ? 10 : -10}px` });
+        const elbow = side === 'l' ? 236 : 644;
+        el('path', { d: `M${s.px.toFixed(1)} ${s.py.toFixed(1)}L${elbow + (side === 'l' ? 14 : -14)} ${s.ly.toFixed(1)}H${elbow}` }, g);
+        el('circle', { cx: elbow + (side === 'l' ? -8 : 8), cy: s.ly, r: 4.5, fill: s.color }, g);
+        const x = side === 'l' ? elbow - 20 : elbow + 20, anchor = side === 'l' ? 'end' : 'start';
+        el('text', { x, y: s.ly - 2, 'text-anchor': anchor, class: 'n' }, g).textContent = s.name;
+        el('text', { x, y: s.ly + 17, 'text-anchor': anchor, class: 'd' }, g).textContent = `${s.pct}% · ${money(s.cents)}`;
+        s.label = g;
+      });
+    }
+    for (const s of slices) {
+      const li = document.createElement('li');
+      li.innerHTML = `<i style="--c:${s.color}"></i>${s.name}<b>${s.pct}% · ${money(s.cents)}</b>`;
+      legend.append(li); s.li = li;
+    }
+    // Small screens show just the ring (the legend below carries the labels).
+    const fit = () => svg.setAttribute('viewBox', matchMedia('(max-width: 900px)').matches ? '252 32 376 376' : '0 0 800 440');
+    fit(); addEventListener('resize', fit);
+    const total = slices.reduce((t, s) => t + s.ticks, 0);
+    const planned = slices.reduce((t, s) => t + s.cents, 0);
+    return (p) => {
+      const f = Math.round(clamp((p - 0.06) / 0.7) * total);
+      lines.forEach((l, i) => l.setAttribute('stroke', i < f ? owner[i].color : 'rgb(243 240 232 / 0.12)'));
+      let cents = 0;
+      for (const s of slices) {
+        const done = f >= s.end;
+        s.label.classList.toggle('on', done); s.li.classList.toggle('on', done);
+        cents += done ? s.cents : f > s.start ? (s.cents * (f - s.start)) / s.ticks : 0;
+      }
+      c2.textContent = `${f}%`;
+      c3.textContent = `${money(f >= total ? planned : Math.round(cents))} of ${money(INCOME)}`;
+    };
+  }
+
+  // The receipt: the phone slides over it as a camera, takes the picture, and the app
+  // shows what it read, then the Add sheet it fills in.
+  function scanScene() {
+    const root = document.getElementById('scan');
+    const show = Object.fromEntries([...root.querySelectorAll('[data-show]')].map((n) => [n.dataset.show, n]));
+    const flash = root.querySelector('.flash');
+    const phone = root.querySelector('.scan__phone');
+    const steps = [...root.querySelectorAll('.scan__steps li')];
+    return (p) => {
+      const stage = p < 0.5 ? 'cam' : p < 0.78 ? 'found' : 'add';
+      for (const k in show) show[k].classList.toggle('on', k === stage);
+      flash.style.opacity = clamp(1 - Math.abs(p - 0.5) / 0.045).toFixed(3);
+      phone.style.setProperty('--lift', (clamp((p - 0.5) / 0.3) * 36).toFixed(1));
+      const cur = stage === 'cam' ? 0 : stage === 'found' ? 1 : 2;
+      steps.forEach((li, i) => li.classList.toggle('on', i <= cur));
+    };
+  }
+
+  // Split each inking headline into words, keeping any highlighter.
+  const words = [...document.querySelectorAll('.words')].map((h) => {
+    const wrap = (node) => {
+      for (const n of [...node.childNodes]) {
+        if (n.nodeType === 3) {
+          const frag = document.createDocumentFragment();
+          for (const part of n.textContent.split(/(\s+)/)) {
+            if (!part) continue;
+            if (/^\s+$/.test(part)) { frag.append(part); continue; }
+            const s = document.createElement('span'); s.className = 'w'; s.textContent = part; frag.append(s);
+          }
+          n.replaceWith(frag);
+        } else wrap(n);
+      }
+    };
+    wrap(h);
+    return { h, ws: [...h.querySelectorAll('.w')], mark: h.querySelector('mark') };
+  });
+
+  // Each pinned scene reacts to its own scroll progress, 0..1.
+  const scenes = {
+    stage: (p) => {
+      const lit = Math.round(clamp(p * 1.25) * 68);
+      ticks.forEach((t, i) => t.classList.toggle('lit', i < lit));
+    },
+    plan: planScene(),
+    scan: scanScene(),
+  };
+  const tracked = [...document.querySelectorAll('[data-progress]')];
+  const nav = document.getElementById('nav');
+  const dock = document.getElementById('dock');
+  const hero = document.getElementById('hero');
+  const foot = document.querySelector('footer');
+
+  let queued = false;
+  const frame = () => {
+    queued = false;
+    const vh = innerHeight;
+    for (const el of tracked) {
+      const r = el.getBoundingClientRect();
+      const p = clamp(-r.top / (r.height - vh)); // 0 when it pins, 1 when it lets go
+      el.style.setProperty('--p', p.toFixed(4));
+      scenes[el.id || el.className.split(' ')[0]]?.(p);
+    }
+    for (const { h, ws, mark } of words) {
+      const r = h.getBoundingClientRect();
+      const p = clamp((vh * 0.88 - r.top) / (vh * 0.55));
+      const n = Math.round(p * ws.length);
+      ws.forEach((w, i) => w.classList.toggle('lit', i < n));
+      if (mark) mark.classList.toggle('on', p >= 1);
+    }
+    nav.classList.toggle('scrolled', scrollY > 24);
+    dock.classList.toggle('on', hero.getBoundingClientRect().bottom < 0 && foot.getBoundingClientRect().top > vh);
+  };
+  const ask = () => { if (!queued) { queued = true; requestAnimationFrame(frame); } };
+  addEventListener('scroll', ask, { passive: true });
+  addEventListener('resize', ask);
+  frame();
+  if (still) {
+    words.forEach(({ ws }) => ws.forEach((w) => w.classList.add('lit')));
+    ticks.slice(0, 68).forEach((t) => t.classList.add('lit'));
+  }
+
+  // The hero's highlighter swipes in once the page has settled.
+  setTimeout(() => document.querySelector('mark.on-load').classList.add('on'), still ? 0 : 450);
+
+  // Fade things up, and swipe any highlighter, as they arrive.
+  const io = new IntersectionObserver((es) => es.forEach((e) => {
+    if (!e.isIntersecting) return;
+    e.target.classList.add('in');
+    e.target.querySelectorAll?.('mark').forEach((m) => setTimeout(() => m.classList.add('on'), 500));
+    io.unobserve(e.target);
+  }), { rootMargin: '0px 0px -12% 0px' });
+  document.querySelectorAll('.up, [data-inview]').forEach((el) => io.observe(el));
+})();
+</script>
+</body>
 </html>

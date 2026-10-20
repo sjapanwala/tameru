@@ -2827,6 +2827,16 @@ main ul.txlist > li:has(> .txrow, > .swipe) {
   animation: fade-in 0.8s var(--glide) 0.5s forwards;
 }
 
+/* With motion off the line never draws in, so show it finished. */
+@media (prefers-reduced-motion: reduce) {
+  .spark-line__line {
+    stroke-dashoffset: 0;
+  }
+  .spark-line__area {
+    opacity: 1;
+  }
+}
+
 @keyframes draw {
   to {
     stroke-dashoffset: 0;
@@ -3022,126 +3032,337 @@ main ul.txlist > li:has(> .txrow, > .swipe) {
   mask-image: linear-gradient(to right, transparent, #000 56px, #000 calc(100% - 56px), transparent);
 }
 
-/* ---------- install page (browser tab, before the app is installed) ---------- */
+/* ---------- install page (browser tab, before the app is installed) ----------
+   The product site's look: ink on paper, a lime highlighter, the 100-tick dial.
+   On iPhone the install sheet opens over the bottom ~300px, so the hero fills exactly
+   the space above it; the points and the page's own button sit underneath, for after
+   the sheet is closed (and for Android and desktop, where it doesn't open by itself). */
 
-.install {
+.gate {
+  --paper: #f3f0e8;
+  --sheet-room: calc(300px + var(--safe-b));
   min-height: 100dvh;
+  background: var(--paper);
+  color: #121211;
+  padding: calc(var(--safe-t) + 12px) 20px calc(var(--safe-b) + 28px);
+}
+
+@media (prefers-color-scheme: dark) {
+  .gate {
+    --paper: #0f0f0e;
+    color: #f2f0ea;
+  }
+}
+
+/* The paper runs edge to edge, past the page column on wide screens. */
+body:has(.gate) {
+  background: #f3f0e8;
+}
+
+@media (prefers-color-scheme: dark) {
+  body:has(.gate) {
+    background: #0f0f0e;
+  }
+}
+
+.gate__bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 44px;
+  font-weight: 600;
+  font-size: 1.2rem;
+  letter-spacing: -0.045em;
+}
+
+.gate__bar img {
+  border-radius: 8px;
+}
+
+.gate__ver {
+  margin-left: auto;
+  font: 500 0.7rem var(--font-num);
+  letter-spacing: 0.04em;
+  opacity: 0.45;
+}
+
+.gate__hero {
   display: flex;
   flex-direction: column;
-  margin: calc(-1 * (var(--safe-t) + var(--s4))) calc(-1 * var(--s5)) calc(-1 * (var(--safe-b) + var(--s7)));
+  min-height: calc(100svh - var(--sheet-room) - var(--safe-t) - 56px);
+  padding-top: 10px;
 }
 
-.install__hero {
-  position: relative;
-  isolation: isolate;
-  overflow: hidden;
-  margin-top: calc(var(--safe-t) + var(--s2));
-  padding: 64px var(--s5) var(--s7);
-  border-radius: 32px 32px 36px 36px;
-  background: var(--hero-bg);
-  color: var(--hero-text);
-  text-align: center;
-}
-
-.install__hero::before {
-  content: '';
-  position: absolute;
-  z-index: -1;
-  inset: -20% -10% auto;
-  height: 80%;
-  background: radial-gradient(60% 60% at 50% 30%, rgb(255 255 255 / 0.12), transparent 70%);
-}
-
-.install__icon {
-  display: block;
-  margin: 0 auto var(--s5);
-  border-radius: 22px;
-  box-shadow: 0 0 0 1px rgb(255 255 255 / 0.12), 0 18px 40px -12px rgb(0 0 0 / 0.8);
+.gate__eyebrow {
+  margin: 0;
+  font: 500 0.72rem var(--font-num);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  opacity: 0.5;
   animation: install-rise var(--t-slow) var(--glide) both;
 }
 
-.install__hero h1 {
-  margin: 0;
-  font-size: var(--fs-hero);
-  letter-spacing: -0.04em;
+.gate h1 {
+  margin: 10px 0 0;
+  font-size: clamp(2rem, 5.4svh, 3rem);
+  font-weight: 600;
   line-height: 1;
+  letter-spacing: -0.05em;
+  text-wrap: balance;
   animation: install-rise var(--t-slow) var(--glide) 80ms both;
 }
 
-.install__tagline {
-  margin: var(--s3) auto 0;
-  max-width: 18em;
-  color: var(--hero-dim);
-  font-size: var(--fs-lg);
-  line-height: 1.3;
+.gate mark {
+  position: relative;
+  z-index: 0;
+  background: none;
+  color: inherit;
+  white-space: nowrap;
+}
+
+.gate mark::before {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  inset: 0.16em -0.08em 0.04em;
+  border-radius: 0.12em 0.3em 0.16em 0.26em;
+  background: #dcf065;
+  transform-origin: left;
+  animation: swipe 700ms var(--glide) 600ms both;
+}
+
+@media (prefers-color-scheme: dark) {
+  .gate mark {
+    color: #121211;
+  }
+}
+
+@keyframes swipe {
+  from {
+    transform: scaleX(0);
+  }
+}
+
+.gate__lede {
+  display: none;
+  margin: 18px 0 0;
+  max-width: 30em;
+  font-size: 1.1rem;
+  line-height: 1.45;
+  opacity: 0.65;
+}
+
+/* The Home screen rising inside the dial, like the site's stage */
+.gate__stage {
+  position: relative;
+  flex: 1;
+  min-height: 150px;
+  margin-top: 18px;
+  border-radius: 26px;
+  overflow: hidden;
+  background: radial-gradient(120% 120% at 20% 0%, #2d2d2a 0%, #141413 45%, #060606 100%);
   animation: install-rise var(--t-slow) var(--glide) 160ms both;
 }
 
-.install__points {
+.gate__dial {
+  position: absolute;
+  left: 50%;
+  top: 18px;
+  width: min(124%, 520px);
+  aspect-ratio: 1;
+  translate: -50% 0;
+}
+
+.gate__dial line {
+  stroke: rgb(255 255 255 / 0.14);
+  stroke-width: 2.4;
+  stroke-linecap: round;
+}
+
+.gate__dial line.lit {
+  stroke: #dcf065;
+  animation: tick-on 260ms linear both;
+  animation-delay: calc(500ms + var(--i) * 12ms);
+}
+
+@keyframes tick-on {
+  from {
+    stroke: rgb(255 255 255 / 0.14);
+  }
+}
+
+.gate__phone {
+  --w: min(62%, 250px);
+  position: absolute;
+  left: 50%;
+  top: 34px;
+  width: var(--w);
+  translate: -50% 0;
+  padding: 2.4%;
+  border-radius: 38px;
+  background: linear-gradient(145deg, #34342f, #0b0b0a 40%, #22221f);
+  box-shadow: inset 0 0 0 1.5px rgb(255 255 255 / 0.1), 0 30px 60px -20px rgb(0 0 0 / 0.7);
+  animation: phone-rise 900ms var(--glide) 300ms both;
+}
+
+.gate__phone img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 31px;
+}
+
+.gate__phone::after {
+  content: '';
+  position: absolute;
+  top: 4.5%;
+  left: 50%;
+  width: 30%;
+  height: 4.2%;
+  max-height: 22px;
+  translate: -50% 0;
+  border-radius: 99px;
+  background: #050505;
+}
+
+@keyframes phone-rise {
+  from {
+    opacity: 0;
+    transform: translateY(80px);
+  }
+}
+
+.gate__points {
   list-style: none;
-  margin: 0;
-  padding: var(--s6) var(--s5) var(--s4);
-  display: grid;
-  gap: var(--s5);
+  margin: 28px 0 0;
+  padding: 0;
 }
 
-.install__points li {
+.gate__points li {
   display: flex;
-  gap: var(--s4);
-  align-items: flex-start;
-  animation: install-rise var(--t-slow) var(--glide) both;
+  gap: 12px;
+  padding: 14px 0;
+  border-bottom: 1px solid color-mix(in srgb, currentColor 12%, transparent);
 }
 
-.install__points li:nth-child(1) { animation-delay: 240ms; }
-.install__points li:nth-child(2) { animation-delay: 300ms; }
-.install__points li:nth-child(3) { animation-delay: 360ms; }
-
-.install__points strong {
-  display: block;
-  font-weight: 600;
-}
-
-.install__points small {
-  display: block;
-  color: var(--text-2);
-  font-size: var(--fs-sm);
-  line-height: 1.4;
-}
-
-/* a small receipt-style tick, the app's stand-in for icons */
-.install__tick {
+.gate__points li::before {
+  content: '✓';
   flex: none;
   width: 22px;
   height: 22px;
   margin-top: 1px;
-  border-radius: 50%;
-  background: var(--accent);
-  position: relative;
+  display: grid;
+  place-items: center;
+  border-radius: 5px;
+  background: #dcf065;
+  color: #121211;
+  font: 600 0.8rem var(--font-num);
 }
 
-.install__tick::after {
-  content: '';
-  position: absolute;
-  left: 7.5px;
-  top: 4.5px;
-  width: 5px;
-  height: 9px;
-  border: solid var(--accent-text);
-  border-width: 0 2px 2px 0;
-  transform: rotate(45deg);
+.gate__points strong {
+  display: block;
+  font-weight: 600;
+  letter-spacing: -0.02em;
 }
 
-.install__cta {
-  margin-top: auto;
-  padding: var(--s4) var(--s5) calc(var(--safe-b) + var(--s5));
-  animation: install-rise var(--t-slow) var(--glide) 420ms both;
+.gate__points small {
+  display: block;
+  font-size: var(--fs-sm);
+  line-height: 1.4;
+  opacity: 0.6;
 }
 
-.install__fine {
-  margin: var(--s3) 0 0;
+.gate__cta {
+  margin-top: 24px;
+}
+
+.gate__cta button {
+  width: 100%;
+  min-height: 54px;
+  border: 0;
+  border-radius: 999px;
+  background: #121211;
+  color: #f3f0e8;
+  font: 600 1.05rem var(--font);
+  letter-spacing: -0.01em;
+}
+
+@media (prefers-color-scheme: dark) {
+  .gate__cta button {
+    background: #dcf065;
+    color: #121211;
+  }
+}
+
+.gate__legal a {
+  color: inherit;
+  text-underline-offset: 3px;
+}
+
+.gate__cta button:disabled {
+  opacity: 0.4;
+}
+
+.gate__fine {
+  margin: 12px 0 0;
   text-align: center;
-  color: var(--text-2);
   font-size: var(--fs-xs);
+  opacity: 0.55;
+}
+
+/* Wide screens: copy and points on the left, the stage on the right. Nothing opens over it. */
+@media (min-width: 900px) {
+  .gate {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-rows: auto 1fr;
+    column-gap: 56px;
+    max-width: 1184px;
+    margin: 0 auto;
+    padding: 24px 32px 40px;
+  }
+  .gate__bar {
+    grid-column: 1 / -1;
+  }
+  .gate__hero {
+    display: contents;
+  }
+  .gate__copy {
+    grid-column: 1;
+    align-self: center;
+  }
+  .gate h1 {
+    font-size: clamp(3rem, 5vw, 4.6rem);
+  }
+  .gate__lede {
+    display: block;
+  }
+  .gate__stage {
+    grid-column: 2;
+    grid-row: 2 / 4;
+    margin: 0;
+    min-height: 620px;
+  }
+  .gate__dial {
+    top: 50%;
+    width: min(118%, 640px);
+    translate: -50% -50%;
+  }
+  .gate__phone {
+    --w: min(300px, 62%);
+    top: 50%;
+    translate: -50% -42%;
+  }
+  .gate__rest {
+    grid-column: 1;
+  }
+  .gate__cta button {
+    width: auto;
+    padding: 0 32px;
+  }
+  .gate__fine {
+    text-align: left;
+  }
 }
 
 @keyframes install-rise {

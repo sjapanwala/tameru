@@ -18,6 +18,10 @@ export const S = {
   gate: {
     name: 'Tameru',
     tagline: 'A calm budget that lives on your phone.',
+    eyebrow: '貯める · to save up',
+    headline: 'Know exactly what’s safe to spend',
+    highlight: 'today.',
+    lede: 'Tameru takes your pay, bills, card balances and savings goals and turns them into one number: how much you can spend right now without coming up short.',
     points: [
       ['Know what’s safe to spend', 'One number for today, after bills, goals and a buffer.'],
       ['Private by design', 'No account and no bank login. Everything stays on this device.'],
@@ -26,6 +30,8 @@ export const S = {
     installButton: 'Install Tameru',
     installDescription: 'Add it to your home screen. It opens full screen and works offline.',
     fine: 'Free. Takes a few seconds. Nothing to sign up for.',
+    privacy: 'Privacy',
+    terms: 'Terms',
   },
 
   nav: {
@@ -534,7 +540,7 @@ export const S = {
     setToday: 'Pin today to',
     useReal: 'Use the real date',
     jump: (n: number) => `Jump ${plural(n, 'day')}`,
-    seed: 'Replace with sample data (student)',
+    seed: 'Replace with sample data',
     wipe: 'Wipe all data',
     notices: 'Notices scheduled',
     events: 'Event log',
