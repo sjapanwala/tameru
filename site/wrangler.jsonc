@@ -1,0 +1,6 @@
+// The product site at tameru.cc: static files only. The app itself is the tameru-pwa project.
+{
+  "name": "tameru-site",
+  "compatibility_date": "2026-10-01",
+  "assets": { "directory": "./public" }
+}
