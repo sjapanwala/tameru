@@ -44,7 +44,22 @@ select,
 
 /* Home: the dark hero continues into the status bar and the top overscroll. */
 html.hero-top {
-  background: #1c1c1c;
+  background: var(--hero-top);
+}
+
+/* see StatusTint.tsx: a strip in the hero's colour that iOS takes the status bar colour from */
+.status-tint {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 15; /* above the page, below sheets and menus */
+  height: max(var(--safe-t), 4px);
+  background: var(--hero-top);
+}
+
+.status-tint[hidden] {
+  display: none;
 }
 
 ::selection {

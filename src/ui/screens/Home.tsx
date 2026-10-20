@@ -18,6 +18,7 @@ import { useTween } from '../motion';
 import { QuickRow } from '../QuickRow';
 import { useWalletPull, Wallet } from '../Wallet';
 import { Sheet } from '../Sheet';
+import { StatusTint } from '../StatusTint';
 import { orderedAccounts, reorderAccounts } from '../../services/accounts';
 
 export function Home(props: { offer: FreshStartOffer | null; clearOffer: () => void }) {
@@ -93,6 +94,7 @@ export function Home(props: { offer: FreshStartOffer | null; clearOffer: () => v
 
   return (
     <section class="home">
+      <StatusTint target=".home-hero" />
       <div ref={pull.ref} class={`home-hero${pull.open ? ' home-hero--open' : ''}`} {...pull.bind}>
         <div class="home-hero__top">
           <a class="mark" href="#/settings" aria-label={S.home.profile}>
@@ -222,9 +224,9 @@ export function Home(props: { offer: FreshStartOffer | null; clearOffer: () => v
 const HERO_TOP = '#1c1c1c';
 
 /**
- * While Home is showing, the dark hero runs up under the status bar: the browser /
- * status bar tint (theme-color) and the area revealed by pulling the page down
- * (the root background) both take the hero's colour.
+ * While Home is showing, the area revealed by pulling the page down (the root
+ * background) takes the hero's colour, as does theme-color for iOS versions before 26
+ * (iOS 26 ignores it; StatusTint covers that).
  */
 function useHeroTop() {
   useEffect(() => {
