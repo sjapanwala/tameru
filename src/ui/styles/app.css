@@ -2143,7 +2143,7 @@ main ul.card-picker__results > li {
   letter-spacing: 0;
 }
 
-main ul.txlist > li:has(> .txrow) {
+main ul.txlist > li:has(> .txrow, > .swipe) {
   padding: 0;
 }
 
@@ -2179,6 +2179,8 @@ main ul.txlist > li:has(> .txrow) {
 
 .swipe {
   position: relative;
+  flex: 1; /* the list item is a flex row: take all of it */
+  min-width: 0;
   overflow: hidden;
   margin: 0 calc(-1 * var(--s2));
   border-radius: var(--radius-sm);
