@@ -1,7 +1,7 @@
 // Recurring schedules: expand into dated occurrences over any range.
 
 import { addDays, clampedDay, diffDays, maxDate, minDate, parts } from './dates';
-import type { Cents, Frequency, LocalDate, RecurringItem, Schedule } from './types';
+import type { Cents, Frequency, Id, LocalDate, RecurringItem, Schedule } from './types';
 
 /** Occurrence dates of a schedule within [from, to] (inclusive), sorted. */
 export function expandSchedule(schedule: Schedule, from: LocalDate, to: LocalDate): LocalDate[] {
@@ -93,6 +93,20 @@ export function occurrenceAmount(item: Pick<RecurringItem, 'amount' | 'kind'>, v
   if ('fixedCents' in a) return a.fixedCents;
   if (view === 'expected') return Math.round((a.minCents + a.maxCents) / 2);
   return item.kind === 'income' ? a.minCents : a.maxCents;
+}
+
+/**
+ * What bills and subscriptions cost each category in [from, to], read high, so a
+ * category's plan can always cover what's due in it. Income and irregular bills don't count.
+ */
+export function billsByCategory(items: readonly RecurringItem[], from: LocalDate, to: LocalDate): Record<Id, Cents> {
+  const out: Record<Id, Cents> = {};
+  for (const item of items) {
+    if (item.archived || item.kind === 'income' || item.schedule.freq === 'irregular') continue;
+    const n = occurrences(item, from, to).length;
+    if (n) out[item.categoryId] = (out[item.categoryId] ?? 0) + n * occurrenceAmount(item, 'conservative');
+  }
+  return out;
 }
 
 /** Occurrences per month, on average. */

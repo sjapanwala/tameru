@@ -3,7 +3,7 @@
 import { budgetHistory, type CategoryBudget } from '../domain/budgets';
 import { isBudgetCategory, nextCategoryColor, suggestionFor } from '../domain/defaults';
 import { daysElapsed, daysLeft, periodFor, periodLength, periodsBetween, type Period } from '../domain/period';
-import { monthlyEquivalent } from '../domain/recurrence';
+import { billsByCategory, monthlyEquivalent } from '../domain/recurrence';
 import { coverOptions, type CoverOption } from '../domain/reabsorb';
 import type { BudgetBehaviour, Category, Cents, EventType, Id, Plan, Schedule } from '../domain/types';
 import { nowIso, stamp, type AppContext } from './context';
@@ -68,20 +68,25 @@ export interface BudgetRow {
 /** Category budgets for the period containing `date` (default today), remaining first. */
 export async function budgetsFor(ctx: AppContext, date = ctx.clock.today()) {
   const { plan, schedule, period } = await periodContext(ctx, date);
-  const [categories, allocations, moves, segments, transactions] = await Promise.all([
+  const [categories, allocations, moves, segments, transactions, recurring] = await Promise.all([
     ctx.repos.categories.all(),
     ctx.repos.allocations.all(),
     ctx.repos.budgetMoves.all(),
     ctx.repos.segments.all(),
     ctx.repos.transactions.all(),
+    ctx.repos.recurring.all(),
   ]);
   const cats = categories.filter(isBudgetCategory).sort((a, b) => a.sortOrder - b.sortOrder);
   const overrides = new Map(allocations.map((a) => [`${a.periodStart}|${a.categoryId}`, a.amountCents]));
   const periods = periodsBetween(plan.period, plan.startDate < period.start ? plan.startDate : period.start, period.start, schedule);
+  // A category's plan always covers the bills and subscriptions due in it that period
+  // (after a fresh start, only those still to come, as spending counts from there too).
+  const restartOf = (start: string) => segments.filter((g) => g.periodStart === start).reduce<string | undefined>((m, g) => (!m || g.segmentStart > m ? g.segmentStart : m), undefined);
+  const due = new Map(periods.map((p) => [p.start, billsByCategory(recurring, restartOf(p.start) ?? p.start, p.end)]));
   const history = budgetHistory({
     categories: cats,
     periods,
-    allocationFor: (cid, start) => overrides.get(`${start}|${cid}`) ?? plan.templateAllocations[cid] ?? 0,
+    allocationFor: (cid, start) => Math.max(overrides.get(`${start}|${cid}`) ?? plan.templateAllocations[cid] ?? 0, due.get(start)?.[cid] ?? 0),
     moves,
     segments,
     transactions,
@@ -95,7 +100,7 @@ export async function budgetsFor(ctx: AppContext, date = ctx.clock.today()) {
   const overs = rows
     .filter((r) => r.budget.overCents > (handled[`${period.start}|${r.category.id}`] ?? 0))
     .map((r) => ({ categoryId: r.category.id, overCents: r.budget.overCents, options: coverOptions(r.category.id, budgets, cats, elapsed, left) }));
-  return { plan, period, rows, overs, history };
+  return { plan, period, rows, overs, history, due: due.get(period.start) ?? {} };
 }
 
 export async function setAllocation(ctx: AppContext, categoryId: Id, amountCents: Cents, scope: 'plan' | 'thisPeriod' = 'plan'): Promise<void> {

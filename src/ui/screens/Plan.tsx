@@ -61,9 +61,11 @@ export function Plan() {
   if (!data || !goals || income === undefined) return <div class="placeholder" />;
   const animate = !pull.dragging && !reducedMotion();
 
+  // A category's share is what's planned for it, and never less than the bills due in it this period.
+  const planOf = (id: string) => Math.max(data.plan.templateAllocations[id] ?? 0, data.due[id] ?? 0);
   const rows = [...data.rows].filter((r) => isBudgetCategory(r.category)).sort((a, b) => GROUP_ORDER.indexOf(a.category.group) - GROUP_ORDER.indexOf(b.category.group) || a.category.sortOrder - b.category.sortOrder);
   const slices: Slice[] = [
-    ...rows.map((r, i) => ({ key: `cat:${r.category.id}`, id: r.category.id, kind: 'cat' as const, name: r.category.name, color: categoryColor(r.category, i), cents: data.plan.templateAllocations[r.category.id] ?? 0 })),
+    ...rows.map((r, i) => ({ key: `cat:${r.category.id}`, id: r.category.id, kind: 'cat' as const, name: r.category.name, color: categoryColor(r.category, i), cents: planOf(r.category.id) })),
     ...goals.map((g) => ({ key: `goal:${g.goal.id}`, id: g.goal.id, kind: 'goal' as const, name: g.goal.name, cents: g.perPeriodCents })),
   ]
     .map((s) => ({ ...s, cents: live?.key === s.key ? live.cents : s.cents }))
@@ -225,7 +227,8 @@ export function Plan() {
             {editing.kind === 'cat' && (
               <CategorySheet
                 row={rows.find((r) => r.category.id === editing.id)!}
-                cents={data.plan.templateAllocations[editing.id] ?? 0}
+                cents={planOf(editing.id)}
+                due={data.due[editing.id] ?? 0}
                 color={slices.find((x) => x.key === `cat:${editing.id}`)!.color}
                 income={income}
                 inUse={(recurring ?? []).filter((r) => !r.archived && r.kind !== 'income' && r.categoryId === editing.id).length}
@@ -265,7 +268,7 @@ const SparkIcon = () => (
   </svg>
 );
 
-function CategorySheet(props: { row: { category: Category; budget: { remainingCents: Cents } }; cents: Cents; color: string; income: Cents; inUse: number; onDone: () => void }) {
+function CategorySheet(props: { row: { category: Category; budget: { remainingCents: Cents } }; cents: Cents; due: Cents; color: string; income: Cents; inUse: number; onDone: () => void }) {
   const { app } = useApp();
   const c = props.row.category;
   const canPercent = props.income > 0;
@@ -299,6 +302,7 @@ function CategorySheet(props: { row: { category: Category; budget: { remainingCe
         <AllocationInput value={amount} base={props.income} mode={mode} onChange={setAmount} />
         {canPercent && <small>{mode === 'percent' ? S.plan.dollarsOf(cents, props.income) : S.plan.shareOf(Math.round(percentOf(cents, props.income)))}</small>}
       </label>
+      {props.due > 0 && <p class="plan-sheet__note">{S.plan.coversBills(props.due)}</p>}
       <ColorPicker colors={CATEGORY_COLORS} value={color} onChange={setColor} />
       <p class="field-label">{S.plan.behaviour}</p>
       <ChipSelect label={S.plan.behaviour} options={(['reset', 'rollover', 'fund'] as const).map((b) => ({ value: b, label: S.behaviour[b] }))} value={behaviour} onChange={setBehaviour} />

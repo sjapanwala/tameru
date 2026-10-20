@@ -6,7 +6,7 @@ import { useEffect, useRef, useState } from 'preact/hooks';
 import { fmtDate, fmtWeekday, S } from '../../copy/strings';
 import { centsForPercent, percentOf } from '../../domain/allocation';
 import { diffDays } from '../../domain/dates';
-import { isBudgetCategory } from '../../domain/defaults';
+import { categoryId as defaultCategory, isBudgetCategory } from '../../domain/defaults';
 import { incomePerOccurrence } from '../../domain/recurrence';
 import { monthlyIncome } from '../../services/plan';
 import type { Cents, Frequency, RecurringItem, RecurringKind } from '../../domain/types';
@@ -268,7 +268,8 @@ const FREQS: Frequency[] = ['weekly', 'biweekly', 'semimonthly', 'monthly', 'yea
 function NewRecurringForm({ onDone }: { onDone: () => void }) {
   const { app } = useApp();
   const accounts = useLoad(orderedAccounts)?.filter((a) => !a.archived && a.type !== 'investing') ?? [];
-  const categories = useLoad((a) => a.repos.categories.all())?.filter(isBudgetCategory) ?? [];
+  const allCategories = useLoad((a) => a.repos.categories.all()) ?? [];
+  const categories = allCategories.filter(isBudgetCategory);
   const [name, setName] = useState('');
   const [kind, setKind] = useState<RecurringKind>('bill');
   const [varies, setVaries] = useState(false);
@@ -276,7 +277,8 @@ function NewRecurringForm({ onDone }: { onDone: () => void }) {
   const [max, setMax] = useState<Cents>();
   const [freq, setFreq] = useState<Frequency>('monthly');
   const [nextDate, setNextDate] = useState(app.clock.today());
-  const [categoryId, setCategoryId] = useState<string>();
+  const [categoryId, setCategoryId] = useState<string>(); // only when picked by hand
+  const [changingCategory, setChangingCategory] = useState(false);
   const [payFrom, setPayFrom] = useState<string[]>([]);
   const [mode, setMode] = useState<AmountMode>('dollars');
   const monthly = useLoad(monthlyIncome) ?? 0;
@@ -292,6 +294,9 @@ function NewRecurringForm({ onDone }: { onDone: () => void }) {
     setAmount(rescale);
     setMax(rescale);
   }, [base]);
+  // The type already says where it belongs: subscriptions to a Subscriptions category if there is one, the rest to Bills.
+  const suggested = (kind === 'subscription' && categories.find((c) => /subscri/i.test(c.name))?.id) || defaultCategory('bills');
+  const filedUnder = categoryId ?? suggested;
   const ok = name.trim() && amount !== undefined && (!varies || max !== undefined);
   return (
     <form
@@ -307,7 +312,7 @@ function NewRecurringForm({ onDone }: { onDone: () => void }) {
           nextDate,
           accountIds: ids,
           merchant: name,
-          ...(categoryId && kind !== 'income' ? { categoryId } : {}),
+          ...(kind !== 'income' ? { categoryId: filedUnder } : {}),
           ...(freq === 'irregular' ? { irregularMonthlyCents: amount ?? 0 } : {}),
         });
         onDone();
@@ -331,12 +336,22 @@ function NewRecurringForm({ onDone }: { onDone: () => void }) {
         {S.recurring.nextDate}
         <input type="date" value={nextDate} onInput={(e) => setNextDate((e.target as HTMLInputElement).value)} />
       </label>
-      {kind !== 'income' && (
-        <label class="field">
-          {S.common.category}
-          <CategorySelect categories={categories} value={categoryId} onChange={setCategoryId} />
-        </label>
-      )}
+      {kind !== 'income' &&
+        (changingCategory ? (
+          <label class="field">
+            {S.common.category}
+            <CategorySelect categories={categories} value={filedUnder} allowNone={false} onChange={setCategoryId} />
+          </label>
+        ) : (
+          <p class="filed-under">
+            <span>
+              {S.recurring.countsToward} <strong>{allCategories.find((c) => c.id === filedUnder)?.name ?? '—'}</strong>
+            </span>
+            <button type="button" class="link" onClick={() => setChangingCategory(true)}>
+              {S.recurring.change}
+            </button>
+          </p>
+        ))}
       {accounts.length > 1 && (
         <>
           <p class="field-label">{kind === 'income' ? S.upcoming.depositTo : S.recurring.payFrom}</p>

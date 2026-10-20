@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { expandSchedule, incomePerOccurrence, monthlyEquivalent, nextOccurrence, occurrenceAmount, occurrences, scheduleFrom } from './recurrence';
+import { recurring } from '../../tests/factories';
+import { billsByCategory, expandSchedule, incomePerOccurrence, monthlyEquivalent, nextOccurrence, occurrenceAmount, occurrences, scheduleFrom } from './recurrence';
 
 describe('expandSchedule', () => {
   it('puts a 31st bill on the last day of shorter months', () => {
@@ -65,5 +66,19 @@ describe('incomePerOccurrence', () => {
     expect(incomePerOccurrence(520_000, 'weekly')).toBe(120_000);
     expect(incomePerOccurrence(400_000, 'yearly')).toBe(4_800_000);
     expect(incomePerOccurrence(400_000, 'irregular')).toBe(400_000);
+  });
+});
+
+describe('billsByCategory', () => {
+  const spotify = recurring({ id: 's', kind: 'subscription', categoryId: 'subs', amount: { fixedCents: 671 }, schedule: { freq: 'monthly', day: 21 }, startDate: '2026-10-01' });
+  const claude = recurring({ id: 'c', kind: 'subscription', categoryId: 'subs', amount: { fixedCents: 3000 }, schedule: { freq: 'monthly', day: 16 }, startDate: '2026-11-16' });
+  const phone = recurring({ id: 'p', kind: 'bill', categoryId: 'bills', amount: { minCents: 4000, maxCents: 5000 }, schedule: { freq: 'monthly', day: 12 }, startDate: '2026-01-01' });
+  it('adds up what falls due in each category in the period, ranges at the high end', () => {
+    expect(billsByCategory([spotify, claude, phone], '2026-10-09', '2026-10-22')).toEqual({ subs: 671, bills: 5000 });
+    expect(billsByCategory([spotify, claude, phone], '2026-11-06', '2026-11-19')).toEqual({ subs: 3000, bills: 5000 });
+  });
+  it('leaves out income and stopped items', () => {
+    const pay = recurring({ id: 'i', kind: 'income', categoryId: 'income', amount: { fixedCents: 90000 }, schedule: { freq: 'monthly', day: 15 } });
+    expect(billsByCategory([{ ...spotify, archived: true }, pay], '2026-10-01', '2026-10-31')).toEqual({});
   });
 });

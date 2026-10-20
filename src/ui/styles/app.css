@@ -3032,6 +3032,22 @@ main ul.txlist > li:has(> .txrow, > .swipe) {
   mask-image: linear-gradient(to right, transparent, #000 56px, #000 calc(100% - 56px), transparent);
 }
 
+/* A new bill's category, picked from its type, with a way to change it. */
+.filed-under {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--s3);
+  margin: 0 0 var(--s4);
+  color: var(--text-2);
+  font-size: var(--fs-sm);
+}
+
+.filed-under strong {
+  color: var(--text);
+  font-weight: 600;
+}
+
 /* ---------- install page (browser tab, before the app is installed) ----------
    The product site's look: ink on paper, a lime highlighter, the 100-tick dial.
    On iPhone the install sheet opens over the bottom ~300px, so the hero fills exactly
