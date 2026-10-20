@@ -267,4 +267,7 @@ export interface Settings {
   customInstitutions?: CustomInstitution[]; // optional, only used for the initials avatar
   notificationsEnabled: boolean;
   sentNoticeIds: string[]; // most recent first, capped
+  // "periodStart|categoryId" → overspend the user already dealt with (covered part, or left as is).
+  // The cover prompt only returns if that category goes further over.
+  coversHandled?: Record<string, Cents>;
 }

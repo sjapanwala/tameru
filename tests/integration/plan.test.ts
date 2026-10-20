@@ -26,6 +26,25 @@ describe('plan services', () => {
     expect((await app.repos.events.all()).filter((e) => e.type === 'plan_changed')).toHaveLength(2);
   });
 
+  it('leaving an over as is, or covering part of it, dismisses the prompt until it grows', async () => {
+    const app = await testApp('2026-10-20');
+    const chq = await createAccount(app, { name: 'Chq', type: 'chequing', openingBalanceCents: 200000 });
+    await setAllocation(app, categoryId('eating_out'), 10000);
+    await addTransaction(app, { amountCents: 13000, accountId: chq.id, categoryId: categoryId('eating_out') });
+    let over = (await budgetsFor(app)).overs[0]!;
+    await applyCover(app, over.categoryId, over.options.find((o) => o.kind === 'leave')!);
+    expect((await budgetsFor(app)).overs).toEqual([]);
+    await addTransaction(app, { amountCents: 500, accountId: chq.id, categoryId: categoryId('eating_out') });
+    over = (await budgetsFor(app)).overs[0]!;
+    expect(over.overCents).toBe(3500); // went further over: asks again
+    await setAllocation(app, categoryId('fun'), 1000);
+    over = (await budgetsFor(app)).overs[0]!;
+    const partial = over.options.find((o) => o.kind === 'category' && !o.coversAll);
+    expect(partial).toBeDefined();
+    await applyCover(app, over.categoryId, partial!);
+    expect((await budgetsFor(app)).overs).toEqual([]);
+  });
+
   it('goal contributions count, transfers to a goal account are auto-tagged, milestones are acknowledged', async () => {
     const app = await testApp('2026-10-20');
     const chq = await createAccount(app, { name: 'Chq', type: 'chequing', openingBalanceCents: 200000 });

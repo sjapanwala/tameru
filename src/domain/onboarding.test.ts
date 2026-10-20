@@ -1,9 +1,19 @@
 import { describe, expect, it } from 'vitest';
-import { answer, back, currentStep, defaultNextPayday, incomeMonthlyConservative, initialState, isComplete, skip, steps, toGeneratorInput } from './onboarding';
+import { answer, back, isFullName, currentStep, defaultNextPayday, incomeMonthlyConservative, initialState, isComplete, skip, steps, toGeneratorInput } from './onboarding';
 
 describe('onboarding conversation', () => {
-  it('walks one question at a time and every step can be skipped', () => {
-    let s = initialState();
+  it('requires a full name before anything else', () => {
+    expect(isFullName('Saaim')).toBe(false);
+    expect(isFullName('  Saaim   Japanwala ')).toBe(true);
+    expect(isFullName('Saaim 2')).toBe(false);
+    expect(answer(initialState(), { step: 'welcome', name: 'Saaim' }).index).toBe(0);
+    expect(skip(initialState()).index).toBe(0);
+    const s = answer(initialState(), { step: 'welcome', name: ' Saaim   Japanwala ' });
+    expect(s.index).toBe(1);
+    expect(s.answers.name).toBe('Saaim Japanwala');
+  });
+  it('walks one question at a time and every step after the name can be skipped', () => {
+    let s = answer(initialState(), { step: 'welcome', name: 'Sam Lee' });
     let guard = 0;
     while (!isComplete(s) && guard++ < 50) s = skip(s);
     expect(isComplete(s)).toBe(true);
@@ -11,7 +21,7 @@ describe('onboarding conversation', () => {
     expect(s.answers.habitsWeekly).toEqual({});
   });
   it('adds one detail question per chosen account type', () => {
-    let s = answer(initialState(), { step: 'welcome' });
+    let s = answer(initialState(), { step: 'welcome', name: 'Sam Lee' });
     s = answer(s, { step: 'income', income: { name: 'Job', freq: 'biweekly', amountCents: 80000, nextDate: '2026-01-09' } });
     s = answer(s, { step: 'more_income', income: { name: 'Tutoring', freq: 'irregular', amountCents: 20000, nextDate: '2026-01-09' } });
     expect(currentStep(s)).toEqual({ id: 'more_income' }); // asks again

@@ -28,7 +28,7 @@ const answers = (p: Partial<OnboardingAnswers> = {}): OnboardingAnswers => ({
 describe('onboarding end to end', () => {
   it('saves progress so quitting resumes on the same question', async () => {
     const app = await testApp('2026-10-18');
-    const s = skip(answer(initialState(), { step: 'welcome' }));
+    const s = skip(answer(initialState(), { step: 'welcome', name: 'Sam Lee' }));
     await saveProgress(app, s);
     expect(await loadProgress(app)).toEqual(s);
   });

@@ -99,13 +99,19 @@ export async function confirmTransaction(ctx: AppContext, id: Id): Promise<void>
 
 /**
  * Generated occurrences are kept as 'skipped' so they are never regenerated;
- * manual entries are removed.
+ * manual entries are removed. Returns the record as it was, for undo.
  */
-export async function deleteTransaction(ctx: AppContext, id: Id): Promise<void> {
+export async function deleteTransaction(ctx: AppContext, id: Id): Promise<Transaction | undefined> {
   const cur = await ctx.repos.transactions.get(id);
-  if (!cur) return;
+  if (!cur) return undefined;
   if (cur.originKey) await ctx.repos.transactions.put(stamp(ctx, { ...cur, status: 'skipped' }));
   else await ctx.repos.transactions.delete(id);
+  return cur;
+}
+
+/** Undo a delete: put the record back exactly as deleteTransaction returned it. */
+export async function restoreTransaction(ctx: AppContext, tx: Transaction): Promise<void> {
+  await ctx.repos.transactions.put(tx);
 }
 
 export function transfer(ctx: AppContext, from: Id, to: Id, amountCents: Cents, opts: { date?: LocalDate; note?: string; goalId?: Id } = {}) {

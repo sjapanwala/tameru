@@ -40,4 +40,12 @@ describe('dates', () => {
     expect(D.eachDay('2026-02-27', '2026-03-02')).toEqual(['2026-02-27', '2026-02-28', '2026-03-01', '2026-03-02']);
     expect(D.eachDay('2026-03-02', '2026-03-01')).toEqual([]);
   });
+
+  it('finds the next date a monthly day falls on', () => {
+    expect(D.nextMonthlyDate(22, '2026-10-19')).toBe('2026-10-22');
+    expect(D.nextMonthlyDate(19, '2026-10-19')).toBe('2026-10-19');
+    expect(D.nextMonthlyDate(5, '2026-10-19')).toBe('2026-11-05');
+    expect(D.nextMonthlyDate(31, '2026-11-02')).toBe('2026-11-30');
+    expect(D.nextMonthlyDate(1, '2026-12-20')).toBe('2027-01-01');
+  });
 });

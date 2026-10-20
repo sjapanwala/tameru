@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { money, S } from '../copy/strings';
+import { nextMonthlyDate } from '../domain/dates';
 import { centsToDecimal, parseCents } from '../domain/money';
 import type { Account, Cents, Category } from '../domain/types';
 import { toast } from './toast';
@@ -46,6 +47,27 @@ export function MoneyInput(props: {
     </label>
   ) : (
     input
+  );
+}
+
+/**
+ * A monthly day (card due date, bill day) picked on a calendar: shows the next date
+ * that day falls on and reports just its day of month.
+ */
+export function MonthlyDayInput(props: { label: string; day: number; today: string; onChange: (day: number) => void }) {
+  return (
+    <label>
+      {props.label}{' '}
+      <input
+        type="date"
+        value={nextMonthlyDate(props.day, props.today)}
+        onInput={(e) => {
+          const v = (e.target as HTMLInputElement).value;
+          if (v) props.onChange(Number(v.slice(8)));
+        }}
+      />
+      <small class="muted">{S.common.monthlyOn(props.day)}</small>
+    </label>
   );
 }
 

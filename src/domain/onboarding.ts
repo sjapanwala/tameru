@@ -120,7 +120,7 @@ export function steps(a: OnboardingAnswers): StepId[] {
 export const currentStep = (s: OnboardingState): StepId => steps(s.answers)[Math.min(s.index, steps(s.answers).length - 1)]!;
 
 export type Answer =
-  | { step: 'welcome'; name?: string }
+  | { step: 'welcome'; name: string }
   | { step: 'income'; income: IncomeAnswer }
   | { step: 'more_income'; income?: IncomeAnswer } // undefined = "no, that's all"
   | { step: 'account_types'; types: AccountChoice[] }
@@ -136,7 +136,8 @@ export function answer(s: OnboardingState, ans: Answer): OnboardingState {
   const a = { ...s.answers };
   switch (ans.step) {
     case 'welcome':
-      if (ans.name?.trim()) a.name = ans.name.trim();
+      if (!isFullName(ans.name)) return s; // the full name is required
+      a.name = ans.name!.trim().replace(/\s+/g, ' ');
       break;
     case 'income':
       a.incomes = [ans.income, ...a.incomes.slice(1)];
@@ -173,6 +174,7 @@ export function answer(s: OnboardingState, ans: Answer): OnboardingState {
 /** Skip the current step, keeping its default. */
 export function skip(s: OnboardingState): OnboardingState {
   const step = currentStep(s);
+  if (step.id === 'welcome' && !isFullName(s.answers.name)) return s; // the name can't be skipped
   const a = { ...s.answers };
   if (step.id === 'account_detail' && !a.accounts.some((x) => x.type === step.type)) a.accounts = [...a.accounts, defaultAccount(step.type)];
   if (step.id === 'habit') {
@@ -198,6 +200,10 @@ export const ACCOUNT_LABEL_DEFAULTS: Record<AccountChoice, string> = {
 export function defaultAccount(type: AccountChoice): AccountAnswer {
   return { type, name: ACCOUNT_LABEL_DEFAULTS[type], balanceCents: 0, ...(type === 'savings' ? { rateBps: 0, rateKind: 'apy' as const } : {}) };
 }
+
+/** A first and last name: at least two words that each contain a letter. */
+export const isFullName = (name: string | undefined): boolean =>
+  (name ?? '').trim().split(/\s+/).filter((w) => /\p{L}/u.test(w)).length >= 2;
 
 /** "Saaim Japanwala" → "SJ"; one word → its first letter; nothing usable → "". */
 export function initials(name: string | undefined): string {

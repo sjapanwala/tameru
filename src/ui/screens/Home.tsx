@@ -34,6 +34,7 @@ export function Home(props: { offer: FreshStartOffer | null; clearOffer: () => v
   useEffect(() => {
     takeTodaysNotices(app).then(setNotices);
   }, []);
+  useHeroTop();
   const shownSafe = useTween(data?.sts.safeCents ?? 0, 'safe-to-spend');
   const pull = useWalletPull();
   const [walletOrder, setWalletOrder] = useState<string[] | null>(null);
@@ -217,3 +218,23 @@ export function Home(props: { offer: FreshStartOffer | null; clearOffer: () => v
   );
 }
 
+/** Roughly the hero gradient's colour along its top edge. */
+const HERO_TOP = '#1c1c1c';
+
+/**
+ * While Home is showing, the dark hero runs up under the status bar: the browser /
+ * status bar tint (theme-color) and the area revealed by pulling the page down
+ * (the root background) both take the hero's colour.
+ */
+function useHeroTop() {
+  useEffect(() => {
+    const metas = [...document.querySelectorAll<HTMLMetaElement>('meta[name="theme-color"]')];
+    const before = metas.map((m) => m.content);
+    metas.forEach((m) => (m.content = HERO_TOP));
+    document.documentElement.classList.add('hero-top');
+    return () => {
+      metas.forEach((m, i) => (m.content = before[i]!));
+      document.documentElement.classList.remove('hero-top');
+    };
+  }, []);
+}

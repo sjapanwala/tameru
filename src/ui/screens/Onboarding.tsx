@@ -13,6 +13,7 @@ import {
   goalTempId,
   HABIT_PICKS,
   isComplete,
+  isFullName,
   pickMidpoint,
   skip,
   steps,
@@ -28,7 +29,7 @@ import type { GeneratedPlan } from '../../domain/planGenerator';
 import type { Cents, Frequency } from '../../domain/types';
 import { finishOnboarding, loadProgress, previewPlan, saveProgress } from '../../services/onboarding';
 import { CardPicker } from '../cards';
-import { MoneyInput, Ticks } from '../components';
+import { MoneyInput, MonthlyDayInput, Ticks } from '../components';
 import { useApp, useLoad } from '../hooks';
 
 const ACCOUNT_CHOICES: AccountChoice[] = ['chequing', 'savings', 'credit_card', 'investing', 'cash'];
@@ -91,13 +92,14 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
         return (
           <AccountDetail
             key={step.type}
+            today={today}
             initial={state.answers.accounts.find((a) => a.type === step.type) ?? defaultAccount(step.type)}
             onSubmit={(account) => go({ step: 'account_detail', account })}
             nav={nav}
           />
         );
       case 'bills':
-        return <Bills initial={state.answers.bills} accountTypes={state.answers.accountTypes} onSubmit={(bills) => go({ step: 'bills', bills })} nav={nav} />;
+        return <Bills today={today} initial={state.answers.bills} accountTypes={state.answers.accountTypes} onSubmit={(bills) => go({ step: 'bills', bills })} nav={nav} />;
       case 'habit':
         return <Habit key={step.key} habit={step.key} onSubmit={(weeklyCents) => go({ step: 'habit', key: step.key, weeklyCents })} nav={nav} />;
       case 'goals':
@@ -138,20 +140,22 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
 
 function Welcome(props: { initialName?: string; onStart: (name: string) => void }) {
   const [name, setName] = useState(props.initialName ?? '');
+  const ok = isFullName(name);
   return (
     <form
       onSubmit={(e) => {
         e.preventDefault();
-        props.onStart(name);
+        if (ok) props.onStart(name);
       }}
     >
       <h1>{S.onboarding.welcomeTitle}</h1>
       <p>{S.onboarding.welcomeBody}</p>
       <label>
-        {S.onboarding.nameQ} {S.common.optional}
-        <input value={name} autoComplete="given-name" onInput={(e) => setName((e.target as HTMLInputElement).value)} />
+        {S.onboarding.nameQ}
+        <input value={name} required autoComplete="name" autoCapitalize="words" onInput={(e) => setName((e.target as HTMLInputElement).value)} />
+        <small class="muted">{S.onboarding.nameHint}</small>
       </label>
-      <button type="submit" class="block">{S.onboarding.start}</button>
+      <button type="submit" class="block" disabled={!ok}>{S.onboarding.start}</button>
     </form>
   );
 }
@@ -210,7 +214,7 @@ function AccountTypes(props: { initial: AccountChoice[]; onSubmit: (t: AccountCh
   );
 }
 
-function AccountDetail(props: { initial: AccountAnswer; onSubmit: (a: AccountAnswer) => void; nav: preact.ComponentChildren }) {
+function AccountDetail(props: { initial: AccountAnswer; today: string; onSubmit: (a: AccountAnswer) => void; nav: preact.ComponentChildren }) {
   const [a, setA] = useState(props.initial);
   const [rate, setRate] = useState(a.rateBps ? String(a.rateBps / 100) : '');
   const isCard = a.type === 'credit_card';
@@ -238,9 +242,7 @@ function AccountDetail(props: { initial: AccountAnswer; onSubmit: (a: AccountAns
       {isCard && (
         <>
           <MoneyInput label={S.onboarding.feeQ} value={a.monthlyFeeCents} onChange={(c) => setA({ ...a, monthlyFeeCents: c ?? 0 })} />
-          <label>
-            {S.accounts.dueDay} <input type="number" min="1" max="31" value={a.dueDay ?? 22} onInput={(e) => setA({ ...a, dueDay: Number((e.target as HTMLInputElement).value) || 22 })} />
-          </label>
+          <MonthlyDayInput label={S.accounts.dueDay} day={a.dueDay ?? 22} today={props.today} onChange={(dueDay) => setA({ ...a, dueDay })} />
         </>
       )}
       {(isCard || a.type === 'chequing') && (
@@ -252,7 +254,7 @@ function AccountDetail(props: { initial: AccountAnswer; onSubmit: (a: AccountAns
   );
 }
 
-function Bills(props: { initial: BillAnswer[]; accountTypes: AccountChoice[]; onSubmit: (b: BillAnswer[]) => void; nav: preact.ComponentChildren }) {
+function Bills(props: { initial: BillAnswer[]; today: string; accountTypes: AccountChoice[]; onSubmit: (b: BillAnswer[]) => void; nav: preact.ComponentChildren }) {
   const [bills, setBills] = useState<BillAnswer[]>(props.initial.length ? props.initial : [{ name: '', amountCents: 0, day: 1, kind: 'bill' }]);
   const payOptions = props.accountTypes.filter((t) => t !== 'investing' && t !== 'savings');
   const set = (k: number, p: Partial<BillAnswer>) => setBills(bills.map((b, j) => (j === k ? { ...b, ...p } : b)));
@@ -264,9 +266,7 @@ function Bills(props: { initial: BillAnswer[]; accountTypes: AccountChoice[]; on
         <fieldset key={k}>
           <label>{S.common.name} <input value={b.name} onInput={(e) => set(k, { name: (e.target as HTMLInputElement).value })} /></label>
           <MoneyInput label={S.common.amount} value={b.amountCents || undefined} onChange={(c) => set(k, { amountCents: c ?? 0 })} />
-          <label>
-            {S.onboarding.billDay} <input type="number" min="1" max="31" value={b.day} onInput={(e) => set(k, { day: Number((e.target as HTMLInputElement).value) || 1 })} />
-          </label>
+          <MonthlyDayInput label={S.onboarding.billDay} day={b.day} today={props.today} onChange={(day) => set(k, { day })} />
           <label>
             <input type="checkbox" checked={b.kind === 'subscription'} onChange={(e) => set(k, { kind: (e.target as HTMLInputElement).checked ? 'subscription' : 'bill' })} />{' '}
             {S.recurring.kind.subscription}

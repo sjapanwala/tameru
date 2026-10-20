@@ -8,6 +8,7 @@ import type { Cents, Frequency, PlanReason } from '../domain/types';
 
 const $ = (c: Cents) => formatCents(c);
 const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
+const ordinal = (n: number) => `${n}${n % 100 >= 11 && n % 100 <= 13 ? 'th' : (['th', 'st', 'nd', 'rd'][n % 10] ?? 'th')}`;
 const shortDate = (d: string) => new Date(`${d}T12:00:00`).toLocaleDateString('en-CA', { month: 'short', day: 'numeric' });
 const weekday = (d: string) => new Date(`${d}T12:00:00`).toLocaleDateString('en-CA', { weekday: 'short', month: 'short', day: 'numeric' });
 
@@ -40,6 +41,7 @@ export const S = {
   },
 
   common: {
+    monthlyOn: (d: number) => `Every month on the ${ordinal(d)}`,
     save: 'Save',
     cancel: 'Cancel',
     delete: 'Delete',
@@ -262,6 +264,7 @@ export const S = {
     split: 'Split',
     review: 'Check category',
     deleted: 'Removed.',
+    skipped: 'Skipped.',
     showEarlier: 'Show earlier',
   },
 
@@ -324,8 +327,8 @@ export const S = {
     compounding: 'Interest paid',
     compoundingOpt: { daily: 'Daily (paid monthly)', monthly: 'Monthly', quarterly: 'Quarterly', annually: 'Yearly' },
     monthlyFee: 'Monthly fee',
-    statementDay: 'Statement day',
-    dueDay: 'Payment due day',
+    statementDay: 'Next statement date',
+    dueDay: 'Next payment due',
     openingBalance: 'Current balance',
     openingOwing: 'Current amount owing',
     transfer: 'Move money',
@@ -438,7 +441,8 @@ export const S = {
 
   onboarding: {
     welcomeTitle: 'Let’s set up your plan',
-    nameQ: 'What should we call you?',
+    nameQ: 'Your full name',
+    nameHint: 'First and last name.',
     welcomeBody: 'A few quick questions, one at a time. Skip anything: there are sensible defaults, and you can change it all later.',
     start: 'Start',
     incomeQ: 'How do you get paid?',
@@ -457,7 +461,7 @@ export const S = {
     billsQ: 'Which bills come out every month?',
     billsHint: 'Rent, phone, internet, insurance, subscriptions…',
     addBill: 'Add a bill',
-    billDay: 'Day of month',
+    billDay: 'Next due date',
     habitQ: {
       groceries: 'How much do you usually spend on groceries in a week?',
       eating_out: 'And eating out or coffee, in a week?',

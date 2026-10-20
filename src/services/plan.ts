@@ -72,8 +72,9 @@ export async function budgetsFor(ctx: AppContext, date = ctx.clock.today()) {
   const elapsed = daysElapsed(period, today);
   const left = daysLeft(period, today);
   const rows: BudgetRow[] = cats.map((category) => ({ category, budget: budgets.get(category.id)! }));
+  const handled = (await ctx.repos.settings.get()).coversHandled ?? {};
   const overs = rows
-    .filter((r) => r.budget.overCents > 0)
+    .filter((r) => r.budget.overCents > (handled[`${period.start}|${r.category.id}`] ?? 0))
     .map((r) => ({ categoryId: r.category.id, overCents: r.budget.overCents, options: coverOptions(r.category.id, budgets, cats, elapsed, left) }));
   return { plan, period, rows, overs, history };
 }
@@ -91,10 +92,19 @@ export async function setAllocation(ctx: AppContext, categoryId: Id, amountCents
   await logEvent(ctx, 'plan_changed', { categoryId, periodStart: period.start, to: amountCents });
 }
 
-/** Apply the cover option the user picked. 'leave' records the choice and changes nothing. */
+/**
+ * Apply the cover option the user picked. Whatever is still over afterwards (all of it
+ * for 'leave', the rest for a partial cover) is marked handled so the prompt goes away.
+ */
 export async function applyCover(ctx: AppContext, overCategoryId: Id, option: CoverOption): Promise<void> {
-  if (option.kind === 'leave' || option.amountCents <= 0) return;
-  const period = await currentPeriod(ctx);
+  const { period, rows } = await budgetsFor(ctx);
+  const over = rows.find((r) => r.category.id === overCategoryId)?.budget.overCents ?? 0;
+  const moved = option.kind === 'leave' ? 0 : Math.max(0, option.amountCents);
+  const settings = await ctx.repos.settings.get();
+  // Only the current period's entries matter; older ones are dropped as we go.
+  const kept = Object.fromEntries(Object.entries(settings.coversHandled ?? {}).filter(([k]) => k.startsWith(`${period.start}|`)));
+  await ctx.repos.settings.update({ coversHandled: { ...kept, [`${period.start}|${overCategoryId}`]: Math.max(0, over - moved) } });
+  if (option.kind === 'leave' || moved <= 0) return;
   await ctx.repos.budgetMoves.put(
     stamp(ctx, {
       periodStart: period.start,

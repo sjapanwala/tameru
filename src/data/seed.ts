@@ -104,7 +104,7 @@ export async function seedSampleData(ctx: AppContext, seed = 42): Promise<void> 
         merchantKey: merchantKey(merchant),
         status: 'posted' as const,
         needsReview: false,
-        enteredAt: `${date}T${String(hour + 4).padStart(2, '0')}:15:00.000Z`,
+        enteredAt: new Date(Date.parse(`${date}T00:15:00.000Z`) + (hour + 4) * 3_600_000).toISOString(), // local (UTC−4) hour; late evenings roll into the next UTC day
       }),
     );
   for (const d of eachDay(opening, addDays(today, -1))) {

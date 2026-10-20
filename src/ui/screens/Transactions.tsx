@@ -9,12 +9,14 @@ import { merchantKey } from '../../domain/merchant';
 import { RECEIPT_TYPES } from '../../domain/receipt';
 import type { Account, Category, Cents, Split, Transaction } from '../../domain/types';
 import { currentPeriod } from '../../services/plan';
-import { confirmTransaction, deleteTransaction, listByDay, recategorise, TxValidationError, updateTransaction } from '../../services/transactions';
+import { confirmTransaction, deleteTransaction, listByDay, recategorise, restoreTransaction, TxValidationError, updateTransaction } from '../../services/transactions';
 import { Amount, CategorySelect, Message, monogram, MoneyInput, PageHeader } from '../components';
 import { useApp, useLoad } from '../hooks';
-import { ArrowDownLeft, CameraIcon, PlusIcon, SearchIcon, SwapIcon, UploadIcon } from '../Icons';
+import { ArrowDownLeft, CameraIcon, PencilIcon, PlusIcon, SearchIcon, SwapIcon, TrashIcon, UploadIcon } from '../Icons';
 import { ReceiptScanner } from '../ReceiptScanner';
 import { Sheet } from '../Sheet';
+import { SwipeRow } from '../SwipeRow';
+import { toast } from '../toast';
 import { orderedAccounts } from '../../services/accounts';
 
 type Filter = 'all' | 'spent' | 'income' | 'transfer';
@@ -36,6 +38,7 @@ export function Transactions() {
   const [filter, setFilter] = useState<Filter>('all');
   const [query, setQuery] = useState('');
   const [open, setOpen] = useState<string>();
+  const [editing, setEditing] = useState(false); // opened by swiping right: straight to the edit form
   const [msg, setMsg] = useState<string>();
   const [scanning, setScanning] = useState<File | null>(null);
   const lastSource = useRef<'upload' | 'camera'>('upload');
@@ -84,6 +87,19 @@ export function Transactions() {
     } catch (e) {
       setMsg(e instanceof TxValidationError ? e.errors.map((x) => S.errors.tx[x]).join(' ') : String(e));
     }
+  };
+
+  const swipeDelete = async (t: Transaction) => {
+    const before = await deleteTransaction(app, t.id);
+    bump();
+    if (before)
+      toast(t.originKey ? S.transactions.skipped : S.transactions.deleted, {
+        label: S.common.undo,
+        run: async () => {
+          await restoreTransaction(app, before);
+          bump();
+        },
+      });
   };
 
   const onReceipt = (input: HTMLInputElement | null, source: 'upload' | 'camera') => {
@@ -168,6 +184,14 @@ export function Transactions() {
           <ul class="txlist">
             {g.transactions.map((t) => (
               <li key={t.id}>
+                <SwipeRow
+                  onDelete={() => swipeDelete(t)}
+                  onEdit={t.status !== 'skipped' ? () => (setEditing(true), setOpen(t.id)) : undefined}
+                  deleteLabel={t.originKey ? S.transactions.skip : S.common.delete}
+                  editLabel={S.common.edit}
+                  deleteIcon={<TrashIcon />}
+                  editIcon={<PencilIcon />}
+                >
                 <button type="button" class={`txrow${t.status === 'pending' ? ' txrow--pending' : ''}`} onClick={() => setOpen(t.id)}>
                   <span class="avatar" aria-hidden="true">
                     {t.type === 'transfer' ? <SwapIcon /> : t.type === 'income' ? <ArrowDownLeft /> : monogram(title(t))}
@@ -183,6 +207,7 @@ export function Transactions() {
                     <Amount c={t.type === 'expense' ? -t.amountCents : t.amountCents} sign={t.type === 'income' || t.type === 'refund' ? '+' : undefined} />
                   </span>
                 </button>
+                </SwipeRow>
               </li>
             ))}
           </ul>
@@ -193,14 +218,15 @@ export function Transactions() {
       </button>
 
       {selected && (
-        <Sheet label={S.transactions.details} onClose={() => setOpen(undefined)}>
+        <Sheet label={S.transactions.details} onClose={() => (setOpen(undefined), setEditing(false))}>
           <TxDetails
             t={selected}
+            startEditing={editing}
             title={title(selected)}
             categories={budgetCats}
             accounts={accounts}
             catName={catName}
-            onAction={(fn, done) => run(fn, done).then(() => setOpen(undefined))}
+            onAction={(fn, done) => run(fn, done).then(() => (setOpen(undefined), setEditing(false)))}
           />
         </Sheet>
       )}
@@ -216,6 +242,7 @@ export function Transactions() {
 
 function TxDetails(props: {
   t: Transaction;
+  startEditing?: boolean;
   title: string;
   categories: Category[];
   accounts: Account[];
@@ -224,7 +251,7 @@ function TxDetails(props: {
 }) {
   const { app } = useApp();
   const { t } = props;
-  const [editing, setEditing] = useState(false);
+  const [editing, setEditing] = useState(!!props.startEditing);
   const acct = (id?: string) => props.accounts.find((a) => a.id === id)?.name ?? '';
   if (editing)
     return (

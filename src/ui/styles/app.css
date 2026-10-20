@@ -25,6 +25,28 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+/* An app, not a document: long-presses shouldn't select text or pop the callout.
+   Fields stay editable and selectable. */
+body {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
+input,
+textarea,
+select,
+[contenteditable] {
+  -webkit-user-select: text;
+  user-select: text;
+  -webkit-touch-callout: default;
+}
+
+/* Home: the dark hero continues into the status bar and the top overscroll. */
+html.hero-top {
+  background: #1c1c1c;
+}
+
 ::selection {
   background: var(--text);
   color: var(--bg);
@@ -820,6 +842,21 @@ aside button.primary {
   animation: sheet-up var(--t-slow) var(--glide) both;
 }
 
+/* Once the entrance animation is done, drop it so a drag's inline transform applies. */
+.sheet--shown .sheet__panel {
+  animation: none;
+  transition: transform var(--t-mid) var(--glide);
+}
+
+.sheet--shown .sheet__backdrop {
+  transition: opacity var(--t-mid) var(--glide);
+}
+
+.sheet[data-dragging] .sheet__panel,
+.sheet[data-dragging] .sheet__backdrop {
+  transition: none !important;
+}
+
 .sheet--closing .sheet__backdrop {
   opacity: 0;
   transition: opacity var(--t-mid) var(--glide-in-out);
@@ -831,12 +868,20 @@ aside button.primary {
 }
 
 .sheet__grabber {
+  position: relative;
   width: 36px;
   height: 5px;
   border-radius: 3px;
   background: var(--track);
   margin: 0 auto var(--s4);
   cursor: pointer;
+}
+
+/* a taller invisible handle so the grabber is easy to catch */
+.sheet__grabber::before {
+  content: '';
+  position: absolute;
+  inset: -14px -40px;
 }
 
 @keyframes sheet-up {
@@ -2142,6 +2187,62 @@ main ul.txlist > li:has(> .txrow) {
   .txrow:hover {
     background: var(--surface);
   }
+}
+
+/* ---------- swipe rows (Activity) ---------- */
+
+.swipe {
+  position: relative;
+  overflow: hidden;
+  margin: 0 calc(-1 * var(--s2));
+  border-radius: var(--radius-sm);
+}
+
+.swipe__row {
+  position: relative;
+  z-index: 1;
+  padding: 0 var(--s2);
+  background: var(--bg);
+  touch-action: pan-y; /* vertical scrolling stays with the page; sideways is ours */
+  transition: transform var(--t-mid) var(--glide);
+}
+
+.swipe__action {
+  position: absolute;
+  inset: 0;
+  display: none;
+  align-items: center;
+  gap: var(--s2);
+  padding: 0 var(--s5);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  color: #fff;
+}
+
+.swipe__action svg {
+  width: 18px;
+  height: 18px;
+  transition: transform var(--t-fast) var(--glide);
+}
+
+.swipe__action--edit {
+  justify-content: flex-start;
+  background: var(--text);
+  color: var(--bg);
+}
+
+.swipe__action--delete {
+  justify-content: flex-end;
+  background: #e5383b; /* red, as for the card menu's destructive action */
+}
+
+.swipe[data-swipe='edit'] .swipe__action--edit,
+.swipe[data-swipe='delete'] .swipe__action--delete {
+  display: flex;
+}
+
+.swipe--armed .swipe__action svg {
+  transform: scale(1.25);
 }
 
 .txrow--pending .avatar {

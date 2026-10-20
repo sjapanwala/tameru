@@ -63,6 +63,13 @@ export function clampedDay(y: number, m: number, day: number): LocalDate {
   return make(y, m, Math.min(day, daysInMonth(y, m)));
 }
 
+/** The next date (today or later) that falls on day-of-month `day`, clamped in short months. */
+export function nextMonthlyDate(day: number, today: LocalDate): LocalDate {
+  const { y, m } = parts(today);
+  const thisMonth = clampedDay(y, m, day);
+  return thisMonth >= today ? thisMonth : addMonths(make(y, m, 1), 1, day);
+}
+
 export function startOfMonth(d: LocalDate): LocalDate {
   const { y, m } = parts(d);
   return make(y, m, 1);

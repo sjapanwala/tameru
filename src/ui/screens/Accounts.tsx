@@ -6,7 +6,7 @@ import { CardFace, CardPicker, useCatalog } from '../cards';
 import { CardMenu } from '../CardMenu';
 import { accountInsights, createAccount, listAccounts, removeAccount, reorderAccounts, restoreAccount, updateAccount, type AccountView } from '../../services/accounts';
 import { Carousel } from '../Carousel';
-import { Amount, monogram, MoneyInput, PageHeader } from '../components';
+import { Amount, monogram, MoneyInput, MonthlyDayInput, PageHeader } from '../components';
 import { ArrangeIcon, PencilIcon, PlusIcon, SwapIcon, TrashIcon } from '../Icons';
 import { useApp, useLoad } from '../hooks';
 import { useTween } from '../motion';
@@ -376,8 +376,8 @@ function NewAccountForm({ onDone }: { onDone: () => void }) {
   const [rateKind, setRateKind] = useState<'apy' | 'apr'>('apy');
   const [compounding, setCompounding] = useState<Compounding>('monthly');
   const [fee, setFee] = useState<Cents>();
-  const [statementDay, setStatementDay] = useState('1');
-  const [dueDay, setDueDay] = useState('22');
+  const [statementDay, setStatementDay] = useState(1);
+  const [dueDay, setDueDay] = useState(22);
   const [face, setFace] = useState<CardFaceT>();
   return (
     <form
@@ -388,7 +388,7 @@ function NewAccountForm({ onDone }: { onDone: () => void }) {
           type,
           openingBalanceCents: type === 'credit_card' ? -(balance ?? 0) : (balance ?? 0),
           ...(type === 'savings' ? { interest: { rateBps: Math.round(Number(rate) * 100) || 0, kind: rateKind, compounding } } : {}),
-          ...(type === 'credit_card' ? { card: { monthlyFeeCents: fee ?? 0, statementDay: Number(statementDay) || 1, dueDay: Number(dueDay) || 22 } } : {}),
+          ...(type === 'credit_card' ? { card: { monthlyFeeCents: fee ?? 0, statementDay, dueDay } } : {}),
           ...(face && (type === 'credit_card' || type === 'chequing') ? { face } : {}),
         });
         setFace(undefined);
@@ -431,8 +431,8 @@ function NewAccountForm({ onDone }: { onDone: () => void }) {
       {type === 'credit_card' && (
         <>
           <MoneyInput label={S.accounts.monthlyFee} value={fee} onChange={setFee} />
-          <label>{S.accounts.statementDay} <input type="number" min="1" max="31" value={statementDay} onInput={(e) => setStatementDay((e.target as HTMLInputElement).value)} /></label>
-          <label>{S.accounts.dueDay} <input type="number" min="1" max="31" value={dueDay} onInput={(e) => setDueDay((e.target as HTMLInputElement).value)} /></label>
+          <MonthlyDayInput label={S.accounts.statementDay} day={statementDay} today={app.clock.today()} onChange={setStatementDay} />
+          <MonthlyDayInput label={S.accounts.dueDay} day={dueDay} today={app.clock.today()} onChange={setDueDay} />
         </>
       )}
       {(type === 'credit_card' || type === 'chequing') && (
