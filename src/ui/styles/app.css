@@ -42,25 +42,6 @@ select,
   -webkit-touch-callout: default;
 }
 
-/* Home: the dark hero continues into the status bar and the top overscroll. */
-html.hero-top {
-  background: var(--hero-top);
-}
-
-/* see StatusTint.tsx: a strip in the hero's colour that iOS takes the status bar colour from */
-.status-tint {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  z-index: 15; /* above the page, below sheets and menus */
-  height: max(var(--safe-t), 4px);
-  background: var(--hero-top);
-}
-
-.status-tint[hidden] {
-  display: none;
-}
 
 ::selection {
   background: var(--text);
@@ -1108,12 +1089,14 @@ summary::after {
 
 /* ---------- home: hero panel ---------- */
 
+/* A rounded card that starts just under the status bar (iOS won't let the page colour
+   the bar itself, so the hero doesn't try to run up under it). */
 .home-hero {
   position: relative;
   overflow: hidden;
-  margin: calc(-1 * (var(--safe-t) + var(--s4))) calc(-1 * var(--s5)) 0;
-  padding: calc(var(--safe-t) + var(--s4)) var(--s5) 0;
-  border-radius: 0 0 36px 36px;
+  margin: calc(var(--s2) - var(--s4)) calc(-1 * var(--s5)) 0;
+  padding: var(--s4) var(--s5) 0;
+  border-radius: 32px 32px 36px 36px;
   background: var(--hero-bg);
   color: var(--hero-text);
   text-align: center;
@@ -3052,8 +3035,9 @@ main ul.txlist > li:has(> .txrow, > .swipe) {
   position: relative;
   isolation: isolate;
   overflow: hidden;
-  padding: calc(var(--safe-t) + 72px) var(--s5) var(--s7);
-  border-radius: 0 0 36px 36px;
+  margin-top: calc(var(--safe-t) + var(--s2));
+  padding: 64px var(--s5) var(--s7);
+  border-radius: 32px 32px 36px 36px;
   background: var(--hero-bg);
   color: var(--hero-text);
   text-align: center;
@@ -3708,9 +3692,9 @@ main ul.txlist > li:has(> .txrow, > .swipe) {
   position: relative;
   isolation: isolate;
   overflow: hidden;
-  margin: calc(-1 * (var(--safe-t) + var(--s4) + var(--s5))) calc(-1 * var(--s5)) var(--s6);
-  padding: calc(var(--safe-t) + 64px) var(--s5) var(--s6);
-  border-radius: 0 0 36px 36px;
+  margin: calc(var(--s2) - var(--s4) - var(--s5)) calc(-1 * var(--s5)) var(--s6);
+  padding: 56px var(--s5) var(--s6);
+  border-radius: 32px 32px 36px 36px;
   background: var(--hero-bg);
   color: var(--hero-text);
 }

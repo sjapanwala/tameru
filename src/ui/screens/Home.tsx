@@ -18,7 +18,6 @@ import { useTween } from '../motion';
 import { QuickRow } from '../QuickRow';
 import { useWalletPull, Wallet } from '../Wallet';
 import { Sheet } from '../Sheet';
-import { StatusTint } from '../StatusTint';
 import { orderedAccounts, reorderAccounts } from '../../services/accounts';
 
 export function Home(props: { offer: FreshStartOffer | null; clearOffer: () => void }) {
@@ -35,7 +34,6 @@ export function Home(props: { offer: FreshStartOffer | null; clearOffer: () => v
   useEffect(() => {
     takeTodaysNotices(app).then(setNotices);
   }, []);
-  useHeroTop();
   const shownSafe = useTween(data?.sts.safeCents ?? 0, 'safe-to-spend');
   const pull = useWalletPull();
   const [walletOrder, setWalletOrder] = useState<string[] | null>(null);
@@ -94,7 +92,6 @@ export function Home(props: { offer: FreshStartOffer | null; clearOffer: () => v
 
   return (
     <section class="home">
-      <StatusTint target=".home-hero" />
       <div ref={pull.ref} class={`home-hero${pull.open ? ' home-hero--open' : ''}`} {...pull.bind}>
         <div class="home-hero__top">
           <a class="mark" href="#/settings" aria-label={S.home.profile}>
@@ -218,25 +215,4 @@ export function Home(props: { offer: FreshStartOffer | null; clearOffer: () => v
       )}
     </section>
   );
-}
-
-/** Roughly the hero gradient's colour along its top edge. */
-const HERO_TOP = '#1c1c1c';
-
-/**
- * While Home is showing, the area revealed by pulling the page down (the root
- * background) takes the hero's colour, as does theme-color for iOS versions before 26
- * (iOS 26 ignores it; StatusTint covers that).
- */
-function useHeroTop() {
-  useEffect(() => {
-    const metas = [...document.querySelectorAll<HTMLMetaElement>('meta[name="theme-color"]')];
-    const before = metas.map((m) => m.content);
-    metas.forEach((m) => (m.content = HERO_TOP));
-    document.documentElement.classList.add('hero-top');
-    return () => {
-      metas.forEach((m, i) => (m.content = before[i]!));
-      document.documentElement.classList.remove('hero-top');
-    };
-  }, []);
 }

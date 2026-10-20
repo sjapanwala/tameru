@@ -8,7 +8,6 @@ import { useEffect, useRef, useState } from 'preact/hooks';
 import type { PWAInstallElement } from '@khmyznikov/pwa-install';
 import { S } from '../../copy/strings';
 import { takeInstallPrompt } from '../../pwa/install';
-import { StatusTint } from '../StatusTint';
 import { versionLabel } from '../version';
 
 declare module 'preact' {
@@ -46,7 +45,6 @@ export function InstallGate() {
 
   return (
     <main class="install">
-      <StatusTint target=".install__hero" />
       <section class="install__hero">
         <img class="install__icon" src="./icons/apple-touch-icon.png" alt="" width={88} height={88} />
         <h1>{S.gate.name}</h1>

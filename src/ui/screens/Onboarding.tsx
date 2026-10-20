@@ -37,7 +37,6 @@ import { useApp, useLoad } from '../hooks';
 import { BankIcon, CardIcon, CashIcon, CheckIcon, ChevronLeft, ChevronRight, JarIcon, PlusIcon, TrendIcon } from '../Icons';
 import { haptic } from '../motion';
 import { Sheet } from '../Sheet';
-import { StatusTint } from '../StatusTint';
 
 const ACCOUNT_CHOICES: AccountChoice[] = ['chequing', 'savings', 'credit_card', 'investing', 'cash'];
 const ACCOUNT_ICONS: Record<AccountChoice, () => preact.JSX.Element> = {
@@ -266,7 +265,6 @@ function Welcome(props: { initialName?: string; onStart: (name: string) => void 
         if (ok) props.onStart(name);
       }}
     >
-      <StatusTint target=".onb-welcome__hero" />
       <div class="onb-welcome__hero">
         <img class="onb-welcome__icon" src="./icons/apple-touch-icon.png" alt="" width={72} height={72} />
         <h1>{S.onboarding.welcomeTitle}</h1>
