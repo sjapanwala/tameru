@@ -33,7 +33,6 @@ const faceFields = (f?: CardFace): { face?: CardFace } => {
     ...(f.cardName?.trim() ? { cardName: f.cardName.trim().slice(0, 40) } : {}),
     ...(isHexColor(f.color) ? { color: f.color.toLowerCase() } : {}),
     ...(last4 ? { last4 } : {}),
-    ...(typeof f.hidePrinted === 'boolean' ? { hidePrinted: f.hidePrinted } : {}),
   };
   return Object.keys(face).length ? { face } : {};
 };

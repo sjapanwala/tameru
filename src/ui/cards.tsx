@@ -49,9 +49,9 @@ export function CardFace({ account, face, catalog, name }: { account?: Account; 
   const last4 = f?.last4 ? `•••• ${f.last4}` : '';
 
   if (art && !broken) {
-    // Some art has a sample name or number printed on it: use the cleaned copy, or
+    // Some art has a sample name or number printed on it: always use the cleaned copy, or
     // cover it with a label. Either way the user's own last four goes where it was.
-    const cover = (f?.hidePrinted ?? true) ? art.cover : undefined;
+    const cover = art.cover;
     const src = (cover && cleanImageUrl(art)) || artImageUrl(art);
     const [x0, y0, , y1] = cover?.box ?? [0.07, 0.82, 0, 0.94];
     const place = { left: `${Math.max(x0, 0.04) * 100}%`, top: `${((y0 + y1) / 2) * 100}%` };
@@ -118,7 +118,6 @@ export function CardPicker({ value, onChange, kind, fallbackName }: { value?: Fa
   const instId = value?.institutionId ?? (value?.artId ? catalog.find((c) => c.id === value.artId)?.institutionId : undefined);
   const customInst: CustomInstitution | undefined = instId ? custom.find((i) => i.id === instId) : undefined;
   const cards = instId ? cardsOf(catalog, instId) : [];
-  const chosenArt = value?.artId ? catalog.find((c) => c.id === value.artId) : undefined;
   const labels = cardLabels(cards);
   // Matching kind first (credit for cards, debit for chequing), the rest after.
   const primary = cards.filter((c) => c.kind === kind);
@@ -230,17 +229,6 @@ export function CardPicker({ value, onChange, kind, fallbackName }: { value?: Fa
             onAuto={customInst ? undefined : () => onChange({ ...value, color: undefined })}
           />
         </>
-      )}
-
-      {chosenArt?.cover && (
-        <label>
-          <input
-            type="checkbox"
-            checked={value?.hidePrinted ?? true}
-            onChange={(e) => onChange({ ...value, hidePrinted: (e.target as HTMLInputElement).checked })}
-          />
-          {S.cards.hidePrinted}
-        </label>
       )}
 
       <label>

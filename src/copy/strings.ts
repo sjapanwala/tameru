@@ -213,7 +213,6 @@ export const S = {
     bankColour: 'Bank colour',
     customColour: 'Pick any colour',
     last4: 'Last 4 digits (optional)',
-    hidePrinted: 'Hide printed name or number on the card art',
     last4Short: 'Card',
   },
 

@@ -56,7 +56,6 @@ export interface CardFace {
   cardName?: string;
   color?: string; // #rrggbb, overrides the institution colour
   last4?: string; // shown as •••• 1234; never the full number
-  hidePrinted?: boolean; // frost the art's printed name/number corner; unset = catalog default
 }
 
 /** An institution the user created because it isn't in the catalog. */
