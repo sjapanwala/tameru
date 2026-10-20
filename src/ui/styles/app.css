@@ -779,36 +779,7 @@ aside button.primary {
 
 /* ---------- onboarding ---------- */
 
-.onb {
-  padding-top: var(--s3);
-}
-
-.onb .ticks {
-  margin-bottom: var(--s7);
-}
-
-.onb h1 {
-  font-size: 2.125rem;
-  margin-bottom: var(--s4);
-}
-
-.onb .options button {
-  display: flex;
-  justify-content: space-between;
-  width: 100%;
-  margin: 0 0 var(--s2);
-  min-height: 56px;
-  border-radius: var(--radius-sm);
-  font-family: var(--font-num);
-  font-size: var(--fs-md);
-  font-weight: 400;
-  padding: 0 var(--s4);
-}
-
-.onb .options button::after {
-  content: '→';
-  color: var(--text-3);
-}
+/* onboarding styles live with the other screens, further down */
 
 /* ---------- sheet ---------- */
 
@@ -3178,3 +3149,703 @@ main ul.txlist > li:has(> .txrow) {
     transform: translateY(12px);
   }
 }
+
+
+/* ---------- onboarding ---------- */
+
+.onb {
+  min-height: calc(100dvh - var(--safe-t) - var(--s4));
+  display: flex;
+  flex-direction: column;
+}
+
+.onb__bar {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  display: grid;
+  grid-template-columns: 44px 1fr auto;
+  align-items: center;
+  gap: var(--s4);
+  margin: calc(-1 * (var(--safe-t) + var(--s4))) calc(-1 * var(--s5)) 0;
+  padding: calc(var(--safe-t) + var(--s3)) var(--s5) var(--s3);
+  background: color-mix(in srgb, var(--bg) 88%, transparent);
+  -webkit-backdrop-filter: saturate(1.4) blur(14px);
+  backdrop-filter: saturate(1.4) blur(14px);
+}
+
+.onb__back {
+  margin: 0;
+  padding: 0;
+  min-height: 0;
+}
+
+.onb__progress {
+  height: 4px;
+  border-radius: var(--pill);
+  background: var(--track);
+  overflow: hidden;
+}
+
+.onb__progress span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--text);
+  transition: width var(--t-slow) var(--glide);
+}
+
+.onb__skip {
+  margin: 0;
+  border: 0;
+  padding: 0 var(--s1);
+  min-height: 44px;
+  color: var(--text-2);
+  font-weight: 500;
+}
+
+/* each step slides in from the side it came from */
+.onb__step {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding-top: var(--s5);
+  animation: onb-in-fwd var(--t-slow) var(--glide) backwards;
+}
+
+.onb__step > section,
+.onb__step > form {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+}
+
+.onb__step--back {
+  animation-name: onb-in-back;
+}
+
+@keyframes onb-in-fwd {
+  from {
+    opacity: 0;
+    transform: translateX(28px);
+  }
+}
+
+@keyframes onb-in-back {
+  from {
+    opacity: 0;
+    transform: translateX(-28px);
+  }
+}
+
+.onb-head {
+  margin-bottom: var(--s5);
+}
+
+.onb-head .eyebrow {
+  margin: 0 0 var(--s2);
+}
+
+.onb-head h1 {
+  font-size: clamp(1.75rem, 8vw, 2.125rem);
+  margin: 0;
+  text-wrap: balance;
+}
+
+.onb-head__sub {
+  margin: var(--s2) 0 0;
+  color: var(--text-2);
+  text-wrap: pretty;
+}
+
+/* pinned primary action, fading the content out beneath it */
+.onb__footer {
+  position: sticky;
+  bottom: 0;
+  z-index: 4;
+  margin: auto calc(-1 * var(--s5)) 0;
+  padding: var(--s6) var(--s5) calc(var(--safe-b) + var(--s4));
+  background: linear-gradient(to bottom, transparent, var(--bg) 38%);
+  text-align: center;
+}
+
+.onb__footer button.block {
+  margin: 0;
+}
+
+.onb__secondary {
+  margin: var(--s3) 0 0;
+  font-size: var(--fs-sm);
+}
+
+.shell--bare:has(.onb) {
+  padding-bottom: 0;
+}
+
+/* fields: soft filled boxes instead of underlines */
+:is(.onb, .onb-sheet) label:not(.switch):not(:has(> input[type='checkbox'])):not(:has(> input[type='radio'])) {
+  display: block;
+  margin: 0 0 var(--s4);
+  font-size: var(--fs-xs);
+  font-weight: 500;
+  color: var(--text-2);
+}
+
+:is(.onb, .onb-sheet) input:not([type='checkbox']):not([type='radio']),
+:is(.onb, .onb-sheet) select {
+  display: block;
+  margin-top: var(--s2);
+  min-height: 54px;
+  padding: 0 var(--s4);
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+  background-color: var(--surface);
+  font-size: 1.0625rem;
+  color: var(--text);
+  transition: border-color var(--t-mid) var(--glide), background-color var(--t-mid) var(--glide);
+}
+
+:is(.onb, .onb-sheet) select {
+  background-position: calc(100% - 22px) 50%, calc(100% - 17px) 50%;
+  padding-right: var(--s6);
+}
+
+:is(.onb, .onb-sheet) input:not([type='checkbox']):not([type='radio']):focus,
+:is(.onb, .onb-sheet) select:focus {
+  border-color: var(--line-strong);
+  background-color: var(--bg);
+}
+
+:is(.onb, .onb-sheet) input[type='date'] {
+  -webkit-appearance: none;
+  appearance: none;
+  text-align: left;
+}
+
+:is(.onb, .onb-sheet) label small {
+  display: block;
+  margin-top: var(--s2);
+  font-weight: 400;
+}
+
+/* money: a "$" set inside the box */
+.field__box {
+  position: relative;
+  display: block;
+  margin-top: var(--s2);
+}
+
+:is(.onb, .onb-sheet) :is(.field__box, .onb-alloc__amt) input:not([type='checkbox']):not([type='radio']) {
+  margin-top: 0;
+}
+
+.field__cur {
+  position: absolute;
+  left: var(--s4);
+  top: 50%;
+  transform: translateY(-50%);
+  line-height: 1;
+  font-family: var(--font-num);
+  font-size: 1.0625rem;
+  color: var(--text-3);
+  pointer-events: none;
+  z-index: 1;
+}
+
+.field--money input,
+.onb-alloc__amt input {
+  padding-left: calc(var(--s4) + 14px) !important;
+}
+
+.field-pair--two {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--s3);
+}
+
+:is(.onb, .onb-sheet) .field-label {
+  margin: 0 0 var(--s2);
+}
+
+:is(.onb, .onb-sheet) .chip-select {
+  margin-bottom: var(--s5);
+}
+
+/* iOS-style switch row (the extra selector outranks the plain checkbox-row style) */
+.switch,
+:is(.onb, .onb-sheet) label.switch {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s3);
+  min-height: 54px;
+  margin: 0 0 var(--s4);
+  padding: 0 var(--s4);
+  border-radius: var(--radius);
+  border-bottom: 0;
+  background: var(--surface);
+  font-size: var(--fs-md);
+  color: var(--text);
+  cursor: pointer;
+}
+
+.switch input {
+  -webkit-appearance: none;
+  appearance: none;
+  position: relative;
+  flex: none;
+  width: 51px !important;
+  height: 31px !important;
+  min-height: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: var(--pill) !important;
+  background: var(--track) !important;
+  cursor: pointer;
+  transition: background-color var(--t-mid) var(--glide);
+}
+
+.switch input::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 27px;
+  height: 27px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 2px 6px rgb(0 0 0 / 0.18);
+  transition: transform var(--t-mid) var(--glide);
+}
+
+.switch input:checked {
+  background: var(--text) !important;
+}
+
+.switch input:checked::after {
+  transform: translateX(20px);
+}
+
+/* one-tap choices (habits, budget period) */
+.onb-options {
+  display: grid;
+  gap: var(--s2);
+  margin-bottom: var(--s5);
+}
+
+.onb-option {
+  display: flex;
+  align-items: center;
+  gap: var(--s3);
+  width: 100%;
+  min-height: 60px;
+  margin: 0;
+  padding: var(--s3) var(--s4);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--bg);
+  text-align: left;
+  font-weight: 400;
+}
+
+.onb-option__text {
+  flex: 1;
+  display: grid;
+  gap: 2px;
+}
+
+.onb-option__text strong {
+  font-size: var(--fs-md);
+  font-weight: 600;
+  font-family: var(--font);
+}
+
+.onb-option__text small {
+  font-size: var(--fs-sm);
+}
+
+.onb-option__end {
+  display: grid;
+  color: var(--text-3);
+}
+
+.onb-option__end svg,
+.onb-item svg {
+  width: 18px;
+  height: 18px;
+}
+
+.onb-option.on {
+  border-color: var(--text);
+  box-shadow: inset 0 0 0 1px var(--text);
+}
+
+.onb-option.on .onb-option__end {
+  color: var(--text);
+}
+
+/* account type tiles */
+.onb-tiles {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--s3);
+}
+
+.onb-tile {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  min-height: 128px;
+  margin: 0;
+  padding: var(--s4);
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  background: var(--bg);
+  text-align: left;
+  font-weight: 400;
+  transition: background-color var(--t-mid) var(--glide), color var(--t-mid) var(--glide), border-color var(--t-mid) var(--glide), transform var(--t-fast) var(--glide);
+}
+
+.onb-tile__icon {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  margin-bottom: auto;
+  border-radius: 12px;
+  background: var(--surface);
+  transition: background-color var(--t-mid) var(--glide);
+}
+
+.onb-tile__icon svg {
+  width: 22px;
+  height: 22px;
+}
+
+.onb-tile strong {
+  margin-top: var(--s3);
+  font-size: var(--fs-md);
+  font-weight: 600;
+}
+
+.onb-tile small {
+  font-size: var(--fs-xs);
+  line-height: 1.35;
+  transition: color var(--t-mid) var(--glide);
+}
+
+.onb-tile__check {
+  position: absolute;
+  top: var(--s3);
+  right: var(--s3);
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 1.5px solid var(--line);
+  color: transparent;
+  transition: all var(--t-mid) var(--glide);
+}
+
+.onb-tile__check svg {
+  width: 14px;
+  height: 14px;
+  stroke-width: 2.5;
+}
+
+.onb-tile.on {
+  background: var(--text);
+  border-color: var(--text);
+  color: var(--bg);
+}
+
+.onb-tile.on .onb-tile__icon {
+  background: color-mix(in srgb, var(--bg) 14%, transparent);
+}
+
+.onb-tile.on small {
+  color: color-mix(in srgb, var(--bg) 62%, transparent);
+}
+
+.onb-tile.on .onb-tile__check {
+  border-color: var(--bg);
+  background: var(--bg);
+  color: var(--text);
+}
+
+/* the odd tile spans the row so the grid ends evenly */
+.onb-tile:last-child:nth-child(odd) {
+  grid-column: 1 / -1;
+  min-height: 96px;
+}
+
+/* added bills / incomes / goals */
+.onb-list {
+  display: grid;
+  gap: var(--s2);
+  margin-bottom: var(--s4);
+}
+
+.onb-item {
+  display: flex;
+  align-items: center;
+  gap: var(--s3);
+  width: 100%;
+  min-height: 64px;
+  margin: 0;
+  padding: var(--s3) var(--s4);
+  border: 0;
+  border-radius: var(--radius);
+  background: var(--surface);
+  text-align: left;
+  font-weight: 400;
+}
+
+.onb-item__text {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.onb-item__text strong {
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.onb-item__text small {
+  font-family: var(--font-num);
+  font-size: var(--fs-xs);
+}
+
+.onb-item__tag {
+  font-family: var(--font-num);
+  font-size: var(--fs-2xs);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-2);
+  padding: 3px 8px;
+  border-radius: var(--pill);
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+
+.onb-item > svg {
+  color: var(--text-3);
+}
+
+.onb-add {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--s2);
+  width: 100%;
+  min-height: 56px;
+  margin: 0;
+  border: 1.5px dashed var(--line);
+  border-radius: var(--radius);
+  color: var(--text-2);
+}
+
+.onb-add svg {
+  width: 18px;
+  height: 18px;
+}
+
+.onb-empty {
+  margin: 0 0 var(--s2);
+  color: var(--text-2);
+  font-size: var(--fs-sm);
+}
+
+.onb-suggest {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s2);
+}
+
+.onb-suggest .chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-2);
+}
+
+.onb-suggest .chip svg {
+  width: 14px;
+  height: 14px;
+}
+
+.onb-card-picker {
+  margin-bottom: var(--s4);
+}
+
+/* welcome: the app's dark hero, then one field */
+.onb-welcome__hero {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  margin: calc(-1 * (var(--safe-t) + var(--s4) + var(--s5))) calc(-1 * var(--s5)) var(--s6);
+  padding: calc(var(--safe-t) + 64px) var(--s5) var(--s6);
+  border-radius: 0 0 36px 36px;
+  background: var(--hero-bg);
+  color: var(--hero-text);
+}
+
+.onb-welcome__hero::before {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  inset: -20% -10% auto;
+  height: 80%;
+  background: radial-gradient(60% 60% at 30% 30%, rgb(255 255 255 / 0.12), transparent 70%);
+}
+
+.onb-welcome__icon {
+  display: block;
+  margin-bottom: var(--s5);
+  border-radius: 18px;
+  box-shadow: 0 0 0 1px rgb(255 255 255 / 0.12), 0 14px 32px -10px rgb(0 0 0 / 0.8);
+}
+
+.onb-welcome__hero h1 {
+  font-size: clamp(2.25rem, 10vw, 2.75rem);
+  letter-spacing: -0.04em;
+  margin: 0 0 var(--s3);
+}
+
+.onb-welcome__hero p {
+  margin: 0;
+  color: var(--hero-dim);
+  font-size: var(--fs-md);
+  text-wrap: pretty;
+}
+
+/* review: a dark summary card, then editable rows */
+.onb-review {
+  margin-bottom: var(--s5);
+  padding: var(--s5);
+  border-radius: 24px;
+  background: var(--hero-bg);
+  color: var(--hero-text);
+}
+
+.onb-review__label {
+  margin: 0;
+  font-size: var(--fs-sm);
+  color: var(--hero-dim);
+}
+
+.onb-review__amount {
+  margin: var(--s1) 0 var(--s4);
+  font-family: var(--font-num);
+  font-size: var(--fs-xl);
+  font-weight: 500;
+  letter-spacing: -0.04em;
+}
+
+.onb-review__bar {
+  display: flex;
+  gap: 3px;
+  height: 10px;
+  margin-bottom: var(--s4);
+}
+
+.onb-review__bar .part {
+  flex-basis: 0;
+  min-width: 6px;
+  border-radius: var(--pill);
+  animation: grow var(--t-slow) var(--glide) both;
+}
+
+@keyframes grow {
+  from {
+    flex-grow: 0;
+  }
+}
+
+.part--fixed { background: #f5f5f5; }
+.part--flex { background: #a3a3a3; }
+.part--goals { background: #5c5c5c; }
+.part--free {
+  background: repeating-linear-gradient(-45deg, #5c5c5c 0 2px, transparent 2px 5px);
+  box-shadow: inset 0 0 0 1px #5c5c5c;
+}
+
+.onb-review__legend {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--s2) var(--s4);
+  font-size: var(--fs-sm);
+}
+
+.onb-review__legend li {
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+  color: var(--hero-dim);
+}
+
+.onb-review__legend .amt {
+  margin-left: auto;
+  color: var(--hero-text);
+  font-family: var(--font-num);
+}
+
+.swatch-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex: none;
+}
+
+.onb-allocs {
+  list-style: none;
+  margin: 0 0 var(--s4);
+  padding: 0;
+}
+
+.onb-alloc {
+  display: flex;
+  align-items: center;
+  gap: var(--s3);
+  padding: var(--s3) 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.onb-alloc__text {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.onb-alloc__text strong {
+  font-weight: 600;
+}
+
+.onb-alloc__text small {
+  line-height: 1.35;
+}
+
+.onb-alloc__amt {
+  position: relative;
+  display: block;
+  flex: none;
+  width: 124px;
+}
+
+.onb .onb-alloc__amt input:not([type='checkbox']):not([type='radio']) {
+  min-height: 46px;
+  text-align: right;
+}
+

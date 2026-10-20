@@ -117,3 +117,48 @@ export const TrashIcon = () => (
     <path d="M4.5 7h15M9.5 7V4.5h5V7M6.5 7l.9 12a1.5 1.5 0 0 0 1.5 1.4h6.2a1.5 1.5 0 0 0 1.5-1.4l.9-12M10 11v6M14 11v6" />
   </Svg>
 );
+
+export const ChevronLeft = () => (
+  <Svg>
+    <path d="M14.5 5.5 8 12l6.5 6.5" />
+  </Svg>
+);
+
+export const ChevronRight = () => (
+  <Svg>
+    <path d="M9.5 5.5 16 12l-6.5 6.5" />
+  </Svg>
+);
+
+export const BankIcon = () => (
+  <Svg>
+    <path d="M3.5 9.5 12 4.5l8.5 5M5 10v7.5M9.5 10v7.5M14.5 10v7.5M19 10v7.5M3.5 20.5h17" />
+  </Svg>
+);
+
+export const JarIcon = () => (
+  <Svg>
+    <path d="M8 3.5h8M8.5 3.5v2.5C6.5 7 5.5 8.6 5.5 11v7.5a2 2 0 0 0 2 2h9a2 2 0 0 0 2-2V11c0-2.4-1-4-3-5V3.5" />
+    <path d="M9.5 13.5h5" />
+  </Svg>
+);
+
+export const TrendIcon = () => (
+  <Svg>
+    <path d="M4 17.5 9.5 12l3.5 3.5L20 8.5M15 8.5h5v5" />
+  </Svg>
+);
+
+export const CashIcon = () => (
+  <Svg>
+    <rect x="3" y="6.5" width="18" height="11" rx="2" />
+    <circle cx="12" cy="12" r="2.5" />
+    <path d="M6.5 9.5v5M17.5 9.5v5" />
+  </Svg>
+);
+
+export const CheckIcon = () => (
+  <Svg>
+    <path d="M5.5 12.5 10 17l8.5-9.5" />
+  </Svg>
+);
