@@ -6,7 +6,6 @@ import { versionLabel } from '../version';
 export function More() {
   const links: [string, string][] = [
     ['/recurring', S.nav.recurring],
-    ['/forecast', S.nav.forecast],
     ['/settings', S.nav.settings],
     ...(devMode() ? ([['/debug', S.nav.debug]] as [string, string][]) : []),
   ];

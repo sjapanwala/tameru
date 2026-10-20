@@ -3355,7 +3355,8 @@ main ul.txlist > li:has(> .txrow, > .swipe) {
 }
 
 .field--money input,
-.onb-alloc__amt input {
+.onb-alloc__amt input,
+.field__cur + input {
   padding-left: calc(var(--s4) + 14px) !important;
 }
 
@@ -3427,6 +3428,7 @@ main ul.txlist > li:has(> .txrow, > .swipe) {
 
 .switch input:checked::after {
   transform: translateX(20px);
+  background: var(--bg); /* dark knob on the light track in dark mode */
 }
 
 /* one-tap choices (habits, budget period) */
@@ -3773,6 +3775,7 @@ main ul.txlist > li:has(> .txrow, > .swipe) {
 
 .part--fixed { background: #f5f5f5; }
 .part--flex { background: #a3a3a3; }
+.part--fund { background: #7a7a7a; }
 .part--goals { background: #5c5c5c; }
 .part--free {
   background: repeating-linear-gradient(-45deg, #5c5c5c 0 2px, transparent 2px 5px);
@@ -4048,4 +4051,935 @@ main .spend-card__legend > li {
 
 .blur-reset__panel.on {
   transform: translateX(0);
+}
+
+/* ---------- Plan: income dial, tick ruler, pills (see PlanDial.tsx) ---------- */
+
+.plan-card {
+  padding: var(--s5) var(--s4) var(--s6);
+  touch-action: pan-x pan-up;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.plan-sheet__title {
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+}
+
+.plan-sheet__title .plan-pill__dot {
+  width: 12px;
+  height: 12px;
+}
+
+.amount-mode {
+  margin-bottom: var(--s4);
+}
+
+.plan-sheet__note {
+  margin: var(--s3) 0 0;
+  font-size: var(--fs-xs);
+  color: var(--text-2);
+  text-align: center;
+  text-wrap: pretty;
+}
+
+/* compact allocation field in a list (onboarding review) */
+.field__box--compact {
+  margin-top: 0;
+}
+
+:is(.onb, .onb-sheet) .field__box--percent input {
+  font-family: var(--font-num);
+  padding-right: calc(var(--s4) + 16px) !important;
+}
+
+.onb .onb-alloc__amt .field__box--percent input:not([type='checkbox']) {
+  padding-left: var(--s3) !important;
+}
+
+.plan-sheet__suggest {
+  margin: calc(-1 * var(--s2)) 0 var(--s4);
+}
+
+.field__suffix {
+  position: absolute;
+  right: var(--s4);
+  top: 50%;
+  transform: translateY(-50%);
+  font-family: var(--font-num);
+  font-size: 1.0625rem;
+  color: var(--text-3);
+  pointer-events: none;
+}
+
+.onb-item > .plan-pill__dot {
+  width: 10px;
+  height: 10px;
+}
+
+.plan-dial {
+  position: relative;
+  width: 100%;
+}
+
+.plan-dial__ring {
+  position: absolute;
+  display: block;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.plan-card--animate .plan-dial,
+.plan-card--animate .plan-dial__ring,
+.plan-card--animate .plan-dial__center {
+  transition: height var(--t-slow) var(--glide), width var(--t-slow) var(--glide), left var(--t-slow) var(--glide), top var(--t-slow) var(--glide), opacity var(--t-mid) var(--glide);
+}
+
+.plan-dial__leaders {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: visible;
+}
+
+.plan-dial__leaders polyline {
+  fill: none;
+  stroke-width: 1.1;
+  stroke-opacity: 0.75;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition: opacity var(--t-mid) var(--glide);
+}
+
+.plan-dial__leaders polyline.dim {
+  opacity: 0.25;
+}
+
+/* the floating label on each colour when the card is pulled open */
+.plan-callout {
+  position: absolute;
+  transform: translateY(-50%);
+  display: grid;
+  gap: 1px;
+  min-height: 0;
+  margin: 0;
+  padding: 5px 9px 5px 10px;
+  border: 0;
+  border-radius: 10px;
+  background: rgb(255 255 255 / 0.08);
+  box-shadow: inset 3px 0 0 var(--c), inset 0 0 0 1px rgb(255 255 255 / 0.08);
+  color: var(--hero-text);
+  text-align: left;
+  font-weight: 400;
+  transition: opacity var(--t-mid) var(--glide), background-color var(--t-mid) var(--glide);
+}
+
+.plan-callout strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--fs-xs);
+  font-weight: 600;
+}
+
+.plan-callout small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-family: var(--font-num);
+  font-size: var(--fs-2xs);
+  color: var(--hero-dim);
+  white-space: nowrap;
+}
+
+.plan-callout.on {
+  background: rgb(255 255 255 / 0.18);
+}
+
+.plan-callout.dim {
+  opacity: 0.35 !important;
+}
+
+.plan-dial__tick {
+  stroke-width: 3.2;
+  stroke-linecap: round;
+  transition: stroke var(--t-mid) var(--glide), opacity var(--t-mid) var(--glide);
+}
+
+.plan-dial__tick--empty {
+  stroke: rgb(255 255 255 / 0.12);
+}
+
+.plan-dial__tick.dim {
+  opacity: 0.22;
+}
+
+.plan-dial__tick.on {
+  stroke-width: 4;
+  filter: drop-shadow(0 0 3px rgb(255 255 255 / 0.35));
+}
+
+.plan-dial__center {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  pointer-events: none;
+}
+
+.plan-dial__label {
+  margin: 0;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--fs-sm);
+  color: var(--hero-dim);
+}
+
+.plan-dial__pct {
+  margin: 2px 0;
+  font-family: var(--font-display);
+  font-size: 3.25rem;
+  font-weight: 600;
+  letter-spacing: -0.05em;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.plan-dial__pct span {
+  font-size: 0.45em;
+  margin-left: 2px;
+  opacity: 0.5;
+  letter-spacing: 0;
+}
+
+.plan-dial__sub {
+  margin: 0;
+  font-family: var(--font-num);
+  font-size: var(--fs-2xs);
+  color: var(--hero-dim);
+  white-space: nowrap;
+}
+
+.plan-card__hint {
+  margin: var(--s4) var(--s4) var(--s2);
+  text-align: center;
+  font-size: var(--fs-xs);
+  color: var(--hero-dim);
+}
+
+.tick-ruler {
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+  margin-top: var(--s4);
+}
+
+.tick-ruler__step {
+  flex: none;
+  width: 36px;
+  height: 36px;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: rgb(255 255 255 / 0.1);
+  color: var(--hero-text);
+  font-family: var(--font-num);
+  font-size: var(--fs-lg);
+  line-height: 1;
+}
+
+.tick-ruler__track {
+  position: relative;
+  flex: 1;
+  height: 52px;
+  overflow: hidden;
+  touch-action: pan-y; /* sideways drags scrub the ruler; vertical still scrolls */
+  cursor: ew-resize;
+  -webkit-mask-image: linear-gradient(to right, transparent, #000 22%, #000 78%, transparent);
+  mask-image: linear-gradient(to right, transparent, #000 22%, #000 78%, transparent);
+}
+
+.tick-ruler__track:focus-visible {
+  outline: 1px solid var(--hero-dim);
+  outline-offset: 2px;
+  border-radius: 8px;
+}
+
+/* the strip's 0 sits at the centre marker; translateX moves the value under it */
+.tick-ruler__strip {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  transition: transform 90ms linear;
+}
+
+.tick-ruler__tick {
+  position: absolute;
+  top: 10px;
+  width: 1.5px;
+  height: 12px;
+  margin-left: -0.75px;
+  border-radius: 1px;
+  background: rgb(255 255 255 / 0.35);
+}
+
+.tick-ruler__tick.mid {
+  height: 16px;
+  background: rgb(255 255 255 / 0.5);
+}
+
+.tick-ruler__tick.major {
+  height: 20px;
+  background: rgb(255 255 255 / 0.75);
+}
+
+.tick-ruler__tick.off {
+  opacity: 0.25;
+}
+
+.tick-ruler__tick b {
+  position: absolute;
+  top: 26px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-family: var(--font-num);
+  font-size: var(--fs-2xs);
+  font-weight: 400;
+  color: var(--hero-dim);
+}
+
+.tick-ruler__marker {
+  position: absolute;
+  top: 4px;
+  left: 50%;
+  width: 3px;
+  height: 26px;
+  margin-left: -1.5px;
+  border-radius: 2px;
+  background: var(--hero-text);
+  box-shadow: 0 0 0 3px rgb(0 0 0 / 0.35);
+}
+
+.plan-pill__dot {
+  flex: none;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 1px rgb(0 0 0 / 0.25);
+}
+
+/* category / goal rows */
+.plan-list {
+  list-style: none;
+  margin: 0 0 var(--s3);
+  padding: 0;
+  display: grid;
+  gap: var(--s2);
+}
+
+main .plan-list > li {
+  padding: 0;
+  border: 0;
+}
+
+.plan-row {
+  display: flex;
+  align-items: center;
+  gap: var(--s3);
+  width: 100%;
+  min-height: 68px;
+  margin: 0;
+  padding: var(--s3) var(--s4);
+  border: 0;
+  border-radius: var(--radius);
+  background: var(--surface);
+  text-align: left;
+  font-weight: 400;
+}
+
+.plan-row .plan-pill__dot {
+  /* light shades need an edge on the light surface */
+  box-shadow: inset 0 0 0 1px rgb(0 0 0 / 0.18);
+}
+
+.plan-row__main {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+
+.plan-row__main strong {
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.plan-row__main small {
+  font-size: var(--fs-xs);
+}
+
+.plan-row__main .bar {
+  margin: 3px 0 0;
+}
+
+.plan-row__amt {
+  display: grid;
+  justify-items: end;
+  gap: 2px;
+  font-family: var(--font-num);
+  font-weight: 500;
+}
+
+.plan-row__amt small {
+  font-size: var(--fs-2xs);
+}
+
+.plan-row > svg {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  color: var(--text-3);
+}
+
+.plan .onb-add {
+  margin-bottom: var(--s4);
+}
+
+.plan__suggest svg {
+  width: 20px;
+  height: 20px;
+}
+
+.plan-suggest {
+  list-style: none;
+  margin: var(--s4) 0;
+  padding: 0;
+}
+
+.plan-suggest li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s3);
+  padding: var(--s3) 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.plan-suggest li span {
+  display: grid;
+  gap: 2px;
+}
+
+.plan-suggest li strong {
+  font-weight: 600;
+}
+
+.plan-suggest .amt {
+  font-family: var(--font-num);
+  font-weight: 500;
+}
+
+.plan-contribute {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  gap: var(--s2);
+  align-items: center;
+  margin-bottom: var(--s4);
+}
+
+.plan-contribute button {
+  margin: 0;
+  min-height: 54px;
+}
+
+.onb-sheet .plan-contribute .field__box input,
+.onb-sheet .plan-contribute select {
+  margin-top: 0;
+}
+
+/* ---------- switch text (label + optional sub line) ---------- */
+
+.switch__text {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.switch__text small {
+  font-size: var(--fs-xs);
+  line-height: 1.35;
+}
+
+.switch--disabled {
+  opacity: 0.45;
+}
+
+/* ---------- settings: grouped lists ---------- */
+
+.settings-profile {
+  display: flex;
+  align-items: center;
+  gap: var(--s4);
+  width: 100%;
+  min-height: 0;
+  margin: var(--s2) 0 var(--s5);
+  padding: var(--s4);
+  border: 0;
+  border-radius: 24px;
+  background: var(--hero-bg);
+  color: var(--hero-text);
+  text-align: left;
+  font-weight: 400;
+}
+
+.settings-profile__mark {
+  flex: none;
+  width: 52px;
+  height: 52px;
+  font-size: var(--fs-lg);
+}
+
+.settings-profile__text {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.settings-profile__text strong {
+  font-size: var(--fs-lg);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.settings-profile__text small {
+  color: var(--hero-dim);
+}
+
+.settings-profile > svg {
+  width: 18px;
+  height: 18px;
+  color: var(--hero-dim);
+}
+
+.settings-group {
+  margin-bottom: var(--s5);
+}
+
+.settings-group__title {
+  margin: 0 0 var(--s2) var(--s4);
+}
+
+.settings-group__card {
+  overflow: hidden;
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.settings-group__note {
+  margin: var(--s2) var(--s4) 0;
+  font-size: var(--fs-xs);
+  color: var(--text-2);
+  text-wrap: pretty;
+}
+
+/* rows and switches inside a group share one look, divided by hairlines */
+.settings-row,
+.settings-group__card > .switch {
+  display: flex;
+  align-items: center;
+  gap: var(--s3);
+  width: 100%;
+  min-height: 54px;
+  margin: 0;
+  padding: var(--s3) var(--s4);
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--text);
+  text-align: left;
+  font-size: var(--fs-md);
+  font-weight: 400;
+}
+
+.settings-group__card > * + * {
+  box-shadow: inset 0 1px 0 var(--line);
+}
+
+.settings-row:active {
+  transform: none;
+  background: color-mix(in srgb, var(--text) 5%, transparent);
+}
+
+.settings-row--static:active {
+  background: transparent;
+}
+
+.settings-row__label {
+  flex: 1;
+  min-width: 0;
+}
+
+.settings-row__value {
+  max-width: 55%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-2);
+  font-size: var(--fs-sm);
+}
+
+.settings-row > svg {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  color: var(--text-3);
+}
+
+.settings-row--danger {
+  justify-content: center;
+  color: #e5383b;
+  font-weight: 550;
+}
+
+.settings-row--danger .settings-row__label {
+  flex: none;
+}
+
+.stepper {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s2);
+}
+
+.stepper button {
+  width: 34px;
+  height: 34px;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  border-radius: 50%;
+  border: 1px solid var(--line);
+  background: var(--bg);
+  font-family: var(--font-num);
+  font-size: var(--fs-lg);
+  line-height: 1;
+}
+
+.stepper .num {
+  min-width: 2.2ch;
+  text-align: center;
+  font-size: var(--fs-md);
+}
+
+button.danger {
+  background: #e5383b;
+  border-color: #e5383b;
+  color: #fff;
+}
+
+/* ---------- passcode pad and lock screen ---------- */
+
+.pin {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.pin__title {
+  margin: 0;
+  font-size: var(--fs-lg);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.pin__sub {
+  min-height: 1.4em;
+  margin: var(--s1) 0 var(--s4);
+  font-size: var(--fs-sm);
+  color: var(--text-2);
+}
+
+.pin__sub--error {
+  color: #e5383b;
+}
+
+.pin__dots {
+  display: flex;
+  gap: 14px;
+  margin-bottom: var(--s6);
+}
+
+.pin__dots span {
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 1.5px currentColor;
+  transition: background-color var(--t-fast) var(--glide), transform var(--t-fast) var(--glide);
+}
+
+.pin__dots span.on {
+  background: currentColor;
+  transform: scale(1.05);
+}
+
+.pin__dots--shake {
+  animation: pin-shake 0.42s var(--glide-in-out);
+}
+
+@keyframes pin-shake {
+  20%,
+  60% {
+    transform: translateX(-9px);
+  }
+  40%,
+  80% {
+    transform: translateX(9px);
+  }
+}
+
+.pin__pad {
+  display: grid;
+  grid-template-columns: repeat(3, 76px);
+  gap: 16px 26px;
+}
+
+.pin__key {
+  width: 76px;
+  height: 76px;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: color-mix(in srgb, currentColor 9%, transparent);
+  color: inherit;
+  font-family: var(--font-display);
+  font-size: 1.75rem;
+  font-weight: 400;
+}
+
+.pin__key:active {
+  background: color-mix(in srgb, currentColor 22%, transparent);
+}
+
+.pin__key--icon {
+  background: transparent;
+  font-size: 1.4rem;
+}
+
+.pin__key--icon svg {
+  width: 30px;
+  height: 30px;
+}
+
+.lock {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: calc(var(--safe-t) + var(--s5)) var(--s5) calc(var(--safe-b) + var(--s5));
+  background: var(--hero-bg);
+  color: var(--hero-text);
+  animation: fade-in var(--t-mid) var(--glide);
+}
+
+.lock .pin__sub {
+  color: var(--hero-dim);
+}
+
+.lock .pin__sub--error {
+  color: #ff8a8c;
+}
+
+.lock__icon {
+  margin-bottom: var(--s5);
+  border-radius: 14px;
+  box-shadow: 0 0 0 1px rgb(255 255 255 / 0.12);
+}
+
+.lock__forgot {
+  margin-top: var(--s6);
+  color: var(--hero-dim);
+}
+
+.passcode-sheet {
+  padding: var(--s3) 0 var(--s4);
+}
+
+.passcode-sheet__switch {
+  display: block;
+  margin: var(--s4) auto 0;
+}
+
+/* ---------- Upcoming (the bell) ---------- */
+
+.notice-list {
+  display: grid;
+  gap: var(--s2);
+  margin-bottom: var(--s5);
+}
+
+.notice-card {
+  display: grid;
+  gap: var(--s3);
+  padding: var(--s4);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.notice-card__text {
+  display: grid;
+  gap: 2px;
+}
+
+.notice-card__text strong {
+  font-weight: 600;
+}
+
+.notice-card__text small {
+  font-size: var(--fs-xs);
+}
+
+.notice-card__actions {
+  display: flex;
+  gap: var(--s2);
+}
+
+.notice-card__actions button {
+  flex: 1;
+  margin: 0;
+  min-height: 40px;
+  font-size: var(--fs-sm);
+  padding: 0 var(--s3);
+}
+
+.notice-card__actions button.primary {
+  min-height: 40px;
+  font-size: var(--fs-sm);
+}
+
+.upcoming-card {
+  margin-top: var(--s2);
+}
+
+.upcoming-card__nums {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--s4);
+}
+
+.upcoming-card__nums p {
+  margin: 0;
+  display: grid;
+  gap: 2px;
+  font-family: var(--font-num);
+  font-size: var(--fs-xl);
+  font-weight: 500;
+  letter-spacing: -0.04em;
+}
+
+.upcoming-card__k {
+  font-family: var(--font);
+  font-size: var(--fs-xs);
+  font-weight: 400;
+  letter-spacing: 0;
+  color: var(--hero-dim);
+}
+
+.upcoming .segmented {
+  margin-bottom: var(--s3);
+}
+
+.upcoming-list {
+  margin-bottom: var(--s5);
+}
+
+/* ---------- calendar ---------- */
+
+.calendar-row {
+  display: flex;
+  align-items: center;
+  gap: var(--s3);
+  width: 100%;
+  min-height: 0;
+  margin: 0 0 var(--s4);
+  padding: var(--s3) var(--s4);
+  border: 0;
+  border-radius: var(--radius);
+  background: var(--surface);
+  text-align: left;
+  font-weight: 400;
+}
+
+.calendar-row > svg {
+  flex: none;
+  width: 20px;
+  height: 20px;
+}
+
+.calendar-row > svg:last-child {
+  width: 16px;
+  height: 16px;
+  color: var(--text-3);
+}
+
+.calendar-row span {
+  flex: 1;
+  display: grid;
+  gap: 2px;
+}
+
+.calendar-row strong {
+  font-weight: 600;
+}
+
+.calendar-row small {
+  font-size: var(--fs-xs);
+}
+
+.calendar-actions {
+  display: grid;
+  justify-items: center;
+  gap: var(--s2);
+  margin-top: var(--s4);
+}
+
+.calendar-actions button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--s2);
+  margin: 0;
+}
+
+.calendar-actions svg {
+  width: 18px;
+  height: 18px;
+}
+
+.calendar-actions .link {
+  font-size: var(--fs-sm);
+  color: var(--text-2);
+}
+
+.settings-row__label small {
+  display: block;
+  margin-top: 2px;
+  font-size: var(--fs-xs);
+  color: var(--text-2);
 }

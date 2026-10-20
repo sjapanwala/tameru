@@ -3,7 +3,7 @@
 // Includes 12 weeks of history so averages, rollover and detection have something to work with.
 
 import { addDays, dayOfWeek, eachDay, parts } from '../domain/dates';
-import { categoryId } from '../domain/defaults';
+import { categoryId, suggestedCategories } from '../domain/defaults';
 import { merchantKey } from '../domain/merchant';
 import { periodFor } from '../domain/period';
 import type { Id, Transaction } from '../domain/types';
@@ -34,6 +34,8 @@ export async function seedSampleData(ctx: AppContext, seed = 42): Promise<void> 
   const between = (lo: number, hi: number) => Math.round(lo + rand() * (hi - lo));
   const today = ctx.clock.today();
   const opening = addDays(today, -SEED_HISTORY_DAYS);
+  // The student's own categories (a new install has only Bills and the Irregular fund).
+  await ctx.repos.categories.bulkPut(suggestedCategories(['groceries', 'eating_out', 'transport', 'fun', 'personal'], ctx.clock.now().toISOString()));
 
   // Card faces use the bundled art in cards/card-art.
   const chq = await createAccount(ctx, {

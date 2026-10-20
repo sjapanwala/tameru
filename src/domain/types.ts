@@ -147,6 +147,7 @@ export interface Category extends BaseRecord {
   sortOrder: number;
   archived: boolean;
   systemKey?: 'income' | 'interest' | 'transfer' | 'fees';
+  color?: string; // #rrggbb for the Plan dial; assigned on creation, changeable
 }
 
 export type PeriodConfig =
@@ -269,4 +270,14 @@ export interface Settings {
   // "periodStart|categoryId" → overspend the user already dealt with (covered part, or left as is).
   // The cover prompt only returns if that category goes further over.
   coversHandled?: Record<string, Cents>;
+  lock?: AppLock; // absent = no passcode
+}
+
+/** The optional app lock. Only a salted hash of the passcode is kept. */
+export interface AppLock {
+  digits: 4 | 6;
+  salt: string;
+  hash: string;
+  passkeyId?: string; // base64url credential id, when Face ID / Touch ID unlock is on
+  relockAfterMs: number; // lock again after the app has been away this long
 }

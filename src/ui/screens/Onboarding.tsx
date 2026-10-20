@@ -12,31 +12,33 @@ import {
   currentStep,
   defaultAccount,
   defaultNextPayday,
+  categoryTempId,
   goalTempId,
-  HABIT_PICKS,
   isComplete,
   isFullName,
-  pickMidpoint,
   skip,
   steps,
   type AccountAnswer,
   type AccountChoice,
   type Answer,
   type BillAnswer,
+  type CategoryAnswer,
   type GoalAnswer,
   type IncomeAnswer,
   type OnboardingState,
   type StepId,
 } from '../../domain/onboarding';
 import type { GeneratedPlan } from '../../domain/planGenerator';
+import { CATEGORY_COLORS, categoryId, nextCategoryColor, SUGGESTED_CATEGORIES } from '../../domain/defaults';
 import type { Cents, Frequency } from '../../domain/types';
 import { finishOnboarding, loadProgress, previewPlan, saveProgress } from '../../services/onboarding';
-import { CardPicker } from '../cards';
-import { Amount, ChipSelect, MoneyInput, MonthlyDayInput } from '../components';
+import { CardPicker, ColorPicker } from '../cards';
+import { AllocationInput, Amount, AmountModeToggle, ChipSelect, MoneyInput, MonthlyDayInput, Switch, type AmountMode } from '../components';
 import { useApp, useLoad } from '../hooks';
 import { BankIcon, CardIcon, CashIcon, CheckIcon, ChevronLeft, ChevronRight, JarIcon, PlusIcon, TrendIcon } from '../Icons';
 import { haptic } from '../motion';
 import { Sheet } from '../Sheet';
+import { toast } from '../toast';
 
 const ACCOUNT_CHOICES: AccountChoice[] = ['chequing', 'savings', 'credit_card', 'investing', 'cash'];
 const ACCOUNT_ICONS: Record<AccountChoice, () => preact.JSX.Element> = {
@@ -58,7 +60,7 @@ const sectionOf = (step: StepId): string | undefined => {
       return S.onboarding.section.accounts;
     case 'bills':
       return S.onboarding.section.bills;
-    case 'habit':
+    case 'categories':
       return S.onboarding.section.habits;
     case 'goals':
       return S.onboarding.section.goals;
@@ -127,8 +129,8 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
         );
       case 'bills':
         return <Bills eyebrow={eyebrow} today={today} initial={state.answers.bills} accountTypes={state.answers.accountTypes} onSubmit={(bills) => go({ step: 'bills', bills })} />;
-      case 'habit':
-        return <Habit key={step.key} eyebrow={eyebrow} habit={step.key} initial={state.answers.habitsWeekly[step.key]} onSubmit={(weeklyCents) => go({ step: 'habit', key: step.key, weeklyCents })} />;
+      case 'categories':
+        return <Categories eyebrow={eyebrow} initial={state.answers.categories} onSubmit={(categories) => go({ step: 'categories', categories })} />;
       case 'goals':
         return <Goals eyebrow={eyebrow} today={today} initial={state.answers.goals} onSubmit={(goals) => go({ step: 'goals', goals })} />;
       case 'period':
@@ -197,15 +199,6 @@ function Footer(props: { children: preact.ComponentChildren }) {
   return <div class="onb__footer">{props.children}</div>;
 }
 
-function Switch(props: { label: string; checked: boolean; onChange: (v: boolean) => void }) {
-  return (
-    <label class="switch">
-      <span>{props.label}</span>
-      <input type="checkbox" role="switch" checked={props.checked} onChange={(e) => props.onChange((e.target as HTMLInputElement).checked)} />
-    </label>
-  );
-}
-
 function OptionCard(props: { title: string; sub?: string; on?: boolean; onClick: () => void; icon?: preact.ComponentChildren }) {
   return (
     <button type="button" class={`onb-option${props.on ? ' on' : ''}`} aria-pressed={props.on} onClick={props.onClick}>
@@ -220,9 +213,10 @@ function OptionCard(props: { title: string; sub?: string; on?: boolean; onClick:
 }
 
 /** A tappable summary row (an added bill, income or goal). */
-function Item(props: { title: string; meta: string; tag?: string; onClick?: () => void }) {
+function Item(props: { title: string; meta: string; tag?: string; dot?: string; onClick?: () => void }) {
   const inner = (
     <>
+      {props.dot && <span class="plan-pill__dot" style={{ background: props.dot }} />}
       <span class="onb-item__text">
         <strong>{props.title}</strong>
         <small>{props.meta}</small>
@@ -570,26 +564,91 @@ function BillForm(props: { initial: BillAnswer; today: string; payOptions: Accou
   );
 }
 
-function Habit(props: { eyebrow?: string; habit: keyof typeof HABIT_PICKS; initial?: Cents; onSubmit: (c: Cents) => void }) {
-  const [custom, setCustom] = useState<Cents | undefined>();
-  const picked = (p: { lo: Cents; hi: Cents }) => props.initial !== undefined && props.initial === pickMidpoint(p);
+function Categories(props: { eyebrow?: string; initial: CategoryAnswer[]; onSubmit: (c: CategoryAnswer[]) => void }) {
+  const [cats, setCats] = useState<CategoryAnswer[]>(props.initial);
+  const [editing, setEditing] = useState<{ index: number } | { draft: CategoryAnswer } | null>(null);
+  const current = editing && ('index' in editing ? cats[editing.index] : editing.draft);
+  const unused = SUGGESTED_CATEGORIES.filter((s) => !cats.some((c) => c.name.toLowerCase() === s.name.toLowerCase()));
+  const draft = (name = ''): CategoryAnswer => ({ name, color: nextCategoryColor(cats.map((c) => c.color)) });
   return (
     <section>
-      <Head eyebrow={props.eyebrow} title={S.onboarding.habitQ[props.habit]} sub={S.onboarding.habitSub} />
-      <div class="onb-options">
-        {HABIT_PICKS[props.habit].map((p) => (
-          <OptionCard key={p.hi} title={S.onboarding.pickRange(p.lo, p.hi)} on={picked(p)} onClick={() => props.onSubmit(pickMidpoint(p))} />
+      <Head eyebrow={props.eyebrow} title={S.onboarding.categoriesQ} sub={S.onboarding.categoriesHint} />
+      <div class="onb-list">
+        {cats.length === 0 && <p class="onb-empty">{S.onboarding.categoriesEmpty}</p>}
+        {cats.map((c, k) => (
+          <Item key={k} dot={c.color} title={c.name} meta={S.onboarding.categoryMeta(c.weeklyCents)} onClick={() => setEditing({ index: k })} />
         ))}
+        <button type="button" class="onb-add" onClick={() => setEditing({ draft: draft() })}>
+          <PlusIcon /> {S.onboarding.addCategory}
+        </button>
       </div>
-      <Money label={S.onboarding.habitOther} value={custom} onChange={setCustom} />
-      {custom !== undefined && (
-        <Footer>
-          <button type="button" class="primary block" onClick={() => props.onSubmit(custom)}>
-            {S.onboarding.continue}
-          </button>
-        </Footer>
+      {unused.length > 0 && (
+        <div class="onb-suggest">
+          {unused.map((s) => (
+            <button type="button" key={s.key} class="chip" onClick={() => setEditing({ draft: draft(s.name) })}>
+              <PlusIcon /> {s.name}
+            </button>
+          ))}
+        </div>
+      )}
+      <Footer>
+        <button type="button" class="primary block" onClick={() => props.onSubmit(cats)}>
+          {S.onboarding.continue}
+        </button>
+      </Footer>
+      {editing && current && (
+        <Sheet label={S.onboarding.editCategory} onClose={() => setEditing(null)}>
+          <div class="onb-sheet">
+            <CategoryForm
+              initial={current}
+              isNew={'draft' in editing}
+              onSave={(c) => {
+                setCats('index' in editing ? cats.map((x, j) => (j === editing.index ? c : x)) : [...cats, c]);
+                setEditing(null);
+              }}
+              onRemove={'index' in editing ? () => (setCats(cats.filter((_, j) => j !== editing.index)), setEditing(null)) : undefined}
+            />
+          </div>
+        </Sheet>
       )}
     </section>
+  );
+}
+
+function CategoryForm(props: { initial: CategoryAnswer; isNew: boolean; onSave: (c: CategoryAnswer) => void; onRemove?: () => void }) {
+  const [c, setC] = useState(props.initial);
+  return (
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        if (c.name.trim()) props.onSave({ ...c, name: c.name.trim() });
+      }}
+    >
+      <h2>{props.isNew ? S.onboarding.addCategory : S.onboarding.editCategory}</h2>
+      <label class="field">
+        {S.common.name}
+        <input value={c.name} autoFocus={!c.name} autoCapitalize="sentences" placeholder={S.onboarding.categoryNamePlaceholder} onInput={(e) => setC({ ...c, name: (e.target as HTMLInputElement).value })} />
+      </label>
+      <ColorPicker colors={CATEGORY_COLORS} value={c.color} onChange={(color) => setC({ ...c, color })} />
+      <label class="field field--money">
+        {S.onboarding.weeklyQ}
+        <span class="field__box">
+          <span class="field__cur">$</span>
+          <MoneyInput value={c.weeklyCents} autoFocus={!!c.name && c.weeklyCents === undefined} onChange={(v) => setC({ ...c, weeklyCents: v })} />
+        </span>
+        <small>{S.onboarding.weeklyHint}</small>
+      </label>
+      <div class="sheet__actions">
+        <button type="submit" class="primary block" disabled={!c.name.trim()}>
+          {props.isNew ? S.onboarding.add : S.common.save}
+        </button>
+        {props.onRemove && (
+          <button type="button" class="link" onClick={props.onRemove}>
+            {S.common.remove}
+          </button>
+        )}
+      </div>
+    </form>
   );
 }
 
@@ -683,18 +742,28 @@ function Review(props: { eyebrow?: string; state: OnboardingState; today: string
   const generate = () => previewPlan(props.state.answers, props.today);
   const [plan, setPlan] = useState<GeneratedPlan>(generate);
   const [saving, setSaving] = useState(false);
+  const [mode, setMode] = useState<AmountMode>('dollars');
   const categories = useLoad((a) => a.repos.categories.all()) ?? [];
   const label = (id: string) => {
     const g = props.state.answers.goals.findIndex((_, k) => goalTempId(k) === id);
     if (g >= 0) return props.state.answers.goals[g]!.name;
+    const c = props.state.answers.categories.findIndex((_, k) => categoryTempId(k) === id);
+    if (c >= 0) return props.state.answers.categories[c]!.name;
     return categories.find((c) => c.id === id)?.name ?? '';
   };
   const s = plan.summary;
+  // Recomputed from the amounts as they're edited, so the card always adds up.
+  const sum = (r: Record<string, Cents>) => Object.values(r).reduce((t, c) => t + c, 0);
+  const bills = plan.allocations[categoryId('bills')] ?? 0;
+  const fund = plan.allocations[categoryId('irregular')] ?? 0;
+  const goals = sum(plan.goalContributions);
+  const flex = sum(plan.allocations) - bills - fund;
   const parts = [
-    { key: 'fixed', cents: s.fixedCents },
-    { key: 'flex', cents: s.flexibleCents },
-    { key: 'goals', cents: s.goalsCents },
-    { key: 'free', cents: s.unassignedCents },
+    { key: 'fixed', cents: bills },
+    { key: 'flex', cents: flex },
+    { key: 'fund', cents: fund },
+    { key: 'goals', cents: goals },
+    { key: 'free', cents: Math.max(0, s.incomeCents - bills - flex - fund - goals) },
   ] as const;
   const whole = Math.max(1, parts.reduce((t, p) => t + Math.max(0, p.cents), 0));
   const row = (id: string, c: Cents, onChange: (v: Cents) => void) => (
@@ -704,8 +773,7 @@ function Review(props: { eyebrow?: string; state: OnboardingState; today: string
         {plan.reasons[id]?.[0] && <small>{reasonText(plan.reasons[id]![0]!)}</small>}
       </span>
       <span class="onb-alloc__amt">
-        <span class="field__cur">$</span>
-        <MoneyInput value={c} onChange={(v) => v !== undefined && onChange(v)} />
+        <AllocationInput compact value={c} base={s.incomeCents} mode={mode} onChange={(v) => v !== undefined && onChange(v)} />
       </span>
     </li>
   );
@@ -730,6 +798,7 @@ function Review(props: { eyebrow?: string; state: OnboardingState; today: string
           ))}
         </ul>
       </div>
+      {s.incomeCents > 0 && <AmountModeToggle value={mode} onChange={setMode} />}
       <ul class="onb-allocs">
         {Object.entries(plan.allocations).map(([id, c]) => row(id, c, (v) => setPlan({ ...plan, allocations: { ...plan.allocations, [id]: v } })))}
         {Object.entries(plan.goalContributions).map(([id, c]) => row(id, c, (v) => setPlan({ ...plan, goalContributions: { ...plan.goalContributions, [id]: v } })))}
@@ -747,7 +816,7 @@ function Review(props: { eyebrow?: string; state: OnboardingState; today: string
           onClick={() => {
             setSaving(true);
             haptic(12);
-            props.onAccept(plan).catch(() => setSaving(false));
+            props.onAccept(plan).catch((e) => (setSaving(false), toast(S.onboarding.finishFailed(String(e)))));
           }}
         >
           {S.onboarding.accept}

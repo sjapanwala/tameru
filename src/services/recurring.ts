@@ -41,7 +41,14 @@ export async function createRecurring(ctx: AppContext, input: NewRecurring): Pro
     archived: false,
   });
   await ctx.repos.recurring.put(item);
+  await reviveCategory(ctx, item.categoryId);
   return item;
+}
+
+/** A bill filed under a removed category (e.g. Bills) brings that category back. */
+async function reviveCategory(ctx: AppContext, id: Id): Promise<void> {
+  const cat = await ctx.repos.categories.get(id);
+  if (cat?.archived) await ctx.repos.categories.put(stamp(ctx, { ...cat, archived: false }));
 }
 
 export async function updateRecurring(ctx: AppContext, id: Id, patch: Partial<Omit<RecurringItem, 'id'>>): Promise<RecurringItem> {
@@ -49,6 +56,7 @@ export async function updateRecurring(ctx: AppContext, id: Id, patch: Partial<Om
   if (!cur) throw new Error('recurring item not found');
   const next: RecurringItem = stamp(ctx, { ...cur, ...patch, id });
   await ctx.repos.recurring.put(next);
+  if (!next.archived) await reviveCategory(ctx, next.categoryId);
   return next;
 }
 

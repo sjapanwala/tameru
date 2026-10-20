@@ -2,7 +2,7 @@
 // create everything when the user accepts.
 
 import { categoryId } from '../domain/defaults';
-import { goalTempId, initialState, toGeneratorInput, type AccountChoice, type OnboardingAnswers, type OnboardingState } from '../domain/onboarding';
+import { categoryTempId, emptyAnswers, goalTempId, initialState, toGeneratorInput, type AccountChoice, type OnboardingAnswers, type OnboardingState } from '../domain/onboarding';
 import { periodFor, periodLength } from '../domain/period';
 import { generatePlan, scaleToPeriod, type GeneratedPlan } from '../domain/planGenerator';
 import { nextOccurrence, perMonth } from '../domain/recurrence';
@@ -11,11 +11,13 @@ import { createAccount } from './accounts';
 import type { AppContext } from './context';
 import { emit } from './events';
 import { createGoal } from './goals';
-import { getPlan, logEvent, savePlan } from './plan';
+import { addCategory, getPlan, logEvent, savePlan } from './plan';
 import { createRecurring } from './recurring';
 
 export async function loadProgress(ctx: AppContext): Promise<OnboardingState> {
-  return (await ctx.repos.settings.get()).onboarding ?? initialState();
+  const saved = (await ctx.repos.settings.get()).onboarding;
+  // Progress saved by an older version may lack newer answers (e.g. categories).
+  return saved ? { ...saved, answers: { ...emptyAnswers(), ...saved.answers } } : initialState();
 }
 
 export async function saveProgress(ctx: AppContext, state: OnboardingState): Promise<void> {
@@ -101,7 +103,10 @@ export async function finishOnboarding(ctx: AppContext, a: OnboardingAnswers, pl
     });
     goalIds.set(goalTempId(k), created.id);
   }
-  const mapGoals = <T,>(r: Record<Id, T>) => Object.fromEntries(Object.entries(r).map(([k, v]) => [goalIds.get(k) ?? k, v]));
+  // The user's own spending categories (temp ids in the plan → real ids).
+  const catIds = new Map<Id, Id>();
+  for (const [k, c] of a.categories.entries()) catIds.set(categoryTempId(k), (await addCategory(ctx, c.name, { color: c.color })).id);
+  const mapIds = <T,>(r: Record<Id, T>) => Object.fromEntries(Object.entries(r).map(([k, v]) => [goalIds.get(k) ?? catIds.get(k) ?? k, v]));
 
   const period: PeriodConfig = a.periodAlignment === 'payday' && mainIncomeId ? { kind: 'payday', recurringId: mainIncomeId } : { kind: 'monthly', startDay: 1 };
   const schedule = mainIncomeId && period.kind === 'payday' ? (await ctx.repos.recurring.get(mainIncomeId))?.schedule : undefined;
@@ -109,10 +114,10 @@ export async function finishOnboarding(ctx: AppContext, a: OnboardingAnswers, pl
   const existing = await getPlan(ctx);
   await savePlan(
     ctx,
-    { ...existing, period, startDate: current.start, templateAllocations: plan.allocations, goalContributions: mapGoals(plan.goalContributions), reasons: mapGoals(plan.reasons) },
+    { ...existing, period, startDate: current.start, templateAllocations: mapIds(plan.allocations), goalContributions: mapIds(plan.goalContributions), reasons: mapIds(plan.reasons) },
     { source: 'onboarding', periodDays: periodLength(current) },
   );
-  const habits = Object.fromEntries(Object.entries(a.habitsWeekly).map(([k, v]) => [categoryId(k), v!]));
+  const habits = Object.fromEntries(a.categories.flatMap((c, k) => (c.weeklyCents !== undefined ? [[catIds.get(categoryTempId(k))!, c.weeklyCents]] : [])));
   await ctx.repos.settings.update({ onboardedAt: ctx.clock.now().toISOString(), habitWeeklyCents: habits, ...(a.name ? { userName: a.name } : {}), lastOpenedDate: today, onboarding: undefined });
   await logEvent(ctx, 'onboarding_complete', { accounts: answers.length, incomes: a.incomes.length, bills: a.bills.length, goals: a.goals.length });
   emit('onboardingComplete', { accounts: answers.length, goals: a.goals.length });

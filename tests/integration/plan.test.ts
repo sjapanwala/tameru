@@ -3,14 +3,24 @@ import { testApp } from '../helpers';
 import { categoryId } from '../../src/domain/defaults';
 import { seedSampleData } from '../../src/data/seed';
 import { createAccount } from '../../src/services/accounts';
-import { contribute, createGoal, listGoals } from '../../src/services/goals';
+import { contribute, createGoal, listGoals, removeGoal, setGoalContribution } from '../../src/services/goals';
 import { getHome } from '../../src/services/home';
-import { applyCover, budgetsFor, setAllocation } from '../../src/services/plan';
+import { applyCover, budgetsFor, CategoryInUseError, removeCategory, setAllocation } from '../../src/services/plan';
+import { archiveRecurring, createRecurring } from '../../src/services/recurring';
 import { addTransaction } from '../../src/services/transactions';
+import { suggestedCategories } from '../../src/domain/defaults';
+import type { App } from '../../src/services/app';
+
+/** A fresh app with a few of the user's own categories (installs start with only Bills and the fund). */
+async function appWithCategories(today: string): Promise<App> {
+  const app = await testApp(today);
+  await app.repos.categories.bulkPut(suggestedCategories(['groceries', 'eating_out', 'transport', 'fun', 'personal'], '2026-01-01T00:00:00Z'));
+  return app;
+}
 
 describe('plan services', () => {
   it('shows remaining, offers covers for an over, and applies one in one action', async () => {
-    const app = await testApp('2026-10-20');
+    const app = await appWithCategories('2026-10-20');
     const chq = await createAccount(app, { name: 'Chq', type: 'chequing', openingBalanceCents: 200000 });
     await setAllocation(app, categoryId('eating_out'), 10000);
     await setAllocation(app, categoryId('fun'), 20000);
@@ -27,7 +37,7 @@ describe('plan services', () => {
   });
 
   it('leaving an over as is, or covering part of it, dismisses the prompt until it grows', async () => {
-    const app = await testApp('2026-10-20');
+    const app = await appWithCategories('2026-10-20');
     const chq = await createAccount(app, { name: 'Chq', type: 'chequing', openingBalanceCents: 200000 });
     await setAllocation(app, categoryId('eating_out'), 10000);
     await addTransaction(app, { amountCents: 13000, accountId: chq.id, categoryId: categoryId('eating_out') });
@@ -46,7 +56,7 @@ describe('plan services', () => {
   });
 
   it('goal contributions count, transfers to a goal account are auto-tagged, milestones are acknowledged', async () => {
-    const app = await testApp('2026-10-20');
+    const app = await appWithCategories('2026-10-20');
     const chq = await createAccount(app, { name: 'Chq', type: 'chequing', openingBalanceCents: 200000 });
     const tfsa = await createAccount(app, { name: 'TFSA', type: 'investing' });
     const goal = await createGoal(app, { name: 'Trip', targetCents: 40000, accountId: tfsa.id });
@@ -69,5 +79,45 @@ describe('plan services', () => {
     expect(accounts.map((a) => a.type).sort()).toEqual(['chequing', 'credit_card', 'investing', 'savings']);
     const interest = (await app.repos.transactions.all()).filter((t) => t.originKey?.startsWith('int:'));
     expect(interest.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it('Bills can be removed only once no recurring bills use it, and a new bill brings it back', async () => {
+    const app = await appWithCategories('2026-10-20');
+    const chq = await createAccount(app, { name: 'Chq', type: 'chequing', openingBalanceCents: 100000 });
+    const rent = await createRecurring(app, { name: 'Rent', kind: 'bill', amountCents: 90000, freq: 'monthly', nextDate: '2026-11-01', accountIds: [chq.id] });
+    await expect(removeCategory(app, categoryId('bills'))).rejects.toBeInstanceOf(CategoryInUseError);
+    await archiveRecurring(app, rent.id);
+    await setAllocation(app, categoryId('bills'), 90000);
+    await removeCategory(app, categoryId('bills'));
+    let bills = (await app.repos.categories.get(categoryId('bills')))!;
+    expect(bills.archived).toBe(true);
+    expect((await budgetsFor(app)).rows.some((r) => r.category.id === bills.id)).toBe(false);
+    expect((await budgetsFor(app)).plan.templateAllocations[bills.id]).toBe(0);
+    await createRecurring(app, { name: 'Phone', kind: 'bill', amountCents: 4500, freq: 'monthly', nextDate: '2026-11-05', accountIds: [chq.id] });
+    bills = (await app.repos.categories.get(categoryId('bills')))!;
+    expect(bills.archived).toBe(false);
+  });
+
+  it('any category used by a recurring item is protected the same way', async () => {
+    const app = await appWithCategories('2026-10-20');
+    const chq = await createAccount(app, { name: 'Chq', type: 'chequing' });
+    await createRecurring(app, { name: 'Gym', kind: 'subscription', amountCents: 5000, freq: 'monthly', nextDate: '2026-11-01', accountIds: [chq.id], categoryId: categoryId('personal') });
+    await expect(removeCategory(app, categoryId('personal'))).rejects.toMatchObject({ count: 1 });
+    await removeCategory(app, categoryId('fun'));
+    expect((await app.repos.categories.get(categoryId('fun')))!.archived).toBe(true);
+  });
+
+  it('removing a goal drops it and its contribution, keeping money already moved', async () => {
+    const app = await appWithCategories('2026-10-20');
+    const chq = await createAccount(app, { name: 'Chq', type: 'chequing', openingBalanceCents: 200000 });
+    const tfsa = await createAccount(app, { name: 'TFSA', type: 'investing' });
+    const goal = await createGoal(app, { name: 'Trip', targetCents: 40000, accountId: tfsa.id });
+    await setGoalContribution(app, goal.id, 10000);
+    await contribute(app, goal.id, chq.id, 5000);
+    await removeGoal(app, goal.id);
+    expect(await listGoals(app)).toEqual([]);
+    expect((await budgetsFor(app)).plan.goalContributions[goal.id]).toBeUndefined();
+    expect((await getHome(app)).sts.breakdown.goalLines).toEqual([]);
+    expect((await app.repos.transactions.all()).filter((t) => t.goalId === goal.id)).toHaveLength(1); // the transfer stays
   });
 });

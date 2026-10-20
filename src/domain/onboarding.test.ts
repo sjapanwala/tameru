@@ -18,7 +18,7 @@ describe('onboarding conversation', () => {
     while (!isComplete(s) && guard++ < 50) s = skip(s);
     expect(isComplete(s)).toBe(true);
     expect(s.answers.accounts).toEqual([{ type: 'chequing', name: 'Chequing', balanceCents: 0 }]);
-    expect(s.answers.habitsWeekly).toEqual({});
+    expect(s.answers.categories).toEqual([]);
   });
   it('adds one detail question per chosen account type', () => {
     let s = answer(initialState(), { step: 'welcome', name: 'Sam Lee' });
@@ -45,12 +45,12 @@ describe('onboarding conversation', () => {
     expect(incomeMonthlyConservative({ name: 'x', freq: 'biweekly', range: { minCents: 70000, maxCents: 90000 }, nextDate: '2026-01-01' })).toBe(151667);
     expect(incomeMonthlyConservative({ name: 'x', freq: 'irregular', amountCents: 40000, nextDate: '2026-01-01' })).toBe(30000);
     const g = toGeneratorInput(
-      { ...initialState().answers, bills: [{ name: 'Rent', amountCents: 90000, day: 1, kind: 'bill' }], habitsWeekly: { groceries: 5000 }, goals: [{ name: 'Trip', targetCents: 50000 }] },
+      { ...initialState().answers, bills: [{ name: 'Rent', amountCents: 90000, day: 1, kind: 'bill' }], categories: [{ name: 'Groceries', color: '#4ade80', weeklyCents: 5000 }, { name: 'Climbing', color: '#a78bfa' }], goals: [{ name: 'Trip', targetCents: 50000 }] },
       '2026-01-01',
     );
     expect(g.billsMonthlyCents).toBe(90000);
-    expect(g.habitsWeekly.cat_groceries).toBe(5000);
-    expect(g.habitsWeekly.cat_fun).toBeUndefined();
+    expect(g.habitsWeekly).toEqual({ new_cat_0: 5000, new_cat_1: undefined });
+    expect(g.defaultHabitsWeekly).toEqual({ new_cat_0: 6000, new_cat_1: 2000 }); // a suggestion's typical week, else $20
     expect(g.goals).toEqual([{ id: 'new_goal_0', progressCents: 0, targetCents: 50000 }]);
   });
   it('defaults the next payday', () => {

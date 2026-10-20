@@ -2,7 +2,7 @@ import { render } from 'preact';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { S } from '../copy/strings';
 import type { FreshStartOffer } from '../domain/freshStart';
-import type { TransactionType } from '../domain/types';
+import type { AppLock, TransactionType } from '../domain/types';
 import { devMode } from '../pwa/standalone';
 import { openApp, type App as AppT } from '../services/app';
 import { onAppOpen } from '../services/appOpen';
@@ -12,7 +12,6 @@ import { go, useRoute } from './router';
 import { Accounts } from './screens/Accounts';
 import { Add } from './screens/Add';
 import { Debug } from './screens/Debug';
-import { Forecast } from './screens/Forecast';
 import { Home } from './screens/Home';
 import { Onboarding } from './screens/Onboarding';
 import { Plan } from './screens/Plan';
@@ -21,6 +20,7 @@ import { Settings } from './screens/Settings';
 import { Transactions } from './screens/Transactions';
 import { More } from './screens/More';
 import { QuickEditor } from './screens/QuickEditor';
+import { LockScreen } from './PinPad';
 import { Sheet } from './Sheet';
 import { TabBar } from './TabBar';
 import { ToastHost } from './toast';
@@ -62,8 +62,6 @@ function Screens({ offer, setOffer }: { offer: FreshStartOffer | null; setOffer:
         return <Recurring />;
       case '/plan':
         return <Plan />;
-      case '/forecast':
-        return <Forecast />;
       case '/settings':
         return <Settings />;
       case '/more':
@@ -98,10 +96,22 @@ function Screens({ offer, setOffer }: { offer: FreshStartOffer | null; setOffer:
   );
 }
 
-function Shell({ app, initialOffer }: { app: AppT; initialOffer: FreshStartOffer | null }) {
+function Shell({ app, initialOffer, initialLock }: { app: AppT; initialOffer: FreshStartOffer | null; initialLock?: AppLock }) {
   const [version, setVersion] = useState(0);
   const [offer, setOffer] = useState(initialOffer);
+  const [lock, setLock] = useState<AppLock | undefined>(initialLock); // set while locked
   const bump = () => setVersion((v) => v + 1);
+  // Lock again when the app comes back after being away longer than the chosen time.
+  const hiddenAt = useRef(0);
+  useEffect(() => {
+    const onChange = async () => {
+      if (document.visibilityState === 'hidden') return void (hiddenAt.current = Date.now());
+      const current = (await app.repos.settings.get()).lock;
+      if (current && hiddenAt.current && Date.now() - hiddenAt.current >= current.relockAfterMs) setLock(current);
+    };
+    document.addEventListener('visibilitychange', onChange);
+    return () => document.removeEventListener('visibilitychange', onChange);
+  }, []);
   // Opening the app again later in the day (e.g. from the background) runs bookkeeping again.
   useEffect(() => {
     const onVisible = () => document.visibilityState === 'visible' && onAppOpen(app).then((r) => (r.freshStart && setOffer(r.freshStart), bump()));
@@ -110,17 +120,17 @@ function Shell({ app, initialOffer }: { app: AppT; initialOffer: FreshStartOffer
   }, []);
   return (
     <AppCtx.Provider value={{ app, version, bump }}>
-      <Screens offer={offer} setOffer={(o) => (setOffer(o), bump())} />
+      {lock ? <LockScreen lock={lock} onUnlock={() => setLock(undefined)} /> : <Screens offer={offer} setOffer={(o) => (setOffer(o), bump())} />}
     </AppCtx.Provider>
   );
 }
 
 function Boot() {
-  const [state, setState] = useState<{ app: AppT; offer: FreshStartOffer | null }>();
+  const [state, setState] = useState<{ app: AppT; offer: FreshStartOffer | null; lock?: AppLock }>();
   useEffect(() => {
-    openApp().then(async (app) => setState({ app, offer: (await onAppOpen(app)).freshStart }));
+    openApp().then(async (app) => setState({ app, offer: (await onAppOpen(app)).freshStart, lock: (await app.repos.settings.get()).lock }));
   }, []);
-  return state ? <Shell app={state.app} initialOffer={state.offer} /> : <div class="shell" />;
+  return state ? <Shell app={state.app} initialOffer={state.offer} initialLock={state.lock} /> : <div class="shell" />;
 }
 
 export function mountApp(root: HTMLElement): void {

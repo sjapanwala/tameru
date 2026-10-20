@@ -1,8 +1,9 @@
 // Plan, periods and category budgets.
 
 import { budgetHistory, type CategoryBudget } from '../domain/budgets';
-import { isBudgetCategory } from '../domain/defaults';
-import { daysElapsed, daysLeft, periodFor, periodsBetween, type Period } from '../domain/period';
+import { isBudgetCategory, nextCategoryColor, suggestionFor } from '../domain/defaults';
+import { daysElapsed, daysLeft, periodFor, periodLength, periodsBetween, type Period } from '../domain/period';
+import { monthlyEquivalent } from '../domain/recurrence';
 import { coverOptions, type CoverOption } from '../domain/reabsorb';
 import type { BudgetBehaviour, Category, Cents, EventType, Id, Plan, Schedule } from '../domain/types';
 import { nowIso, stamp, type AppContext } from './context';
@@ -37,6 +38,19 @@ export async function periodContext(ctx: AppContext, date = ctx.clock.today()) {
   const plan = await getPlan(ctx);
   const schedule = await paySchedule(ctx, plan);
   return { plan, schedule, period: periodFor(plan.period, date, schedule) };
+}
+
+const MONTH_DAYS = 365 / 12;
+
+/**
+ * Income expected in a period of the current length, counting varying pay at its low
+ * end (as the plan generator does). The Plan dial's 100%.
+ */
+export async function plannedIncome(ctx: AppContext): Promise<Cents> {
+  const [{ period }, recurring] = await Promise.all([periodContext(ctx), ctx.repos.recurring.all()]);
+  const monthly = recurring.filter((r) => !r.archived && r.kind === 'income').reduce((s, r) => s + monthlyEquivalent(r, 'conservative'), 0);
+  const days = periodLength(period);
+  return Math.abs(days - MONTH_DAYS) < 3 ? monthly : Math.round((monthly * days) / MONTH_DAYS);
 }
 
 export const currentPeriod = async (ctx: AppContext): Promise<Period> => (await periodContext(ctx)).period;
@@ -115,17 +129,46 @@ export async function applyCover(ctx: AppContext, overCategoryId: Id, option: Co
   );
 }
 
-export async function addCategory(ctx: AppContext, name: string, behaviour: BudgetBehaviour = 'reset', group: Category['group'] = 'lifestyle'): Promise<Category> {
+/** A new budget category. A suggested name brings its usual group and behaviour; the colour is the next free one unless given. */
+export async function addCategory(ctx: AppContext, name: string, opts: { behaviour?: BudgetBehaviour; group?: Category['group']; color?: string } = {}): Promise<Category> {
   const cats = await ctx.repos.categories.all();
-  const cat: Category = stamp(ctx, { name: name.trim(), group, behaviour, isBuffer: false, sortOrder: Math.max(0, ...cats.map((c) => c.sortOrder)) + 1, archived: false });
+  const s = suggestionFor(name);
+  const cat: Category = stamp(ctx, {
+    name: name.trim(),
+    group: opts.group ?? s?.group ?? 'lifestyle',
+    behaviour: opts.behaviour ?? s?.behaviour ?? 'reset',
+    isBuffer: false,
+    sortOrder: Math.max(0, ...cats.map((c) => c.sortOrder)) + 1,
+    archived: false,
+    color: opts.color ?? nextCategoryColor(cats.filter(isBudgetCategory).map((c) => c.color)),
+  });
   await ctx.repos.categories.put(cat);
   return cat;
 }
 
-export async function updateCategory(ctx: AppContext, id: Id, patch: Partial<Pick<Category, 'name' | 'behaviour' | 'isBuffer' | 'archived' | 'group'>>): Promise<void> {
+export async function updateCategory(ctx: AppContext, id: Id, patch: Partial<Pick<Category, 'name' | 'behaviour' | 'isBuffer' | 'archived' | 'group' | 'color'>>): Promise<void> {
   const cur = await ctx.repos.categories.get(id);
   if (!cur) return;
   await ctx.repos.categories.put(stamp(ctx, { ...cur, ...patch }));
+}
+
+/** Active recurring items (bills, subscriptions) filed under a category; while any exist it can't be removed. */
+export async function recurringUsing(ctx: AppContext, categoryId: Id): Promise<number> {
+  return (await ctx.repos.recurring.all()).filter((r) => !r.archived && r.kind !== 'income' && r.categoryId === categoryId).length;
+}
+
+export class CategoryInUseError extends Error {
+  constructor(readonly count: number) {
+    super(`category used by ${count} recurring item(s)`);
+  }
+}
+
+/** Remove (archive) a category and clear its allocation. Refused while recurring items still use it. */
+export async function removeCategory(ctx: AppContext, id: Id): Promise<void> {
+  const using = await recurringUsing(ctx, id);
+  if (using > 0) throw new CategoryInUseError(using);
+  await setAllocation(ctx, id, 0);
+  await updateCategory(ctx, id, { archived: true });
 }
 
 export async function setPeriodConfig(ctx: AppContext, period: Plan['period']): Promise<void> {

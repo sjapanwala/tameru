@@ -4,7 +4,7 @@ import { S } from '../copy/strings';
 import { ActivityIcon, CardIcon, HomeIcon, MoreIcon, PlanIcon } from './Icons';
 
 /** Screens reached from More still highlight the More tab. */
-export const MORE_PATHS = ['/more', '/recurring', '/forecast', '/settings', '/debug'];
+export const MORE_PATHS = ['/more', '/recurring', '/settings', '/debug'];
 
 const TABS: [string, keyof typeof S.nav, () => preact.JSX.Element][] = [
   ['/', 'home', HomeIcon],

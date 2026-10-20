@@ -1,11 +1,10 @@
 // Re-run the plan generator against current data (Plan screen "regenerate"),
 // and re-size only the affected goal contributions when a goal is edited.
 
-import { categoryId, isBudgetCategory } from '../domain/defaults';
+import { categoryId, defaultWeeklyFor, isBudgetCategory } from '../domain/defaults';
 import { goalProgress } from '../domain/goals';
 import { periodLength } from '../domain/period';
 import { generatePlan, regenerateGoals, scaleToPeriod, type GeneratedPlan, type GeneratorInput } from '../domain/planGenerator';
-import { DEFAULT_HABITS_WEEKLY, HABIT_KEYS } from '../domain/onboarding';
 import { monthlyEquivalent } from '../domain/recurrence';
 import type { Cents, Id } from '../domain/types';
 import type { AppContext } from './context';
@@ -27,7 +26,7 @@ async function inputFromData(ctx: AppContext): Promise<{ input: GeneratorInput; 
   const bills = live.filter((r) => r.kind !== 'income');
   const flexible = cats.filter((c) => isBudgetCategory(c) && c.id !== categoryId('bills') && !c.isBuffer);
   const habitsWeekly: GeneratorInput['habitsWeekly'] = {};
-  const defaults: Record<Id, Cents> = Object.fromEntries(HABIT_KEYS.map((k) => [categoryId(k), DEFAULT_HABITS_WEEKLY[k]]));
+  const defaults: Record<Id, Cents> = Object.fromEntries(flexible.map((c) => [c.id, defaultWeeklyFor(c.name)]));
   for (const c of flexible) {
     // Real recent spending beats what was said in onboarding.
     habitsWeekly[c.id] =

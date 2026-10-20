@@ -245,7 +245,8 @@ export function CardPicker({ value, onChange, kind, fallbackName }: { value?: Fa
   );
 }
 
-function ColorPicker(props: { value?: string; onChange: (c: string) => void; autoLabel?: string; onAuto?: () => void }) {
+/** Swatches plus a custom colour. Card colours by default; `colors` swaps the palette (e.g. categories). */
+export function ColorPicker(props: { value?: string; onChange: (c: string) => void; autoLabel?: string; onAuto?: () => void; colors?: readonly string[] }) {
   return (
     <div class="color-picker">
       <p class="field-label">{S.cards.colour}</p>
@@ -255,7 +256,7 @@ function ColorPicker(props: { value?: string; onChange: (c: string) => void; aut
             {props.autoLabel}
           </button>
         )}
-        {CARD_COLORS.map((c) => (
+        {(props.colors ?? CARD_COLORS).map((c) => (
           <button
             type="button"
             key={c}

@@ -2,7 +2,7 @@
 // with a sensible default. Pure state machine; the UI renders the current step.
 
 import { addDays, dayOfWeek } from './dates';
-import { categoryId } from './defaults';
+import { categoryId, defaultWeeklyFor } from './defaults';
 import type { GeneratorInput } from './planGenerator';
 import { perMonth } from './recurrence';
 import type { CardFace, Cents, Frequency, LocalDate } from './types';
@@ -42,14 +42,19 @@ export interface GoalAnswer {
   targetDate?: LocalDate;
 }
 
-export type HabitKey = 'groceries' | 'eating_out' | 'transport' | 'fun' | 'personal';
+/** A spending category the user adds during onboarding. */
+export interface CategoryAnswer {
+  name: string;
+  color: string;
+  weeklyCents?: Cents; // "about how much a week"; missing = a typical amount for the name
+}
 
 export interface OnboardingAnswers {
   incomes: IncomeAnswer[];
   accountTypes: AccountChoice[];
   accounts: AccountAnswer[];
   bills: BillAnswer[];
-  habitsWeekly: Partial<Record<HabitKey, Cents>>; // missing = skipped
+  categories: CategoryAnswer[];
   goals: GoalAnswer[];
   periodAlignment: 'month' | 'payday';
   name?: string;
@@ -62,26 +67,10 @@ export type StepId =
   | { id: 'account_types' }
   | { id: 'account_detail'; type: AccountChoice }
   | { id: 'bills' }
-  | { id: 'habit'; key: HabitKey }
+  | { id: 'categories' }
   | { id: 'goals' }
   | { id: 'period' }
   | { id: 'review' };
-
-export const HABIT_KEYS: HabitKey[] = ['groceries', 'eating_out', 'transport', 'fun', 'personal'];
-
-/** Quick-pick ranges per habit question (weekly cents); the midpoint is used. */
-export const HABIT_PICKS: Record<HabitKey, { lo: Cents; hi: Cents }[]> = {
-  groceries: [{ lo: 0, hi: 3000 }, { lo: 3000, hi: 6000 }, { lo: 6000, hi: 10000 }, { lo: 10000, hi: 16000 }],
-  eating_out: [{ lo: 0, hi: 1000 }, { lo: 1000, hi: 3000 }, { lo: 3000, hi: 6000 }, { lo: 6000, hi: 10000 }],
-  transport: [{ lo: 0, hi: 1000 }, { lo: 1000, hi: 2500 }, { lo: 2500, hi: 5000 }, { lo: 5000, hi: 9000 }],
-  fun: [{ lo: 0, hi: 1500 }, { lo: 1500, hi: 3000 }, { lo: 3000, hi: 6000 }, { lo: 6000, hi: 10000 }],
-  personal: [{ lo: 0, hi: 1000 }, { lo: 1000, hi: 2000 }, { lo: 2000, hi: 4000 }, { lo: 4000, hi: 7000 }],
-};
-
-/** Used when a habit question is skipped: roughly a student/early-career week. */
-export const DEFAULT_HABITS_WEEKLY: Record<HabitKey, Cents> = { groceries: 6000, eating_out: 2500, transport: 2000, fun: 2000, personal: 1000 };
-
-export const pickMidpoint = (p: { lo: Cents; hi: Cents }): Cents => Math.round((p.lo + p.hi) / 2);
 
 export interface OnboardingState {
   index: number;
@@ -93,7 +82,7 @@ export const emptyAnswers = (): OnboardingAnswers => ({
   accountTypes: [],
   accounts: [],
   bills: [],
-  habitsWeekly: {},
+  categories: [],
   goals: [],
   periodAlignment: 'month',
 });
@@ -110,7 +99,7 @@ export function steps(a: OnboardingAnswers): StepId[] {
     { id: 'account_types' },
     ...types.map((type) => ({ id: 'account_detail' as const, type })),
     { id: 'bills' },
-    ...HABIT_KEYS.map((key) => ({ id: 'habit' as const, key })),
+    { id: 'categories' },
     { id: 'goals' },
     { id: 'period' },
     { id: 'review' },
@@ -126,7 +115,7 @@ export type Answer =
   | { step: 'account_types'; types: AccountChoice[] }
   | { step: 'account_detail'; account: AccountAnswer }
   | { step: 'bills'; bills: BillAnswer[] }
-  | { step: 'habit'; key: HabitKey; weeklyCents: Cents }
+  | { step: 'categories'; categories: CategoryAnswer[] }
   | { step: 'goals'; goals: GoalAnswer[] }
   | { step: 'period'; alignment: 'month' | 'payday' }
   | { step: 'review' };
@@ -158,8 +147,8 @@ export function answer(s: OnboardingState, ans: Answer): OnboardingState {
     case 'bills':
       a.bills = ans.bills.filter((b) => b.amountCents > 0);
       break;
-    case 'habit':
-      a.habitsWeekly = { ...a.habitsWeekly, [ans.key]: ans.weeklyCents };
+    case 'categories':
+      a.categories = ans.categories.filter((c) => c.name.trim()).map((c) => ({ ...c, name: c.name.trim() }));
       break;
     case 'goals':
       a.goals = ans.goals.filter((g) => g.name.trim()).slice(0, 3);
@@ -177,11 +166,6 @@ export function skip(s: OnboardingState): OnboardingState {
   if (step.id === 'welcome' && !isFullName(s.answers.name)) return s; // the name can't be skipped
   const a = { ...s.answers };
   if (step.id === 'account_detail' && !a.accounts.some((x) => x.type === step.type)) a.accounts = [...a.accounts, defaultAccount(step.type)];
-  if (step.id === 'habit') {
-    const h = { ...a.habitsWeekly };
-    delete h[step.key];
-    a.habitsWeekly = h;
-  }
   return { index: s.index + 1, answers: a };
 }
 
@@ -240,14 +224,15 @@ export function incomeMonthlyConservative(inc: IncomeAnswer): Cents {
 }
 
 export const goalTempId = (index: number): string => `new_goal_${index}`;
+export const categoryTempId = (index: number): string => `new_cat_${index}`;
 
 export function toGeneratorInput(a: OnboardingAnswers, today: LocalDate): GeneratorInput {
   const habitsWeekly: GeneratorInput['habitsWeekly'] = {};
   const defaults: GeneratorInput['defaultHabitsWeekly'] = {};
-  for (const k of HABIT_KEYS) {
-    habitsWeekly[categoryId(k)] = a.habitsWeekly[k];
-    defaults[categoryId(k)] = DEFAULT_HABITS_WEEKLY[k];
-  }
+  a.categories.forEach((c, k) => {
+    habitsWeekly[categoryTempId(k)] = c.weeklyCents;
+    defaults[categoryTempId(k)] = defaultWeeklyFor(c.name);
+  });
   return {
     today,
     incomeMonthlyCents: a.incomes.reduce((s, i) => s + incomeMonthlyConservative(i), 0),

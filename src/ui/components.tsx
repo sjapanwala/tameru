@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { money, S } from '../copy/strings';
 import { nextMonthlyDate } from '../domain/dates';
+import { centsForPercent, percentOf } from '../domain/allocation';
 import { centsToDecimal, parseCents } from '../domain/money';
 import type { Account, Cents, Category } from '../domain/types';
 import { toast } from './toast';
@@ -47,6 +48,76 @@ export function MoneyInput(props: {
     </label>
   ) : (
     input
+  );
+}
+
+/** An iOS-style on/off row. */
+export function Switch(props: { label: string; sub?: string; checked: boolean; onChange: (v: boolean) => void; disabled?: boolean }) {
+  return (
+    <label class={`switch${props.disabled ? ' switch--disabled' : ''}`}>
+      <span class="switch__text">
+        <span>{props.label}</span>
+        {props.sub && <small>{props.sub}</small>}
+      </span>
+      <input type="checkbox" role="switch" checked={props.checked} disabled={props.disabled} onChange={(e) => props.onChange((e.target as HTMLInputElement).checked)} />
+    </label>
+  );
+}
+
+export type AmountMode = 'dollars' | 'percent';
+
+/** Dollars / Percent switch for entering a share of income. */
+export function AmountModeToggle(props: { value: AmountMode; onChange: (m: AmountMode) => void }) {
+  const modes: AmountMode[] = ['dollars', 'percent'];
+  return (
+    <div class="segmented amount-mode" role="radiogroup" aria-label={S.plan.allocation}>
+      <span class="segmented__thumb" style={{ width: 'calc((100% - 6px) / 2)', transform: `translateX(${modes.indexOf(props.value) * 100}%)` }} />
+      {modes.map((m) => (
+        <button type="button" role="radio" aria-checked={props.value === m} key={m} onClick={() => props.onChange(m)}>
+          {S.plan.mode[m]}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+/**
+ * An allocation entered as dollars, or as a percentage of `base` (income) which is
+ * reported back in whole-dollar cents. The field box (with its $ or % sign) is the caller's
+ * to label; `compact` is the small right-aligned version used in lists.
+ */
+export function AllocationInput(props: { value: Cents | undefined; base: Cents; mode: AmountMode; onChange: (c: Cents | undefined) => void; compact?: boolean; autoFocus?: boolean }) {
+  const pctOf = (c: Cents | undefined) => String(Math.round(percentOf(c ?? 0, props.base) * 10) / 10);
+  const [text, setText] = useState(() => pctOf(props.value));
+  // Re-read the figure when switching into percent, or when it changes from outside.
+  useEffect(() => {
+    if (props.mode !== 'percent') return;
+    const typed = Number(text.replace(',', '.'));
+    if (!Number.isFinite(typed) || centsForPercent(typed, props.base) !== (props.value ?? 0)) setText(pctOf(props.value));
+  }, [props.mode, props.value, props.base]);
+  const cls = `field__box${props.compact ? ' field__box--compact' : ''}`;
+  if (props.mode === 'dollars')
+    return (
+      <span class={cls}>
+        <span class="field__cur">$</span>
+        <MoneyInput value={props.value} onChange={props.onChange} autoFocus={props.autoFocus} />
+      </span>
+    );
+  return (
+    <span class={`${cls} field__box--percent`}>
+      <input
+        inputMode="decimal"
+        value={text}
+        autoFocus={props.autoFocus}
+        onInput={(e) => {
+          const t = (e.target as HTMLInputElement).value;
+          setText(t);
+          const v = Number(t.replace(',', '.'));
+          if (t.trim() && Number.isFinite(v)) props.onChange(centsForPercent(Math.max(0, Math.min(100, v)), props.base));
+        }}
+      />
+      <span class="field__suffix">%</span>
+    </span>
   );
 }
 

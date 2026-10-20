@@ -48,6 +48,20 @@ export async function updateGoal(ctx: AppContext, id: Id, patch: Partial<Omit<Go
   return { goal: next, flags: resized?.flags ?? [] };
 }
 
+/**
+ * Remove a goal: it's archived (money already moved toward it stays where it is, and
+ * its history is kept) and its contribution leaves the plan, freeing that money.
+ */
+export async function removeGoal(ctx: AppContext, id: Id): Promise<void> {
+  const cur = await ctx.repos.goals.get(id);
+  if (!cur) return;
+  await ctx.repos.goals.put(stamp(ctx, { ...cur, archived: true }));
+  const plan = await getPlan(ctx);
+  const { [id]: _dropped, ...goalContributions } = plan.goalContributions;
+  await savePlan(ctx, { ...plan, goalContributions }, { goalId: id, removed: true });
+  await logEvent(ctx, 'goal_changed', { goalId: id, removed: true });
+}
+
 export async function setGoalContribution(ctx: AppContext, goalId: Id, perPeriodCents: Cents): Promise<void> {
   const plan = await getPlan(ctx);
   await savePlan(ctx, { ...plan, goalContributions: { ...plan.goalContributions, [goalId]: perPeriodCents } }, { goalId, to: perPeriodCents });

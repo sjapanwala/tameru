@@ -19,10 +19,28 @@ const answers = (p: Partial<OnboardingAnswers> = {}): OnboardingAnswers => ({
     { name: 'Rent', amountCents: 80000, day: 1, kind: 'bill' },
     { name: 'Phone', amountCents: 4500, day: 31, kind: 'bill', payFrom: ['credit_card', 'chequing'] },
   ],
-  habitsWeekly: { groceries: 5000, eating_out: 2000 },
+  categories: [
+    { name: 'Groceries', color: '#4ade80', weeklyCents: 5000 },
+    { name: 'Climbing', color: '#a78bfa' },
+  ],
   goals: [{ name: 'Laptop', targetCents: 150000, targetDate: '2027-06-01' }],
   periodAlignment: 'month',
   ...p,
+});
+
+describe('record ids', () => {
+  it('are v4 UUIDs even where crypto.randomUUID is unavailable (insecure pages, older iOS)', async () => {
+    const { defaultNewId } = await import('../../src/services/context');
+    const real = crypto.randomUUID;
+    Object.defineProperty(crypto, 'randomUUID', { value: undefined, configurable: true });
+    try {
+      const ids = new Set(Array.from({ length: 50 }, defaultNewId));
+      expect(ids.size).toBe(50);
+      for (const id of ids) expect(id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
+    } finally {
+      Object.defineProperty(crypto, 'randomUUID', { value: real, configurable: true });
+    }
+  });
 });
 
 describe('onboarding end to end', () => {
@@ -59,13 +77,31 @@ describe('onboarding end to end', () => {
     expect(home.rows.find((r) => r.category.id === 'cat_bills')!.budget.remainingCents).toBe(80000 + 4500);
   });
 
+  it('creates the user’s own categories with their colours, planned from their weekly amounts', async () => {
+    const app = await testApp('2026-10-18');
+    const a = answers();
+    const plan = previewPlan(a, '2026-10-18');
+    await finishOnboarding(app, a, plan);
+    const cats = await app.repos.categories.all();
+    const groceries = cats.find((c) => c.name === 'Groceries')!;
+    const climbing = cats.find((c) => c.name === 'Climbing')!;
+    expect(groceries).toMatchObject({ color: '#4ade80', group: 'essentials', behaviour: 'rollover' }); // a suggested name keeps its usual settings
+    expect(climbing).toMatchObject({ color: '#a78bfa', group: 'lifestyle', behaviour: 'reset' });
+    // No preset lifestyle categories: only Bills, the Irregular fund and what the user added.
+    expect(cats.filter((c) => c.group !== 'system').map((c) => c.name).sort()).toEqual(['Bills', 'Climbing', 'Groceries', 'Irregular']);
+    const { plan: saved } = await periodContext(app);
+    expect(saved.templateAllocations[groceries.id]).toBe(plan.allocations.new_cat_0);
+    expect(saved.templateAllocations[climbing.id]).toBe(plan.allocations.new_cat_1);
+    expect((await app.repos.settings.get()).habitWeeklyCents).toEqual({ [groceries.id]: 5000 });
+  });
+
   it('payday alignment scales the plan to the pay period', async () => {
     const app = await testApp('2026-10-18');
     const a = answers({ periodAlignment: 'payday' });
     const monthly = previewPlan({ ...a, periodAlignment: 'month' }, '2026-10-18');
     const biweekly = previewPlan(a, '2026-10-18');
     // average biweekly period = 365 / 26 days
-    expect(biweekly.allocations.cat_groceries).toBe(Math.round((monthly.allocations.cat_groceries! * 12) / 26));
+    expect(biweekly.allocations.new_cat_0).toBe(Math.round((monthly.allocations.new_cat_0! * 12) / 26));
     await finishOnboarding(app, a, biweekly);
     const { period } = await periodContext(app);
     expect(period).toEqual({ start: '2026-10-09', end: '2026-10-22' });
