@@ -112,6 +112,7 @@ export const S = {
       income: 'Pay still coming',
       bills: 'Bills still to come',
       goals: 'Goal contributions left',
+      planned: 'Still planned in categories',
       buffer: 'Buffer',
     },
     categories: 'Left this period',

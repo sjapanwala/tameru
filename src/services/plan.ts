@@ -47,13 +47,18 @@ const MONTH_DAYS = 365 / 12;
  * end (as the plan generator does). The Plan dial's 100%.
  */
 export async function plannedIncome(ctx: AppContext): Promise<Cents> {
-  const [{ period }, recurring] = await Promise.all([periodContext(ctx), ctx.repos.recurring.all()]);
-  const monthly = recurring.filter((r) => !r.archived && r.kind === 'income').reduce((s, r) => s + monthlyEquivalent(r, 'conservative'), 0);
+  const [{ period }, monthly] = await Promise.all([periodContext(ctx), monthlyIncome(ctx)]);
   const days = periodLength(period);
   return Math.abs(days - MONTH_DAYS) < 3 ? monthly : Math.round((monthly * days) / MONTH_DAYS);
 }
 
-export const currentPeriod = async (ctx: AppContext): Promise<Period> => (await periodContext(ctx)).period;
+/** Income in an average month, varying pay at its low end. What a bill's percentage is of. */
+export async function monthlyIncome(ctx: AppContext): Promise<Cents> {
+  const recurring = await ctx.repos.recurring.all();
+  return recurring.filter((r) => !r.archived && r.kind === 'income').reduce((s, r) => s + monthlyEquivalent(r, 'conservative'), 0);
+}
+
+export const currentPeriod =async (ctx: AppContext): Promise<Period> => (await periodContext(ctx)).period;
 
 export interface BudgetRow {
   category: Category;

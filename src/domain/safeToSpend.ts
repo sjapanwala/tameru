@@ -4,6 +4,7 @@
 //        + expected income until period end
 //        − upcoming bills until period end
 //        − remaining goal contributions this period
+//        − what's left in each planned category (less its bills, already counted above)
 //        − buffer
 //
 // Ranges are read conservatively (income low, bills high); irregular income is left out.
@@ -23,8 +24,15 @@ export interface SafeToSpendInput {
   recurring: readonly RecurringItem[];
   goals: readonly Goal[];
   goalContributions: Readonly<Record<Id, Cents>>; // planned per period
+  categoriesLeft?: readonly CategoryLeft[]; // this period's budgets; pending spending already taken off
   subtractCardBalances: boolean;
   bufferCents: Cents;
+}
+
+export interface CategoryLeft {
+  categoryId: Id;
+  name: string;
+  remainingCents: Cents;
 }
 
 export interface FlowLine {
@@ -55,6 +63,8 @@ export interface SafeToSpend {
     billLines: FlowLine[];
     goalsCents: Cents;
     goalLines: { goalId: Id; plannedCents: Cents; contributedCents: Cents; remainingCents: Cents }[];
+    plannedCents: Cents;
+    plannedLines: { categoryId: Id; label: string; amountCents: Cents }[];
     bufferCents: Cents;
   };
   shortfallCents: Cents; // max(0, −safe)
@@ -113,14 +123,27 @@ export function safeToSpend(i: SafeToSpendInput): SafeToSpend {
     });
   const goalsCents = goalLines.reduce((s, g) => s + g.remainingCents, 0);
 
-  const safeCents = spendableCents + incomeCents - billsCents - goalsCents - i.bufferCents;
+  // Money still planned for a category is spoken for. Its bills that haven't been recorded
+  // yet are already in billsCents, so only what's left beyond them is held back here.
+  const billCategory = new Map(i.recurring.map((r) => [r.id, r.categoryId]));
+  const billsIn = new Map<Id, Cents>();
+  for (const l of billLines) {
+    const cid = !l.transactionId && l.recurringId ? billCategory.get(l.recurringId) : undefined;
+    if (cid) billsIn.set(cid, (billsIn.get(cid) ?? 0) + l.amountCents);
+  }
+  const plannedLines = (i.categoriesLeft ?? [])
+    .map((c) => ({ categoryId: c.categoryId, label: c.name, amountCents: Math.max(0, c.remainingCents - (billsIn.get(c.categoryId) ?? 0)) }))
+    .filter((l) => l.amountCents > 0);
+  const plannedCents = plannedLines.reduce((s, l) => s + l.amountCents, 0);
+
+  const safeCents = spendableCents + incomeCents - billsCents - goalsCents - plannedCents - i.bufferCents;
   const left = daysLeft(i.period, i.today);
   const shortfallCents = Math.max(0, -safeCents);
   const result: SafeToSpend = {
     safeCents,
     dailyCents: safeCents > 0 ? Math.floor(safeCents / left) : 0,
     daysLeft: left,
-    breakdown: { spendableCents, accounts, cardsOwingCents, incomeCents, incomeLines, billsCents, billLines, goalsCents, goalLines, bufferCents: i.bufferCents },
+    breakdown: { spendableCents, accounts, cardsOwingCents, incomeCents, incomeLines, billsCents, billLines, goalsCents, goalLines, plannedCents, plannedLines, bufferCents: i.bufferCents },
     shortfallCents,
   };
   if (shortfallCents > 0) result.recovery = chooseRecovery(shortfallCents, goalLines, billLines);

@@ -90,7 +90,8 @@ export default defineConfig({
     preact(),
     staticMounts(),
     VitePWA({
-      registerType: 'autoUpdate',
+      // The new build waits; src/pwa/update.ts swaps it in when a reload can't interrupt anything.
+      registerType: 'prompt',
       injectRegister: false,
       includeAssets: ['favicon.svg', 'icons/apple-touch-icon.png'],
       manifest: {

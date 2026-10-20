@@ -14,6 +14,7 @@ import {
   defaultNextPayday,
   categoryTempId,
   goalTempId,
+  incomeMonthlyConservative,
   isComplete,
   isFullName,
   skip,
@@ -33,7 +34,7 @@ import { CATEGORY_COLORS, categoryId, nextCategoryColor, SUGGESTED_CATEGORIES } 
 import type { Cents, Frequency } from '../../domain/types';
 import { finishOnboarding, loadProgress, previewPlan, saveProgress } from '../../services/onboarding';
 import { CardPicker, ColorPicker } from '../cards';
-import { AllocationInput, Amount, AmountModeToggle, ChipSelect, MoneyInput, MonthlyDayInput, Switch, type AmountMode } from '../components';
+import { AllocationInput, Amount, AmountModeToggle, ChipSelect, IncomeShareField, MoneyInput, MonthlyDayInput, Switch, type AmountMode } from '../components';
 import { useApp, useLoad } from '../hooks';
 import { BankIcon, CardIcon, CashIcon, CheckIcon, ChevronLeft, ChevronRight, JarIcon, PlusIcon, TrendIcon } from '../Icons';
 import { haptic } from '../motion';
@@ -128,7 +129,7 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
           />
         );
       case 'bills':
-        return <Bills eyebrow={eyebrow} today={today} initial={state.answers.bills} accountTypes={state.answers.accountTypes} onSubmit={(bills) => go({ step: 'bills', bills })} />;
+        return <Bills eyebrow={eyebrow} today={today} monthlyIncome={state.answers.incomes.reduce((t, i) => t + incomeMonthlyConservative(i), 0)} initial={state.answers.bills} accountTypes={state.answers.accountTypes} onSubmit={(bills) => go({ step: 'bills', bills })} />;
       case 'categories':
         return <Categories eyebrow={eyebrow} initial={state.answers.categories} onSubmit={(categories) => go({ step: 'categories', categories })} />;
       case 'goals':
@@ -466,7 +467,7 @@ function AccountDetail(props: { eyebrow?: string; initial: AccountAnswer; today:
   );
 }
 
-function Bills(props: { eyebrow?: string; today: string; initial: BillAnswer[]; accountTypes: AccountChoice[]; onSubmit: (b: BillAnswer[]) => void }) {
+function Bills(props: { eyebrow?: string; today: string; monthlyIncome: Cents; initial: BillAnswer[]; accountTypes: AccountChoice[]; onSubmit: (b: BillAnswer[]) => void }) {
   const [bills, setBills] = useState<BillAnswer[]>(props.initial);
   // The bill being edited: an index into bills, or a new one (with a suggested name).
   const [editing, setEditing] = useState<{ index: number } | { draft: BillAnswer } | null>(null);
@@ -506,6 +507,7 @@ function Bills(props: { eyebrow?: string; today: string; initial: BillAnswer[]; 
             <BillForm
               initial={current}
               today={props.today}
+              monthlyIncome={props.monthlyIncome}
               payOptions={payOptions}
               isNew={'draft' in editing}
               onSave={(b) => {
@@ -521,9 +523,10 @@ function Bills(props: { eyebrow?: string; today: string; initial: BillAnswer[]; 
   );
 }
 
-function BillForm(props: { initial: BillAnswer; today: string; payOptions: AccountChoice[]; isNew: boolean; onSave: (b: BillAnswer) => void; onRemove?: () => void }) {
+function BillForm(props: { initial: BillAnswer; today: string; monthlyIncome: Cents; payOptions: AccountChoice[]; isNew: boolean; onSave: (b: BillAnswer) => void; onRemove?: () => void }) {
   const [b, setB] = useState(props.initial);
   const set = (p: Partial<BillAnswer>) => setB({ ...b, ...p });
+  const [mode, setMode] = useState<AmountMode>('dollars');
   return (
     <form
       onSubmit={(e) => {
@@ -536,7 +539,15 @@ function BillForm(props: { initial: BillAnswer; today: string; payOptions: Accou
         {S.common.name}
         <input value={b.name} autoFocus={!b.name} autoCapitalize="words" placeholder={S.onboarding.billSuggestions[0]} onInput={(e) => set({ name: (e.target as HTMLInputElement).value })} />
       </label>
-      <Money label={S.common.amount} value={b.amountCents || undefined} autoFocus={!!b.name && !b.amountCents} onChange={(c) => set({ amountCents: c ?? 0 })} />
+      {props.monthlyIncome > 0 && <AmountModeToggle value={mode} onChange={setMode} />}
+      <IncomeShareField
+        label={S.common.amount}
+        value={b.amountCents || undefined}
+        base={props.monthlyIncome}
+        mode={mode}
+        autoFocus={!!b.name && !b.amountCents}
+        onChange={(c) => set({ amountCents: c ?? 0 })}
+      />
       <MonthlyDayInput label={S.onboarding.billDay} day={b.day} today={props.today} onChange={(day) => set({ day })} />
       <Switch label={S.recurring.kind.subscription} checked={b.kind === 'subscription'} onChange={(v) => set({ kind: v ? 'subscription' : 'bill' })} />
       {props.payOptions.length > 1 && (

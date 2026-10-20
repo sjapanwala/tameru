@@ -7,7 +7,7 @@ import { upcoming } from './recurring';
 
 export async function safeToSpendNow(ctx: AppContext): Promise<SafeToSpend> {
   const today = ctx.clock.today();
-  const [{ plan, period }, accounts, transactions, recurring, goals, settings] = await Promise.all([
+  const [{ plan, period, rows }, accounts, transactions, recurring, goals, settings] = await Promise.all([
     budgetsFor(ctx),
     ctx.repos.accounts.all(),
     ctx.repos.transactions.all(),
@@ -23,6 +23,7 @@ export async function safeToSpendNow(ctx: AppContext): Promise<SafeToSpend> {
     recurring,
     goals,
     goalContributions: plan.goalContributions,
+    categoriesLeft: rows.map((r) => ({ categoryId: r.category.id, name: r.category.name, remainingCents: r.budget.remainingCents })),
     subtractCardBalances: settings.subtractCardBalances,
     bufferCents: settings.bufferCents,
   });

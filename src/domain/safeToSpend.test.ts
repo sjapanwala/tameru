@@ -23,6 +23,26 @@ const base = (p: Partial<SafeToSpendInput> = {}): SafeToSpendInput => ({
 });
 
 describe('safeToSpend', () => {
+  it('holds back what is still planned in categories', () => {
+    const r = safeToSpend(
+      base({
+        categoriesLeft: [
+          { categoryId: 'food', name: 'Groceries', remainingCents: 30000 },
+          { categoryId: 'fun', name: 'Fun', remainingCents: -2000 }, // overspent: already out of the balance
+        ],
+      }),
+    );
+    expect(r.breakdown.plannedCents).toBe(30000);
+    expect(r.breakdown.plannedLines).toEqual([{ categoryId: 'food', label: 'Groceries', amountCents: 30000 }]);
+    expect(r.safeCents).toBe(85000 - 5000 - 30000);
+  });
+  it("doesn't count a category's upcoming bills twice", () => {
+    const rent = recurring({ id: 'rent', schedule: { freq: 'monthly', day: 31 }, amount: { fixedCents: 95000 }, defaultAccountId: 'chq', categoryId: 'housing' });
+    const r = safeToSpend(base({ recurring: [rent], categoriesLeft: [{ categoryId: 'housing', name: 'Housing', remainingCents: 100000 }] }));
+    expect(r.breakdown.billsCents).toBe(95000);
+    expect(r.breakdown.plannedCents).toBe(5000);
+    expect(r.safeCents).toBe(85000 - 95000 - 5000 - 5000);
+  });
   it('spendable = chequing + cash − card owing; savings excluded', () => {
     const r = safeToSpend(base());
     expect(r.breakdown.spendableCents).toBe(100000 + 5000 - 20000);

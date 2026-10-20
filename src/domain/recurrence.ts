@@ -100,6 +100,12 @@ export function perMonth(freq: Frequency): number {
   return { weekly: 52 / 12, biweekly: 26 / 12, semimonthly: 2, monthly: 1, yearly: 1 / 12, irregular: 0 }[freq];
 }
 
+/** Monthly income spread over one occurrence of `freq` (a weekly bill sees a week's pay). */
+export function incomePerOccurrence(monthlyCents: Cents, freq: Frequency): Cents {
+  const n = perMonth(freq);
+  return n > 0 ? Math.round(monthlyCents / n) : monthlyCents;
+}
+
 /** Average monthly amount of an item, in cents. */
 export function monthlyEquivalent(item: Pick<RecurringItem, 'amount' | 'kind' | 'schedule' | 'irregularMonthlyCents'>, view: AmountView = 'expected'): Cents {
   if (item.schedule.freq === 'irregular') return item.irregularMonthlyCents ?? 0;

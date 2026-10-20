@@ -122,6 +122,23 @@ export function AllocationInput(props: { value: Cents | undefined; base: Cents; 
 }
 
 /**
+ * A labelled amount that can be typed as dollars or as a share of `base` income, with
+ * the other reading underneath. Plain dollars while there's no income to take a share of.
+ */
+export function IncomeShareField(props: { label: string; value: Cents | undefined; base: Cents; mode: AmountMode; onChange: (c: Cents | undefined) => void; autoFocus?: boolean }) {
+  const pct = props.mode === 'percent' && props.base > 0;
+  return (
+    <label class={`field ${pct ? 'field--percent' : 'field--money'}`}>
+      {props.label}
+      <AllocationInput value={props.value} base={props.base} mode={pct ? 'percent' : 'dollars'} onChange={props.onChange} autoFocus={props.autoFocus} />
+      {props.base > 0 && props.value !== undefined && (
+        <small>{pct ? S.plan.dollarsOf(props.value, props.base) : S.plan.shareOf(Math.round(percentOf(props.value, props.base)))}</small>
+      )}
+    </label>
+  );
+}
+
+/**
  * A monthly day (card due date, bill day) picked on a calendar: shows the next date
  * that day falls on and reports just its day of month.
  */

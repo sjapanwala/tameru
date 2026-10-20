@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { expandSchedule, monthlyEquivalent, nextOccurrence, occurrenceAmount, occurrences, scheduleFrom } from './recurrence';
+import { expandSchedule, incomePerOccurrence, monthlyEquivalent, nextOccurrence, occurrenceAmount, occurrences, scheduleFrom } from './recurrence';
 
 describe('expandSchedule', () => {
   it('puts a 31st bill on the last day of shorter months', () => {
@@ -55,5 +55,15 @@ describe('items', () => {
   it('monthly equivalents', () => {
     expect(monthlyEquivalent({ kind: 'income', amount: { fixedCents: 100000 }, schedule: { freq: 'biweekly', anchor: '2026-01-02' } })).toBe(216667);
     expect(monthlyEquivalent({ kind: 'income', amount: { fixedCents: 0 }, schedule: { freq: 'irregular' }, irregularMonthlyCents: 30000 })).toBe(30000);
+  });
+});
+
+describe('incomePerOccurrence', () => {
+  it('spreads monthly income over one occurrence', () => {
+    expect(incomePerOccurrence(400_000, 'monthly')).toBe(400_000);
+    expect(incomePerOccurrence(400_000, 'semimonthly')).toBe(200_000);
+    expect(incomePerOccurrence(520_000, 'weekly')).toBe(120_000);
+    expect(incomePerOccurrence(400_000, 'yearly')).toBe(4_800_000);
+    expect(incomePerOccurrence(400_000, 'irregular')).toBe(400_000);
   });
 });

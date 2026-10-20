@@ -208,6 +208,8 @@ export function Home(props: { offer: FreshStartOffer | null; clearOffer: () => v
             {line(S.home.breakdown.bills, b.billsCents, '−')}
             {b.billLines.map((l) => line(`${l.label} · ${fmtDate(l.date)}`, l.amountCents, undefined, 'sub'))}
             {b.goalsCents > 0 && line(S.home.breakdown.goals, b.goalsCents, '−')}
+            {b.plannedCents > 0 && line(S.home.breakdown.planned, b.plannedCents, '−')}
+            {b.plannedLines.map((l) => line(l.label, l.amountCents, undefined, 'sub'))}
             {line(S.home.breakdown.buffer, b.bufferCents, '−')}
             {line(S.home.safeToSpend, sts.safeCents, undefined, 'total')}
           </ul>

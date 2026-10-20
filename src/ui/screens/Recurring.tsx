@@ -2,16 +2,19 @@
 // spotted in spending), a timeline of the next two weeks of bills and paydays, and every
 // recurring item, each opening a sheet. Adding one is a sheet too.
 
-import { useState } from 'preact/hooks';
+import { useEffect, useRef, useState } from 'preact/hooks';
 import { fmtDate, fmtWeekday, S } from '../../copy/strings';
+import { centsForPercent, percentOf } from '../../domain/allocation';
 import { diffDays } from '../../domain/dates';
 import { isBudgetCategory } from '../../domain/defaults';
+import { incomePerOccurrence } from '../../domain/recurrence';
+import { monthlyIncome } from '../../services/plan';
 import type { Cents, Frequency, RecurringItem, RecurringKind } from '../../domain/types';
 import { orderedAccounts } from '../../services/accounts';
 import { acceptDetection, detectedSuggestions, dismissDetection } from '../../services/detection';
 import { archiveRecurring, createRecurring, listRecurring, pendingRecurring, upcoming } from '../../services/recurring';
 import { confirmTransaction, deleteTransaction } from '../../services/transactions';
-import { Amount, CategorySelect, ChipSelect, Message, monogram, MoneyInput, PageHeader, Switch } from '../components';
+import { Amount, AmountModeToggle, CategorySelect, ChipSelect, IncomeShareField, Message, monogram, PageHeader, Switch, type AmountMode } from '../components';
 import { addAllToCalendar, googleCalendarLink, saveToCalendar } from '../calendar';
 import { calendarItems } from '../../services/calendar';
 import { useApp, useLoad } from '../hooks';
@@ -211,12 +214,14 @@ function RecurringDetails(props: { item: RecurringItem; next?: string; amountCen
   const accounts = useLoad(orderedAccounts) ?? [];
   const categories = useLoad((a) => a.repos.categories.all()) ?? [];
   const cal = useLoad((a) => calendarItems(a, item.id), [item.id])?.[0];
+  const perCycle = incomePerOccurrence(useLoad(monthlyIncome) ?? 0, item.schedule.freq);
   const rows: [string, string][] = [
     [S.add.type, S.recurring.kind[item.kind]],
     [S.recurring.howOften, S.freq[item.schedule.freq]],
     [S.recurring.nextDate, props.next ? fmtWeekday(props.next) : '—'],
     ...('minCents' in item.amount ? ([[S.recurring.range, S.upcoming.range(item.amount.minCents, item.amount.maxCents)]] as [string, string][]) : []),
-    ...(item.kind !== 'income' ? ([[S.common.category, categories.find((c) => c.id === item.categoryId)?.name ?? '—']] as [string, string][]) : []),
+    ...(item.kind !== 'income' && perCycle > 0 ? ([[S.plan.percentOfIncome, `${Math.round(percentOf(props.amountCents, perCycle))}%`]] as [string, string][]) : []),
+    ...(item.kind !== 'income' ? ([[S.common.category,categories.find((c) => c.id === item.categoryId)?.name ?? '—']] as [string, string][]) : []),
     [item.kind === 'income' ? S.upcoming.depositTo : S.upcoming.paidFrom, item.accountIds.map((id) => accounts.find((a) => a.id === id)?.name).filter(Boolean).join(', ') || '—'],
   ];
   return (
@@ -273,6 +278,20 @@ function NewRecurringForm({ onDone }: { onDone: () => void }) {
   const [nextDate, setNextDate] = useState(app.clock.today());
   const [categoryId, setCategoryId] = useState<string>();
   const [payFrom, setPayFrom] = useState<string[]>([]);
+  const [mode, setMode] = useState<AmountMode>('dollars');
+  const monthly = useLoad(monthlyIncome) ?? 0;
+  // A bill's percentage is of the pay that comes in over the same stretch: a weekly bill, a week's pay.
+  const base = kind === 'income' ? 0 : incomePerOccurrence(monthly, freq);
+  const lastBase = useRef(base);
+  useEffect(() => {
+    // Changing how often keeps a typed percentage, not the dollars it worked out to.
+    const was = lastBase.current;
+    lastBase.current = base;
+    if (mode !== 'percent' || was <= 0 || base <= 0 || was === base) return;
+    const rescale = (c: Cents | undefined) => (c === undefined ? c : centsForPercent(percentOf(c, was), base));
+    setAmount(rescale);
+    setMax(rescale);
+  }, [base]);
   const ok = name.trim() && amount !== undefined && (!varies || max !== undefined);
   return (
     <form
@@ -300,23 +319,10 @@ function NewRecurringForm({ onDone }: { onDone: () => void }) {
         {S.common.name}
         <input value={name} autoFocus autoCapitalize="words" placeholder={kind === 'income' ? S.onboarding.incomeNamePlaceholder : S.upcoming.namePlaceholder} onInput={(e) => setName((e.target as HTMLInputElement).value)} />
       </label>
+      {base > 0 && <AmountModeToggle value={mode} onChange={setMode} />}
       <div class={`field-pair${varies ? ' field-pair--two' : ''}`}>
-        <label class="field field--money">
-          {varies ? S.recurring.min : S.common.amount}
-          <span class="field__box">
-            <span class="field__cur">$</span>
-            <MoneyInput value={amount} onChange={setAmount} />
-          </span>
-        </label>
-        {varies && (
-          <label class="field field--money">
-            {S.recurring.max}
-            <span class="field__box">
-              <span class="field__cur">$</span>
-              <MoneyInput value={max} onChange={setMax} />
-            </span>
-          </label>
-        )}
+        <IncomeShareField label={varies ? S.recurring.min : S.common.amount} value={amount} base={base} mode={mode} onChange={setAmount} />
+        {varies && <IncomeShareField label={S.recurring.max} value={max} base={base} mode={mode} onChange={setMax} />}
       </div>
       <Switch label={S.recurring.range} checked={varies} onChange={setVaries} />
       <p class="field-label">{S.recurring.howOften}</p>

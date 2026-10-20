@@ -24,9 +24,36 @@ import { LockScreen } from './PinPad';
 import { Sheet } from './Sheet';
 import { TabBar } from './TabBar';
 import { ToastHost } from './toast';
+import { hideSplash } from './splash';
 import { announceUpdate } from './version';
 
-const addType = (t: string | null): TransactionType => (t === 'income' || t === 'refund' || t === 'transfer' ? t : 'expense');
+// When an unlocked app was last sent to the background, kept across a reload (this tab only).
+const AWAY_KEY = 'tameru.unlockedAwayAt';
+const rememberAway = (at: number) => {
+  try {
+    sessionStorage.setItem(AWAY_KEY, String(at));
+  } catch {
+    /* storage blocked: the app just locks after a reload */
+  }
+};
+const forgetAway = () => {
+  try {
+    sessionStorage.removeItem(AWAY_KEY);
+  } catch {
+    /* storage blocked */
+  }
+};
+const takeAway = (): number => {
+  try {
+    const at = Number(sessionStorage.getItem(AWAY_KEY));
+    sessionStorage.removeItem(AWAY_KEY);
+    return at;
+  } catch {
+    return 0;
+  }
+};
+
+const addType =(t: string | null): TransactionType => (t === 'income' || t === 'refund' || t === 'transfer' ? t : 'expense');
 
 function Screens({ offer, setOffer }: { offer: FreshStartOffer | null; setOffer: (o: FreshStartOffer | null) => void }) {
   const route = useRoute();
@@ -101,11 +128,19 @@ function Shell({ app, initialOffer, initialLock }: { app: AppT; initialOffer: Fr
   const [offer, setOffer] = useState(initialOffer);
   const [lock, setLock] = useState<AppLock | undefined>(initialLock); // set while locked
   const bump = () => setVersion((v) => v + 1);
+  useEffect(hideSplash, []);
   // Lock again when the app comes back after being away longer than the chosen time.
   const hiddenAt = useRef(0);
+  const locked = useRef(!!initialLock);
+  locked.current = !!lock;
   useEffect(() => {
     const onChange = async () => {
-      if (document.visibilityState === 'hidden') return void (hiddenAt.current = Date.now());
+      if (document.visibilityState === 'hidden') {
+        hiddenAt.current = Date.now();
+        if (!locked.current) rememberAway(hiddenAt.current);
+        return;
+      }
+      forgetAway();
       const current = (await app.repos.settings.get()).lock;
       if (current && hiddenAt.current && Date.now() - hiddenAt.current >= current.relockAfterMs) setLock(current);
     };
@@ -128,7 +163,13 @@ function Shell({ app, initialOffer, initialLock }: { app: AppT; initialOffer: Fr
 function Boot() {
   const [state, setState] = useState<{ app: AppT; offer: FreshStartOffer | null; lock?: AppLock }>();
   useEffect(() => {
-    openApp().then(async (app) => setState({ app, offer: (await onAppOpen(app)).freshStart, lock: (await app.repos.settings.get()).lock }));
+    openApp().then(async (app) => {
+      const offer = (await onAppOpen(app)).freshStart;
+      const lock = (await app.repos.settings.get()).lock;
+      // An update reload while switched away shouldn't lock an app that was open moments ago.
+      const away = takeAway();
+      setState({ app, offer, lock: lock && away && Date.now() - away < lock.relockAfterMs ? undefined : lock });
+    });
   }, []);
   return state ? <Shell app={state.app} initialOffer={state.offer} initialLock={state.lock} /> : <div class="shell" />;
 }
