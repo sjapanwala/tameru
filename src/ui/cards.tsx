@@ -10,7 +10,9 @@ import {
   CARD_COLORS,
   cardLabels,
   cardsOf,
+  countries,
   customInstitutionId,
+  defaultCountry,
   institutionInitials,
   institutionName,
   institutions,
@@ -106,7 +108,8 @@ const NEW_INSTITUTION = '__new__';
 const NOT_LISTED = '__custom__';
 
 /**
- * Pick the institution, then the card, from dropdowns.
+ * Pick the country, then the institution, then the card, from dropdowns. The country
+ * starts on the current institution's (or the home currency's) so the list stays short.
  * - Card not listed: name it; it's drawn in the institution's colour with its badge.
  * - Institution not listed: add it with a name and a colour.
  */
@@ -114,10 +117,15 @@ export function CardPicker({ value, onChange, kind, fallbackName }: { value?: Fa
   const { app, bump } = useApp();
   const catalog = useCatalog();
   const custom = useLoad(customInstitutions) ?? [];
-  const list = institutions(catalog, custom);
+  const currency = useLoad((a) => a.repos.settings.get())?.defaultCurrency ?? 'CAD';
   const instId = value?.institutionId ?? (value?.artId ? catalog.find((c) => c.id === value.artId)?.institutionId : undefined);
   const customInst: CustomInstitution | undefined = instId ? custom.find((i) => i.id === instId) : undefined;
-  const cards = instId ? cardsOf(catalog, instId) : [];
+  // undefined = not chosen yet (follow the default); '' = all countries.
+  const [pickedCountry, setPickedCountry] = useState<string>();
+  const countryList = countries(catalog);
+  const country = pickedCountry ?? (customInst ? undefined : defaultCountry(catalog, currency, instId)) ?? '';
+  const list = institutions(catalog, custom, country || undefined);
+  const cards = instId ? cardsOf(catalog, instId, country || undefined) : [];
   const labels = cardLabels(cards);
   // Matching kind first (credit for cards, debit for chequing), the rest after.
   const primary = cards.filter((c) => c.kind === kind);
@@ -131,6 +139,14 @@ export function CardPicker({ value, onChange, kind, fallbackName }: { value?: Fa
   const [awaitingCard, setAwaitingCard] = useState(false);
   const notListed = !!instId && !value?.artId && (!awaitingCard || cards.length === 0);
 
+  const pickCountry = (c: string) => {
+    setPickedCountry(c);
+    // The chosen bank isn't in that country: start the bank over.
+    if (instId && c && !institutions(catalog, custom, c).some((i) => i.id === instId)) {
+      setAwaitingCard(false);
+      onChange({ last4: value?.last4 });
+    }
+  };
   const pickInstitution = (id: string) => {
     if (id === NEW_INSTITUTION) return setAddingInstitution(true);
     setAddingInstitution(false);
@@ -161,6 +177,18 @@ export function CardPicker({ value, onChange, kind, fallbackName }: { value?: Fa
       <div class="card-picker__preview">
         <CardFace face={previewFace} catalog={catalog} name={fallbackName} />
       </div>
+
+      <label>
+        {S.cards.country}
+        <select value={country} onChange={(e) => pickCountry((e.target as HTMLSelectElement).value)}>
+          {countryList.map((c) => (
+            <option key={c} value={c}>
+              {c}
+            </option>
+          ))}
+          <option value="">{S.cards.allCountries}</option>
+        </select>
+      </label>
 
       <label>
         {S.cards.institution}

@@ -7,6 +7,7 @@ export function More() {
   const links: [string, string][] = [
     ['/recurring', S.nav.recurring],
     ['/settings', S.nav.settings],
+    ['/whats-new', S.whatsNew.title],
     ...(devMode() ? ([['/debug', S.nav.debug]] as [string, string][]) : []),
   ];
   return (

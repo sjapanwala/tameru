@@ -34,6 +34,16 @@ describe('quick transactions', () => {
     expect(await app.repos.quickActions.all()).toEqual([]);
   });
 
+  it('logs an income preset as income, never under a spending category', async () => {
+    const app = await testApp('2026-10-19');
+    const chq = await createAccount(app, { name: 'Chq', type: 'chequing', openingBalanceCents: 0 });
+    const q = await saveQuick(app, { slot: 2, type: 'income', label: 'Tips', icon: 'coins', amountCents: 2000, categoryId: 'cat_eating_out', accountId: chq.id });
+    expect(q.categoryId).toBeUndefined();
+    const tx = await logQuick(app, q.id);
+    expect(tx).toMatchObject({ type: 'income', amountCents: 2000, accountId: chq.id, merchant: 'Tips' });
+    expect(tx.categoryId).not.toBe('cat_eating_out');
+  });
+
   it('rejects invalid presets', async () => {
     const app = await testApp();
     await expect(saveQuick(app, { slot: 0, label: '', icon: 'coffee', amountCents: 0, accountId: 'nope' })).rejects.toBeInstanceOf(QuickValidationError);

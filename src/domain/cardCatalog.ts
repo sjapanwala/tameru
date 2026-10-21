@@ -65,9 +65,41 @@ export function parseManifest(json: unknown): CatalogCard[] {
     const label = str(raw.label) ?? id;
     const group = Array.isArray(raw.group) ? raw.group.filter((g): g is string => typeof g === 'string') : [];
     // group[0] is a curator's note in this dataset; group[1] is the region.
-    out.push({ id, name: label, institutionId: bank, network: networkFrom(label, bank), kind: kindFrom(label, group), ...(group[1] ? { region: group[1] } : {}), file });
+    const region = REGION_FIXES[id] ?? regionName(group[1]);
+    out.push({ id, name: label, institutionId: bank, network: networkFrom(label, bank), kind: kindFrom(label, group), ...(region ? { region } : {}), file });
   }
   return out;
+}
+
+// ---------- countries ----------
+
+const REGION_NAMES: Record<string, string> = { UK: 'United Kingdom', 'EU?': 'Europe' };
+/** Cards the dataset files under the wrong country. */
+const REGION_FIXES: Record<string, string> = { 'td/aeroplan': 'Canada', 'td/first-class-travel': 'Canada' };
+
+const regionName = (raw: string | undefined): string | undefined => (raw ? (REGION_NAMES[raw] ?? raw) : undefined);
+
+/** Countries that have card art, most cards first. */
+export function countries(cards: readonly CatalogCard[]): string[] {
+  const n = new Map<string, number>();
+  for (const c of cards) if (c.region) n.set(c.region, (n.get(c.region) ?? 0) + 1);
+  return [...n.keys()].sort((a, b) => n.get(b)! - n.get(a)! || a.localeCompare(b));
+}
+
+const CURRENCY_COUNTRY: Record<string, string> = {
+  CAD: 'Canada', USD: 'United States', GBP: 'United Kingdom', EUR: 'Europe', JPY: 'Japan',
+  AUD: 'Australia', SGD: 'Singapore', CNY: 'Greater China', HKD: 'Greater China', TWD: 'Greater China',
+};
+
+/** The country to open the picker on: the one the current institution is from, else the home currency's. */
+export function defaultCountry(cards: readonly CatalogCard[], currency: string, institutionId?: string): string | undefined {
+  const all = countries(cards);
+  const home = CURRENCY_COUNTRY[currency.toUpperCase()];
+  if (institutionId) {
+    const from = new Set(cards.filter((c) => c.institutionId === institutionId).map((c) => c.region));
+    if (from.size) return home && from.has(home) ? home : all.find((r) => from.has(r));
+  }
+  return home && all.includes(home) ? home : undefined;
 }
 
 const ACRONYMS: Record<string, string> = {
@@ -87,15 +119,19 @@ export function institutionName(slug: string): string {
     .replace(/ \.com$/, '.com');
 }
 
-/** Institutions that have art, plus the user's own, sorted by name. */
-export function institutions(cards: readonly CatalogCard[], custom: readonly Institution[] = []): Institution[] {
-  const ids = [...new Set(cards.map((c) => c.institutionId))];
+/** Institutions that have art (in `country`, when given), plus the user's own, sorted by name. */
+export function institutions(cards: readonly CatalogCard[], custom: readonly Institution[] = [], country?: string): Institution[] {
+  const ids = [...new Set(cards.filter((c) => !country || c.region === country).map((c) => c.institutionId))];
   const all: Institution[] = [...ids.map((id) => ({ id, name: institutionName(id) })), ...custom.map((c) => ({ ...c, custom: true }))];
   return all.sort((a, b) => a.name.localeCompare(b.name, 'en', { sensitivity: 'base' }));
 }
 
-export const cardsOf = (cards: readonly CatalogCard[], institutionId: string): CatalogCard[] =>
-  cards.filter((c) => c.institutionId === institutionId).sort((a, b) => a.name.localeCompare(b.name));
+/** An institution's cards, limited to `country` when it has any there. */
+export function cardsOf(cards: readonly CatalogCard[], institutionId: string, country?: string): CatalogCard[] {
+  const all = cards.filter((c) => c.institutionId === institutionId).sort((a, b) => a.name.localeCompare(b.name));
+  const local = country ? all.filter((c) => c.region === country) : [];
+  return local.length ? local : all;
+}
 
 /** Card name without the institution repeated: "BMO Cashback" under BMO → "Cashback". */
 export function shortCardName(card: Pick<CatalogCard, 'name' | 'institutionId'>): string {

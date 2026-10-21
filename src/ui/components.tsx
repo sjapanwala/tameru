@@ -262,9 +262,9 @@ export function Meter({ left, of }: { left: Cents; of: Cents }) {
 }
 
 /**
- * Single choice as pills (one tap, no dropdown). They wrap by default; `row` keeps
- * them on one scrolling line (compact sheets) with an edge fade, mouse-wheel
- * scrolling, and the selected pill scrolled into view.
+ * Single choice as tiles (one tap, no dropdown). They lay out as a grid by default;
+ * `row` keeps them on one scrolling line (compact sheets) with an edge fade,
+ * mouse-wheel scrolling, and the selected tile scrolled into view.
  */
 export function ChipSelect<T extends string>(props: {
   options: { value: T; label: string; hint?: string }[];
@@ -311,8 +311,10 @@ export function ChipSelect<T extends string>(props: {
           class={props.value === o.value ? 'chip on' : 'chip'}
           onClick={() => props.onChange(o.value)}
         >
-          {o.label}
-          {o.hint && <small> {o.hint}</small>}
+          <span class="chip__label">
+            {o.label}
+            {o.hint && <small> {o.hint}</small>}
+          </span>
         </button>
       ))}
     </div>

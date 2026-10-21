@@ -238,6 +238,7 @@ export interface PeriodSnapshot extends BaseRecord {
 /** A one-tap preset for something bought often but not on a schedule (coffee, parking). */
 export interface QuickAction extends BaseRecord {
   slot: number; // position on Home, 0-based
+  type?: 'expense' | 'income'; // absent = expense (older presets)
   label: string;
   icon: string; // key into the app's icon set
   amountCents: Cents;

@@ -39,7 +39,9 @@
 
   --radius: 14px;
   --radius-sm: 10px;
-  --pill: 999px;
+  --pill: 999px; /* bars, dots and badges only: buttons are never pills */
+  --btn-r: 12px;
+  --btn-r-lg: 16px;
   --tap: 44px;
 
   --tabbar-h: 58px;

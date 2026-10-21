@@ -18,6 +18,8 @@ import { orderedAccounts } from '../services/accounts';
 
 const HOLD_MS = 450;
 
+const askTitle = (q: QuickAction) => (q.type === 'income' ? S.quick.whichAccountIn : S.quick.whichAccount)(quickLabel(q));
+
 export function QuickRow() {
   const { app, bump } = useApp();
   const slots = useLoad(quickSlots);
@@ -64,8 +66,8 @@ export function QuickRow() {
             <button
               type="button"
               key={i}
-              class="quick__slot"
-              aria-label={`${quickLabel(q)} ${money(q.amountCents)}`}
+              class={`quick__slot${q.type === 'income' ? ' quick__slot--income' : ''}`}
+              aria-label={`${quickLabel(q)} ${q.type === 'income' ? '+' : ''}${money(q.amountCents)}`}
               onPointerDown={() => startHold(i)}
               onPointerUp={endHold}
               onPointerLeave={endHold}
@@ -81,7 +83,10 @@ export function QuickRow() {
                 <QuickIcon name={q.icon} />
               </span>
               <span class="quick__label">{quickLabel(q)}</span>
-              <span class="quick__price">{money(q.amountCents)}</span>
+              <span class="quick__price">
+                {q.type === 'income' && '+'}
+                {money(q.amountCents)}
+              </span>
             </button>
           ) : (
             <button type="button" key={i} class="quick__slot quick__slot--empty" aria-label={S.quick.setUp} onClick={() => edit(i)}>
@@ -95,10 +100,10 @@ export function QuickRow() {
         )}
       </div>
       {asking && (
-        <Sheet label={S.quick.whichAccount(quickLabel(asking))} onClose={() => setAsking(null)}>
-          <p class="field-label">{S.quick.whichAccount(quickLabel(asking))}</p>
+        <Sheet label={askTitle(asking)} onClose={() => setAsking(null)}>
+          <p class="field-label">{askTitle(asking)}</p>
           <ChipSelect
-            label={S.quick.from}
+            label={asking.type === 'income' ? S.quick.into : S.quick.from}
             options={accounts.map((a) => ({ value: a.id, label: a.name }))}
             onChange={(id) => {
               const q = asking;

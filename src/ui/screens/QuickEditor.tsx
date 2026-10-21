@@ -1,4 +1,4 @@
-// Set up or edit a quick-add slot: icon, label, price, category, vendor, account (or ask).
+// Set up or edit a quick-add slot: spending or income, icon, label, price, category, vendor, account (or ask).
 
 import { useEffect, useState } from 'preact/hooks';
 import { money, S } from '../../copy/strings';
@@ -17,6 +17,7 @@ export function QuickEditor({ slot, onDone }: { slot: number; onDone: () => void
   const accounts = useLoad(orderedAccounts)?.filter((a) => !a.archived && a.type !== 'investing') ?? [];
   const categories = useLoad((a) => a.repos.categories.all())?.filter(isBudgetCategory).sort((a, b) => a.sortOrder - b.sortOrder) ?? [];
 
+  const [type, setType] = useState<'expense' | 'income'>('expense');
   const [icon, setIcon] = useState('coffee');
   const [label, setLabel] = useState('');
   const [amount, setAmount] = useState<Cents>();
@@ -28,6 +29,7 @@ export function QuickEditor({ slot, onDone }: { slot: number; onDone: () => void
   // Load the slot's current preset once it arrives.
   useEffect(() => {
     if (!existing) return;
+    setType(existing.type ?? 'expense');
     setIcon(existing.icon);
     setLabel(existing.label);
     setAmount(existing.amountCents);
@@ -39,7 +41,7 @@ export function QuickEditor({ slot, onDone }: { slot: number; onDone: () => void
   const save = async (e: Event) => {
     e.preventDefault();
     try {
-      await saveQuick(app, { slot, icon, label, amountCents: amount ?? 0, ...(categoryId ? { categoryId } : {}), merchant, accountId });
+      await saveQuick(app, { slot, type, icon, label, amountCents: amount ?? 0, ...(type === 'expense' && categoryId ? { categoryId } : {}), merchant, accountId });
       bump();
       onDone();
     } catch (err) {
@@ -53,15 +55,30 @@ export function QuickEditor({ slot, onDone }: { slot: number; onDone: () => void
   };
 
   const preview = quickLabel({ label, merchant }) || S.quick.icons[icon] || '';
+  const income = type === 'income';
+  const switchType = (t: 'expense' | 'income') => {
+    setType(t);
+    // A fresh slot gets an icon that fits; a chosen one stays.
+    if (!existing && icon === (t === 'income' ? 'coffee' : 'cash')) setIcon(t === 'income' ? 'cash' : 'coffee');
+  };
 
   return (
     <form class="quick-editor" onSubmit={save}>
+      <div class="segmented" role="radiogroup" aria-label={S.quick.kind}>
+        <span class="segmented__thumb" style={{ width: 'calc((100% - 6px) / 2)', transform: `translateX(${income ? 100 : 0}%)` }} />
+        {(['expense', 'income'] as const).map((t) => (
+          <button type="button" role="radio" aria-checked={type === t} key={t} onClick={() => switchType(t)}>
+            {S.quick.kinds[t]}
+          </button>
+        ))}
+      </div>
+
       <div class="quick-editor__preview">
         <span class="quick__disc quick__disc--lg">
           <QuickIcon name={icon} />
         </span>
         <strong>{preview}</strong>
-        <span class="muted num">{amount ? money(amount) : '—'}</span>
+        <span class="muted num">{amount ? `${income ? '+' : ''}${money(amount)}` : '—'}</span>
       </div>
 
       <p class="field-label">{S.quick.icon}</p>
@@ -77,18 +94,26 @@ export function QuickEditor({ slot, onDone }: { slot: number; onDone: () => void
         {S.quick.label}
         <input value={label} placeholder={S.quick.icons[icon] ?? S.quick.labelHint} onInput={(e) => setLabel((e.target as HTMLInputElement).value)} />
       </label>
-      <MoneyInput label={S.quick.price} value={amount} onChange={setAmount} />
+      <MoneyInput label={income ? S.quick.amount : S.quick.price} value={amount} onChange={setAmount} />
       <label>
         {S.quick.vendor} {S.common.optional}
         <input value={merchant} placeholder={S.quick.vendorHint} onInput={(e) => setMerchant((e.target as HTMLInputElement).value)} />
       </label>
 
-      <p class="field-label">{S.common.category}</p>
-      <ChipSelect label={S.common.category} options={categories.map((c) => ({ value: c.id, label: c.name }))} value={categoryId} onChange={setCategoryId} />
+      {income ? (
+        <p class="muted">
+          <small>{S.quick.incomeNote}</small>
+        </p>
+      ) : (
+        <>
+          <p class="field-label">{S.common.category}</p>
+          <ChipSelect label={S.common.category} options={categories.map((c) => ({ value: c.id, label: c.name }))} value={categoryId} onChange={setCategoryId} />
+        </>
+      )}
 
-      <p class="field-label">{S.quick.from}</p>
+      <p class="field-label">{income ? S.quick.into : S.quick.from}</p>
       <ChipSelect
-        label={S.quick.from}
+        label={income ? S.quick.into : S.quick.from}
         options={[{ value: 'ask', label: S.quick.ask }, ...accounts.map((a) => ({ value: a.id, label: a.name }))]}
         value={accountId}
         onChange={setAccountId}

@@ -159,9 +159,15 @@ export const S = {
     vendor: 'Vendor',
     vendorHint: 'e.g. Tim Hortons',
     price: 'Price',
+    amount: 'Amount',
+    kind: 'Kind',
+    kinds: { expense: 'Spending', income: 'Income' },
     from: 'Pay from',
+    into: 'Deposit to',
     ask: 'Ask each time',
     whichAccount: (label: string) => `Pay for ${label} from…`,
+    whichAccountIn: (label: string) => `Deposit ${label} to…`,
+    incomeNote: 'Logged as income, filed under Income.',
     clear: 'Remove',
     errors: {
       amount_invalid: 'Set a price above zero.',
@@ -172,7 +178,7 @@ export const S = {
     icons: {
       coffee: 'Coffee', food: 'Food', groceries: 'Groceries', bag: 'Shopping', car: 'Car', parking: 'Parking',
       fuel: 'Fuel', bus: 'Transit', ticket: 'Tickets', drink: 'Drinks', gym: 'Gym', health: 'Health',
-      book: 'Books', gift: 'Gift', laundry: 'Laundry', haircut: 'Haircut',
+      book: 'Books', gift: 'Gift', laundry: 'Laundry', haircut: 'Haircut', cash: 'Cash', coins: 'Tips',
     } as Record<string, string>,
   },
 
@@ -207,6 +213,8 @@ export const S = {
   },
 
   cards: {
+    country: 'Country',
+    allCountries: 'All countries',
     institution: 'Bank or institution',
     chooseInstitution: 'Choose…',
     newInstitution: '+ Add a new institution',
@@ -224,6 +232,12 @@ export const S = {
     customColour: 'Pick any colour',
     last4: 'Last 4 digits (optional)',
     last4Short: 'Card',
+  },
+
+  whatsNew: {
+    title: 'What’s new',
+    version: (v: string) => `Version ${v}`,
+    done: 'Got it',
   },
 
   more: {

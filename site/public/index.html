@@ -73,7 +73,7 @@ mark.on { --swipe: 1; }
 
 .btn {
   display: inline-flex; align-items: center; justify-content: center; gap: 10px;
-  min-height: 48px; padding: 0 22px; border-radius: 999px; white-space: nowrap;
+  min-height: 48px; padding: 0 22px; border-radius: 12px; white-space: nowrap;
   font: 500 1rem var(--font); text-decoration: none; letter-spacing: -0.01em;
   background: var(--ink); color: var(--paper); border: 1px solid var(--ink);
   transition: transform 240ms var(--glide), background 240ms, color 240ms;
@@ -322,7 +322,7 @@ mark.on { --swipe: 1; }
 .landing__fine { margin: 0; font: 500 0.78rem var(--mono); letter-spacing: 0.06em; color: var(--ink-3); text-align: center; }
 .land {
   position: relative; display: block; width: 100%; max-width: var(--dock-w, 300px); height: 52px;
-  border-radius: 999px; background: var(--ink); color: var(--ink); text-decoration: none; visibility: hidden;
+  border-radius: 16px; background: var(--ink); color: var(--ink); text-decoration: none; visibility: hidden;
   box-shadow: 0 20px 40px -14px rgb(18 18 17 / 0.55);
   transition: max-width 700ms var(--glide), height 700ms var(--glide), border-radius 700ms var(--glide), background 450ms var(--glide), box-shadow 700ms;
 }
@@ -368,7 +368,7 @@ footer { background: var(--ink); color: var(--paper); padding: 72px 0 calc(110px
 /* ---------- floating bar ---------- */
 .dock {
   position: fixed; left: 50%; bottom: calc(22px + env(safe-area-inset-bottom, 0px)); z-index: 30;
-  display: flex; gap: 4px; padding: 5px; border-radius: 999px; background: var(--ink);
+  display: flex; gap: 4px; padding: 5px; border-radius: 16px; background: var(--ink);
   box-shadow: 0 20px 40px -14px rgb(18 18 17 / 0.55);
   translate: -50% 150%; opacity: 0; transition: translate 500ms var(--glide), opacity 300ms;
 }

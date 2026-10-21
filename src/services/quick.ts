@@ -25,6 +25,8 @@ export async function saveQuick(ctx: AppContext, input: QuickInput): Promise<Qui
   const q: QuickAction = stamp(ctx, {
     ...(existing ? { id: existing.id, createdAt: existing.createdAt } : {}),
     ...input,
+    type: input.type ?? 'expense',
+    ...(input.type === 'income' ? { categoryId: undefined } : {}),
     label: input.label.trim(),
     ...(input.merchant?.trim() ? { merchant: input.merchant.trim() } : { merchant: undefined }),
   });
@@ -45,9 +47,10 @@ export async function logQuick(ctx: AppContext, quickId: Id, accountId?: Id): Pr
   if (q.accountId === 'ask' && !accountId) throw new Error('choose an account for this quick action');
   return addTransaction(ctx, {
     amountCents: q.amountCents,
-    type: 'expense',
+    type: q.type ?? 'expense',
     accountId: q.accountId === 'ask' ? accountId : q.accountId,
-    ...(q.categoryId ? { categoryId: q.categoryId } : {}),
+    // Income files under the Income category on its own; a spending category would be wrong.
+    ...(q.type !== 'income' && q.categoryId ? { categoryId: q.categoryId } : {}),
     merchant: q.merchant ?? q.label,
   });
 }

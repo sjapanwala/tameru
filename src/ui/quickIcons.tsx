@@ -121,6 +121,25 @@ export const QUICK_ICONS: Record<string, { draw: () => preact.JSX.Element }> = {
       </Svg>
     ),
   },
+  cash: {
+    draw: () => (
+      <Svg>
+        <rect x="2.5" y="6" width="19" height="12" rx="1.5" />
+        <circle cx="12" cy="12" r="2.5" />
+        <path d="M6 9.5v5M18 9.5v5" />
+      </Svg>
+    ),
+  },
+  coins: {
+    draw: () => (
+      <Svg>
+        <ellipse cx="9" cy="7" rx="5" ry="2.5" />
+        <path d="M4 7v4c0 1.4 2.2 2.5 5 2.5s5-1.1 5-2.5V7M4 11v4c0 1.4 2.2 2.5 5 2.5 1 0 2-.15 2.8-.4" />
+        <ellipse cx="16" cy="15" rx="4" ry="2" />
+        <path d="M12 15v3c0 1.1 1.8 2 4 2s4-.9 4-2v-3" />
+      </Svg>
+    ),
+  },
 };
 
 export const QUICK_ICON_KEYS = Object.keys(QUICK_ICONS);

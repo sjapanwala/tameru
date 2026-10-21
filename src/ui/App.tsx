@@ -25,7 +25,9 @@ import { Sheet } from './Sheet';
 import { TabBar } from './TabBar';
 import { ToastHost } from './toast';
 import { hideSplash } from './splash';
-import { announceUpdate } from './version';
+import { announceUpdate, latestReleases } from './version';
+import { WhatsNew } from './WhatsNew';
+import type { Release } from '../domain/releases';
 
 // When an unlocked app was last sent to the background, kept across a reload (this tab only).
 const AWAY_KEY = 'tameru.unlockedAwayAt';
@@ -63,8 +65,9 @@ function Screens({ offer, setOffer }: { offer: FreshStartOffer | null; setOffer:
   const settings = useLoad((a) => a.repos.settings.get());
   const [celebration, setCelebration] = useState<string>();
   useEffect(() => on('onboardingComplete', () => setCelebration(S.onboarding.complete)), []);
+  const [news, setNews] = useState<Release[]>([]);
   // Runs once the app (and so the toast host) has rendered.
-  useEffect(() => void (settings && announceUpdate()), [!!settings]);
+  useEffect(() => void (settings && setNews(announceUpdate())), [!!settings]);
   if (!settings) return <div class="placeholder" />;
   // Debug stays reachable before onboarding so the sample data can be seeded.
   if (!settings.onboardedAt && route.path !== '/debug') {
@@ -76,7 +79,7 @@ function Screens({ offer, setOffer }: { offer: FreshStartOffer | null; setOffer:
     );
   }
   // Add is a sheet over whatever screen was showing before it.
-  const sheetOpen = route.path === '/add' || route.path === '/quick';
+  const sheetOpen = route.path === '/add' || route.path === '/quick' || route.path === '/whats-new';
   const base = sheetOpen ? lastPath.current : route.path;
   if (!sheetOpen) lastPath.current = route.path;
   const screen = (() => {
@@ -118,6 +121,9 @@ function Screens({ offer, setOffer }: { offer: FreshStartOffer | null; setOffer:
           <QuickEditor slot={Number(route.params.get('slot')) || 0} onDone={() => go(lastPath.current)} />
         </Sheet>
       )}
+      {route.path === '/whats-new' && <WhatsNew releases={latestReleases()} onClose={() => go(lastPath.current)} />}
+      {/* Not over onboarding or another sheet: it waits for the next screen change. */}
+      {news.length > 0 && !sheetOpen && <WhatsNew releases={news} onClose={() => setNews([])} />}
       <ToastHost />
     </>
   );

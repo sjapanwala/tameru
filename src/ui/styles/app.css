@@ -208,9 +208,9 @@ button {
   font: inherit;
   font-size: var(--fs-sm);
   font-weight: 550;
-  min-height: 38px;
+  min-height: 40px;
   padding: 0 var(--s4);
-  border-radius: var(--pill);
+  border-radius: var(--btn-r);
   border: 1px solid var(--line);
   background: transparent;
   color: var(--text);
@@ -234,9 +234,10 @@ button.primary {
   background: var(--accent);
   border-color: var(--accent);
   color: var(--accent-text);
-  min-height: 52px;
+  min-height: 54px;
   padding: 0 var(--s5);
   font-size: var(--fs-md);
+  border-radius: var(--btn-r-lg);
 }
 
 button.block {
@@ -707,8 +708,9 @@ aside button.primary {
   display: grid;
   grid-auto-flow: column;
   grid-auto-columns: 1fr;
-  border: 1px solid var(--line);
-  border-radius: var(--pill);
+  border: 0;
+  background: var(--surface);
+  border-radius: var(--btn-r);
   padding: 3px;
   margin: 0 0 var(--s2);
 }
@@ -996,8 +998,8 @@ aside button.primary {
   color: var(--bg);
   border: 0;
   margin: 0;
-  padding: 10px 18px;
-  border-radius: var(--pill);
+  padding: 12px 18px;
+  border-radius: var(--btn-r);
   font-size: var(--fs-sm);
   font-weight: 500;
   box-shadow: var(--shadow-lg);
@@ -1060,7 +1062,7 @@ summary::after {
   transition: background-color var(--t-mid) var(--glide), color var(--t-mid) var(--glide), border-color var(--t-mid) var(--glide), transform var(--t-fast) var(--glide);
 }
 
-/* segmented control: the selected pill slides between options */
+/* segmented control: the selected tab slides between options */
 .segmented {
   position: relative;
   isolation: isolate;
@@ -1072,7 +1074,7 @@ summary::after {
   top: 3px;
   bottom: 3px;
   left: 3px;
-  border-radius: var(--pill);
+  border-radius: 9px;
   background: var(--text);
   transition: transform var(--t-mid) var(--glide);
 }
@@ -2077,7 +2079,7 @@ main ul.card-picker__results > li {
   align-items: center;
   gap: var(--s2);
   background: var(--surface);
-  border-radius: var(--pill);
+  border-radius: var(--btn-r);
   padding: 0 var(--s4);
   margin: 0 0 var(--s3);
   color: var(--text-2);
@@ -2486,7 +2488,7 @@ main ul.txlist > li:has(> .txrow, > .swipe) {
 .swatch--auto {
   width: auto;
   padding: 0 var(--s3);
-  border-radius: var(--pill);
+  border-radius: 10px;
   background: var(--surface);
   font-size: var(--fs-xs);
 }
@@ -3296,7 +3298,7 @@ body:has(.gate) {
   width: 100%;
   min-height: 54px;
   border: 0;
-  border-radius: 999px;
+  border-radius: var(--btn-r-lg);
   background: #121211;
   color: #f3f0e8;
   font: 600 1.05rem var(--font);
@@ -5219,4 +5221,142 @@ button.danger {
   margin-top: 2px;
   font-size: var(--fs-xs);
   color: var(--text-2);
+}
+
+/* ---------- choice tiles (ChipSelect and loose .chip buttons) ----------
+   Squared-off tiles instead of pills. Unchosen: a quiet filled tile. Chosen: solid,
+   with a check that slides in, so the choice reads without comparing colours.
+   Wrapping groups lay out as an even grid; the Add sheet keeps one scrolling row. */
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  min-height: 44px;
+  padding: 0 14px;
+  border-radius: var(--btn-r);
+  border: 1px solid transparent;
+  background: var(--surface);
+  color: var(--text);
+  font-weight: 550;
+  transition: background-color var(--t-mid) var(--glide), color var(--t-mid) var(--glide), border-color var(--t-mid) var(--glide), gap var(--t-mid) var(--glide), transform var(--t-fast) var(--glide);
+}
+
+.chip::before {
+  content: '';
+  flex: none;
+  width: 0;
+  height: 14px;
+  background: currentColor;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4.5 12.5l5 5 10-11'/%3E%3C/svg%3E") center / 14px 14px no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4.5 12.5l5 5 10-11'/%3E%3C/svg%3E") center / 14px 14px no-repeat;
+  transition: width var(--t-mid) var(--glide);
+}
+
+.chip.on {
+  gap: 6px;
+  background: var(--text);
+  color: var(--bg);
+  border-color: var(--text);
+}
+
+.chip.on::before {
+  width: 14px;
+}
+
+/* Loose action chips (onboarding suggestions) carry their own + icon: no check. */
+.onb-suggest .chip::before {
+  display: none;
+}
+
+.chip-select:not(.chip-select--row) {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(132px, 1fr));
+  gap: 6px;
+}
+
+.chip-select:not(.chip-select--row) .chip {
+  justify-content: flex-start;
+  min-width: 0;
+  padding: 0 12px;
+}
+
+.chip__label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chip-select--row {
+  gap: 6px;
+}
+
+/* Quick adds that log income show the amount as money coming in. */
+.quick__slot--income .quick__price {
+  color: var(--text);
+}
+
+.icon-grid {
+  grid-template-columns: repeat(9, 1fr);
+}
+
+.quick-editor .segmented {
+  margin-bottom: var(--s4);
+}
+
+/* ---------- what's new (after an update) ---------- */
+
+.whats-new h2 {
+  font-size: var(--fs-xl);
+  letter-spacing: -0.03em;
+  margin: 0 0 var(--s4);
+}
+
+.whats-new__list {
+  list-style: none;
+  margin: 0 0 var(--s4);
+  padding: 0;
+}
+
+.whats-new__list li {
+  display: flex;
+  gap: var(--s3);
+  padding: var(--s3) 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.whats-new__list li:last-child {
+  border-bottom: 0;
+}
+
+.whats-new__n {
+  flex: none;
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  border-radius: 10px;
+  background: var(--surface);
+  font-family: var(--font-num);
+  font-size: var(--fs-xs);
+  color: var(--text-2);
+}
+
+.whats-new__list strong {
+  display: block;
+  font-weight: 600;
+  margin: 2px 0 2px;
+}
+
+.whats-new__list small {
+  display: block;
+  color: var(--text-2);
+  font-size: var(--fs-sm);
+  line-height: 1.45;
+}
+
+.whats-new__earlier {
+  margin-top: var(--s4);
 }
