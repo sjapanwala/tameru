@@ -43,6 +43,26 @@ select,
 }
 
 
+/* Home: pulling the page down past the top shows the hero's colour, not white. */
+html.hero-top {
+  background: var(--hero-top);
+}
+
+/* see StatusTint.tsx: a strip in the hero's colour that iOS takes the status bar colour from */
+.status-tint {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 15; /* above the page, below sheets and menus */
+  height: max(var(--safe-t), 4px);
+  background: var(--hero-top);
+}
+
+.status-tint[hidden] {
+  display: none;
+}
+
 ::selection {
   background: var(--text);
   color: var(--bg);
@@ -1091,18 +1111,30 @@ summary::after {
 
 /* ---------- home: hero panel ---------- */
 
-/* A rounded card that starts just under the status bar (iOS won't let the page colour
-   the bar itself, so the hero doesn't try to run up under it). */
+/* Hangs from the top edge like a fixture: it runs up under the status bar, and its top
+   band is one flat colour (--hero-top) so the bar, tinted to match by StatusTint, joins
+   it without a seam. Only the bottom corners are rounded. */
 .home-hero {
   position: relative;
   overflow: hidden;
-  margin: calc(var(--s2) - var(--s4)) calc(-1 * var(--s5)) 0;
-  padding: var(--s4) var(--s5) 0;
-  border-radius: 32px 32px 36px 36px;
+  margin: calc(-1 * (var(--safe-t) + var(--s4))) calc(-1 * var(--s5)) 0;
+  padding: calc(var(--safe-t) + var(--s4)) var(--s5) 0;
+  border-radius: 0 0 36px 36px;
   background: var(--hero-bg);
   color: var(--hero-text);
   text-align: center;
   isolation: isolate;
+}
+
+/* the flat top band, over the glow, fading into it below the status bar */
+.home-hero::after {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  inset: 0 0 auto;
+  height: calc(var(--safe-t) + 160px);
+  background: linear-gradient(to bottom, var(--hero-top) var(--safe-t), color-mix(in srgb, var(--hero-top) 55%, transparent) calc(var(--safe-t) + 50px), transparent);
+  pointer-events: none;
 }
 
 /* soft light from above, like the reference's glow but in greys */

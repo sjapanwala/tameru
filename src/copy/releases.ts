@@ -5,6 +5,10 @@ import type { Release } from '../domain/releases';
 
 export const RELEASES: Release[] = [
   {
+    version: '0.7.1',
+    items: [{ title: 'Home reaches the top', body: 'The dark panel on Home now runs right up under the status bar, so it hangs from the top of the screen instead of floating as a box.' }],
+  },
+  {
     version: '0.7.0',
     items: [
       { title: 'Hold a tab for shortcuts', body: 'Press and hold a tab icon for quick actions. Hold Activity to add spending or income, or scan a receipt, without leaving the screen you’re on.' },
