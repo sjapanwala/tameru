@@ -16,11 +16,11 @@
       html { background: #ffffff; color: #111111; }
       @media (prefers-color-scheme: dark) { html { background: #0c0c0c; color: #f2f2f2; } }
       /* Themes (see src/ui/theme.ts): the splash takes the theme's paper too. */
-      html[data-theme='paper'] { background: #f6f3ec; } html[data-theme='slate'] { background: #f7f8fa; }
-      html[data-theme='sage'] { background: #f6f7f3; } html[data-theme='dusk'] { background: #f8f6f7; }
+      html[data-theme='receipt'] { background: #f6f2ea; } html[data-theme='almanac'] { background: #fbf8f1; }
+      html[data-theme='night'] { background: #070a10; color: #dfe6f1; }
       @media (prefers-color-scheme: dark) {
-        html[data-theme='paper'] { background: #12110e; } html[data-theme='slate'] { background: #0b0e12; }
-        html[data-theme='sage'] { background: #0d0f0c; } html[data-theme='dusk'] { background: #100d0f; }
+        html[data-theme='receipt'] { background: #15130f; } html[data-theme='almanac'] { background: #12110d; }
+        html[data-theme='contrast'] { background: #000000; }
       }
       #splash { position: fixed; inset: 0; z-index: 1000; display: grid; place-items: center; background: inherit; transition: opacity 0.2s ease-out; }
       #splash.splash--out { opacity: 0; pointer-events: none; }

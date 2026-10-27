@@ -5587,9 +5587,16 @@ body.tab-menu-open .tabbar {
 }
 
 .theme-tile__hero {
+  display: grid;
+  place-items: center;
   height: 52%;
   border-radius: 7px 7px 9px 9px;
   background: var(--hero-bg);
+  color: var(--hero-text);
+  font-family: var(--font-display);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
 }
 
 .theme-tile__line {
@@ -5629,4 +5636,34 @@ body.tab-menu-open .tabbar {
   max-width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+/* ---------- theme moods: the parts tokens can't express ---------- */
+
+/* Receipt: a faint paper grain over everything (fractal noise, drawn once, no image file). */
+[data-theme='receipt'] body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 2147483000;
+  pointer-events: none;
+  opacity: var(--grain);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.35 0 0 0 0 0.3 0 0 0 0 0.22 0 0 0 0.55 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* Receipt: printed type sits a little lighter and wider. */
+[data-theme='receipt'] h1,
+[data-theme='receipt'] .home-hero__amount {
+  letter-spacing: -0.05em;
+}
+
+/* Almanac: serif headings read better a touch less tight. */
+[data-theme='almanac'] h1,
+[data-theme='almanac'] h2 {
+  letter-spacing: -0.01em;
+}
+
+/* Contrast: a flat hero, no glow. */
+[data-theme='contrast'] .home-hero::before {
+  display: none;
 }

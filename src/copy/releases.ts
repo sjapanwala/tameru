@@ -5,6 +5,15 @@ import type { Release } from '../domain/releases';
 
 export const RELEASES: Release[] = [
   {
+    version: '0.9.0',
+    items: [
+      {
+        title: 'New themes',
+        body: 'Four moods to pick from in Settings: Receipt (thermal paper, all monospace), Almanac (ivory paper, serif figures), Night (always dark) and Contrast (pure black and white). Ink is still the default.',
+      },
+    ],
+  },
+  {
     version: '0.8.1',
     items: [
       { title: 'Hold and slide', body: 'Hold a tab, slide your finger up to a shortcut and let go to pick it, all in one motion.' },

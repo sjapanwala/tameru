@@ -9,10 +9,10 @@ export const THEME_KEY = 'tameru-theme';
 /** Each theme's page colour, light and dark (as in tokens.css), for theme-color. */
 export const THEME_BG: Record<ThemeId, [light: string, dark: string]> = {
   ink: ['#ffffff', '#0e0e0e'],
-  paper: ['#f6f3ec', '#12110e'],
-  slate: ['#f7f8fa', '#0b0e12'],
-  sage: ['#f6f7f3', '#0d0f0c'],
-  dusk: ['#f8f6f7', '#100d0f'],
+  receipt: ['#f6f2ea', '#15130f'],
+  almanac: ['#fbf8f1', '#12110d'],
+  night: ['#070a10', '#070a10'],
+  contrast: ['#ffffff', '#000000'],
 };
 
 export function applyTheme(theme: ThemeId | undefined): void {

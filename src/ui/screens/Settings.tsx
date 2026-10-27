@@ -186,7 +186,7 @@ function ThemePicker({ value, onChange }: { value: ThemeId; onChange: (t: ThemeI
       {THEME_IDS.map((id) => (
         <button type="button" key={id} role="radio" aria-checked={value === id} class={`theme-tile${value === id ? ' on' : ''}`} onClick={() => onChange(id)}>
           <span class="theme-tile__preview" data-theme={id} aria-hidden="true">
-            <span class="theme-tile__hero" />
+            <span class="theme-tile__hero">$24</span>
             <span class="theme-tile__line" />
             <span class="theme-tile__line theme-tile__line--short" />
             {value === id && (

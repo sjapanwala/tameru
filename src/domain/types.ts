@@ -278,8 +278,8 @@ export interface Settings {
   theme?: ThemeId; // absent = ink
 }
 
-/** Colour themes: the same monochrome look on a differently tinted paper. */
-export const THEME_IDS = ['ink', 'paper', 'slate', 'sage', 'dusk'] as const;
+/** Themes: moods built from the same parts (paper, ink, type, the hero). */
+export const THEME_IDS = ['ink', 'receipt', 'almanac', 'night', 'contrast'] as const;
 export type ThemeId = (typeof THEME_IDS)[number];
 
 /** The optional app lock. Only a salted hash of the passcode is kept. */
