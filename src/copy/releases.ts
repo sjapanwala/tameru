@@ -5,6 +5,10 @@ import type { Release } from '../domain/releases';
 
 export const RELEASES: Release[] = [
   {
+    version: '0.10.0',
+    items: [{ title: 'Look back at past months', body: 'Tap the calendar next to Plan to open an earlier month and see what you planned and spent in each category. Months with nothing recorded are greyed out.' }],
+  },
+  {
     version: '0.9.0',
     items: [
       {

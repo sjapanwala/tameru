@@ -5,7 +5,7 @@ import { seedSampleData } from '../../src/data/seed';
 import { createAccount } from '../../src/services/accounts';
 import { contribute, createGoal, listGoals, removeGoal, setGoalContribution } from '../../src/services/goals';
 import { getHome } from '../../src/services/home';
-import { applyCover, budgetsFor, CategoryInUseError, removeCategory, setAllocation } from '../../src/services/plan';
+import { applyCover, budgetsFor, CategoryInUseError, planPeriods, removeCategory, setAllocation } from '../../src/services/plan';
 import { archiveRecurring, createRecurring } from '../../src/services/recurring';
 import { addTransaction } from '../../src/services/transactions';
 import { suggestedCategories } from '../../src/domain/defaults';
@@ -19,6 +19,21 @@ async function appWithCategories(today: string): Promise<App> {
 }
 
 describe('plan services', () => {
+  it('lists past periods for the calendar, marking which have data', async () => {
+    const app = await appWithCategories('2026-10-20');
+    const chq = await createAccount(app, { name: 'Chq', type: 'chequing', openingBalanceCents: 200000 });
+    await addTransaction(app, { amountCents: 1500, accountId: chq.id, categoryId: categoryId('groceries'), date: '2026-07-10' });
+    await app.repos.snapshots.put({ id: 's1', periodStart: '2026-08-01', periodEnd: '2026-08-31', perCategory: {}, createdAt: '', updatedAt: '' } as never);
+    const { kind, periods } = await planPeriods(app);
+    expect(kind).toBe('monthly');
+    expect(periods.map((p) => [p.start, p.hasData, p.current])).toEqual([
+      ['2026-07-01', true, false], // a transaction
+      ['2026-08-01', true, false], // a closed-period snapshot
+      ['2026-09-01', false, false], // nothing recorded
+      ['2026-10-01', true, true], // the current period always opens
+    ]);
+  });
+
   it('shows remaining, offers covers for an over, and applies one in one action', async () => {
     const app = await appWithCategories('2026-10-20');
     const chq = await createAccount(app, { name: 'Chq', type: 'chequing', openingBalanceCents: 200000 });

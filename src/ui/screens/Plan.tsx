@@ -5,19 +5,19 @@
 // percent), its colour and settings.
 
 import { useEffect, useState } from 'preact/hooks';
-import { money, reasonText, S } from '../../copy/strings';
+import { fmtDate, money, reasonText, S } from '../../copy/strings';
 import { centsForPercent, percentOf, shareTicks } from '../../domain/allocation';
 import { CATEGORY_COLORS, categoryColor, isBudgetCategory, nextCategoryColor, SUGGESTED_CATEGORIES } from '../../domain/defaults';
-import { periodLength } from '../../domain/period';
+import { periodLength, type Period } from '../../domain/period';
 import type { GeneratedPlan, GoalFlag } from '../../domain/planGenerator';
 import type { Account, BudgetBehaviour, Category, Cents } from '../../domain/types';
 import { orderedAccounts } from '../../services/accounts';
 import { addGoalToPlan, contribute, listGoals, removeGoal, setGoalContribution, updateGoal } from '../../services/goals';
-import { addCategory, budgetsFor, plannedIncome, removeCategory, setAllocation, updateCategory } from '../../services/plan';
+import { addCategory, budgetsFor, plannedIncome, planPeriods, removeCategory, setAllocation, updateCategory, type PlanPeriod } from '../../services/plan';
 import { acceptPlan, recommendPlan } from '../../services/regenerate';
 import { AccountSelect, AllocationInput, Amount, AmountModeToggle, ChipSelect, Message, Meter, MoneyInput, PageHeader, type AmountMode } from '../components';
 import { useApp, useLoad } from '../hooks';
-import { ChevronRight, PlusIcon, SparkIcon } from '../Icons';
+import { CalendarIcon, ChevronRight, PlusIcon, SparkIcon } from '../Icons';
 import { PlanDial, TickRuler, type DialSlice } from '../PlanDial';
 import { ColorPicker } from '../cards';
 import { reducedMotion } from '../motion';
@@ -43,11 +43,17 @@ interface Slice {
   color: string;
 }
 
-type Editing = { kind: 'cat'; id: string } | { kind: 'goal'; id: string } | { kind: 'newCat' } | { kind: 'newGoal' } | { kind: 'suggest' };
+type Editing = { kind: 'cat'; id: string } | { kind: 'goal'; id: string } | { kind: 'newCat' } | { kind: 'newGoal' } | { kind: 'suggest' } | { kind: 'periods' };
 
 export function Plan() {
   const { app, bump } = useApp();
-  const data = useLoad(budgetsFor);
+  // A past period picked from the calendar (its start date); null is the current one.
+  const [viewing, setViewing] = useState<string | null>(null);
+  const past = viewing !== null;
+  const data = useLoad((a) => budgetsFor(a, viewing ?? undefined), [viewing]);
+  // A closed period's snapshot is what it really was: later plan edits don't rewrite it.
+  const snapshot = useLoad(async (a) => (viewing ? (await a.repos.snapshots.all()).find((x) => x.periodStart === viewing) : undefined), [viewing]);
+  const periods = useLoad(planPeriods);
   const goals = useLoad(listGoals);
   const income = useLoad(plannedIncome);
   const recurring = useLoad((a) => a.repos.recurring.all());
@@ -69,19 +75,36 @@ export function Plan() {
   if (!data || !goals || income === undefined) return <div class="placeholder" />;
   const animate = !pull.dragging && !reducedMotion();
 
+  // Looking back, each category shows what it had and spent then (from the snapshot when there is one).
+  const then = (r: (typeof data.rows)[number]) => {
+    const snap = snapshot?.perCategory[r.category.id];
+    return snap ? { availableCents: snap.allocatedCents, spentCents: snap.spentCents, remainingCents: snap.remainingCents } : r.budget;
+  };
   // A category's share is what's planned for it, and never less than the bills due in it this period.
-  const planOf = (id: string) => Math.max(data.plan.templateAllocations[id] ?? 0, data.due[id] ?? 0);
+  const planOf = (id: string) => {
+    if (past) {
+      const r = data.rows.find((x) => x.category.id === id);
+      return r ? then(r).availableCents : 0;
+    }
+    return Math.max(data.plan.templateAllocations[id] ?? 0, data.due[id] ?? 0);
+  };
   const rows = [...data.rows].filter((r) => isBudgetCategory(r.category)).sort((a, b) => GROUP_ORDER.indexOf(a.category.group) - GROUP_ORDER.indexOf(b.category.group) || a.category.sortOrder - b.category.sortOrder);
   const slices: Slice[] = [
     ...rows.map((r, i) => ({ key: `cat:${r.category.id}`, id: r.category.id, kind: 'cat' as const, name: r.category.name, color: categoryColor(r.category, i), cents: planOf(r.category.id) })),
-    ...goals.map((g) => ({ key: `goal:${g.goal.id}`, id: g.goal.id, kind: 'goal' as const, name: g.goal.name, cents: g.perPeriodCents })),
+    // Goal amounts aren't kept per period, so a past period shows categories only.
+    ...(past ? [] : goals.map((g) => ({ key: `goal:${g.goal.id}`, id: g.goal.id, kind: 'goal' as const, name: g.goal.name, cents: g.perPeriodCents }))),
   ]
     .map((s) => ({ ...s, cents: live?.key === s.key ? live.cents : s.cents }))
     .map((s, i, all) => ({ ...s, color: colorOf(s as { kind: 'cat' | 'goal'; color?: string }, i, all as { kind: 'cat' | 'goal'; color?: string }[]) }));
 
   const planned = slices.reduce((t, s) => t + s.cents, 0);
-  // With no income set up, the dial shows each share of what's planned instead.
-  const base = income > 0 ? income : planned;
+  // With no income set up (or looking back), the dial shows each share of what's planned instead.
+  const base = income > 0 && !past ? income : planned;
+  const spentThen = past ? rows.reduce((t, r) => t + then(r).spentCents, 0) : 0;
+  const spentOf = (id: string) => {
+    const r = rows.find((x) => x.category.id === id);
+    return r ? then(r).spentCents : 0;
+  };
   const ticks = shareTicks(slices, base);
   const dial: DialSlice[] = slices.map((s, i) => ({ key: s.key, ticks: ticks[i]!.ticks, color: s.color, name: s.name, detail: `${Math.round(percentOf(s.cents, base))}% · ${money(s.cents)}` }));
   const pct = (c: Cents) => percentOf(c, base);
@@ -105,11 +128,30 @@ export function Plan() {
       <PageHeader
         title={S.plan.title}
         action={
-          <button type="button" class="icon-btn icon-btn--soft plan__suggest" aria-label={S.plan.regenerate} onClick={() => setEditing({ kind: 'suggest' })}>
-            <SparkIcon />
-          </button>
+          <div class="head-actions">
+            <button type="button" class={`icon-btn ${past ? 'icon-btn--plain' : 'icon-btn--soft'}`} aria-label={S.plan.history} onClick={() => setEditing({ kind: 'periods' })}>
+              <CalendarIcon />
+            </button>
+            {!past && (
+              <button type="button" class="icon-btn icon-btn--soft plan__suggest" aria-label={S.plan.regenerate} onClick={() => setEditing({ kind: 'suggest' })}>
+                <SparkIcon />
+              </button>
+            )}
+          </div>
         }
       />
+
+      {past && (
+        <div class="plan-past">
+          <span>
+            <small>{S.plan.lookingBack}</small>
+            <strong>{periodLabel(data.period, periods?.kind)}</strong>
+          </span>
+          <button type="button" class="link" onClick={() => (setViewing(null), setSelected(undefined))}>
+            {S.plan.backToNow}
+          </button>
+        </div>
+      )}
 
       <div
         ref={pull.ref}
@@ -123,7 +165,17 @@ export function Plan() {
         onClickCapture={pull.bind.onClickCapture}
       >
         <PlanDial slices={dial} selected={selected} p={pull.p} onSelect={setSelected}>
-          {current ? (
+          {past ? (
+            // Looking back: how much of what was planned got spent.
+            <>
+              <p class="plan-dial__label">{current ? current.name : S.plan.spentLabel}</p>
+              <p class="plan-dial__pct">
+                {Math.round(percentOf(current ? spentOf(current.id) : spentThen, Math.max(1, current ? current.cents : planned)))}
+                <span>%</span>
+              </p>
+              <p class="plan-dial__sub">{S.plan.ofIncome(current ? spentOf(current.id) : spentThen, current ? current.cents : planned)}</p>
+            </>
+          ) : current ? (
             <>
               <p class="plan-dial__label">{current.name}</p>
               <p class="plan-dial__pct">
@@ -145,7 +197,9 @@ export function Plan() {
             </>
           )}
         </PlanDial>
-        {current && income > 0 ? (
+        {past ? (
+          <p class="plan-card__hint">{S.plan.pastHint}</p>
+        ) : current && income > 0 ? (
           <TickRuler
             label={current.name}
             value={curPct}
@@ -174,6 +228,27 @@ export function Plan() {
       <ul class="plan-list">
         {rows.map((r) => {
           const s = slices.find((x) => x.key === `cat:${r.category.id}`)!;
+          if (past) {
+            const b = then(r);
+            return (
+              <li key={r.category.id}>
+                <div class="plan-row plan-row--past">
+                  <span class="plan-pill__dot" style={{ background: s.color }} />
+                  <span class="plan-row__main">
+                    <strong>{r.category.name}</strong>
+                    <small>
+                      {S.plan.spentOf(b.spentCents, b.availableCents)} · {S.plan.left(b.remainingCents)}
+                    </small>
+                    <Meter left={b.remainingCents} of={Math.max(b.availableCents, 1)} />
+                  </span>
+                  <span class="plan-row__amt">
+                    <Amount c={b.availableCents} />
+                    <small>{Math.round(pct(s.cents))}%</small>
+                  </span>
+                </div>
+              </li>
+            );
+          }
           return (
             <li key={r.category.id}>
               <button type="button" class="plan-row" onClick={() => setEditing({ kind: 'cat', id: r.category.id })}>
@@ -195,38 +270,44 @@ export function Plan() {
           );
         })}
       </ul>
-      <button type="button" class="onb-add" onClick={() => setEditing({ kind: 'newCat' })}>
-        <PlusIcon /> {S.plan.addCategory}
-      </button>
+      {!past && (
+        <button type="button" class="onb-add" onClick={() => setEditing({ kind: 'newCat' })}>
+          <PlusIcon /> {S.plan.addCategory}
+        </button>
+      )}
 
-      <div class="section-head">
-        <h2>{S.plan.goals}</h2>
-      </div>
-      <ul class="plan-list">
-        {goals.map(({ goal, progress, perPeriodCents }) => {
-          const s = slices.find((x) => x.key === `goal:${goal.id}`)!;
-          return (
-            <li key={goal.id}>
-              <button type="button" class="plan-row" onClick={() => setEditing({ kind: 'goal', id: goal.id })}>
-                <span class="plan-pill__dot" style={{ background: s.color }} />
-                <span class="plan-row__main">
-                  <strong>{goal.name}</strong>
-                  <small>{goal.targetCents > 0 ? S.plan.goalLine(progress.progressCents, goal.targetCents) : S.plan.goalOpen(progress.progressCents)}</small>
-                  {goal.targetCents > 0 && <Meter left={progress.progressCents} of={goal.targetCents} />}
-                </span>
-                <span class="plan-row__amt">
-                  <Amount c={perPeriodCents} />
-                  <small>{Math.round(pct(perPeriodCents))}%</small>
-                </span>
-                <ChevronRight />
-              </button>
-            </li>
-          );
-        })}
-      </ul>
-      <button type="button" class="onb-add" onClick={() => setEditing({ kind: 'newGoal' })}>
-        <PlusIcon /> {S.plan.addGoal}
-      </button>
+      {!past && (
+        <>
+          <div class="section-head">
+            <h2>{S.plan.goals}</h2>
+          </div>
+          <ul class="plan-list">
+            {goals.map(({ goal, progress, perPeriodCents }) => {
+              const s = slices.find((x) => x.key === `goal:${goal.id}`)!;
+              return (
+                <li key={goal.id}>
+                  <button type="button" class="plan-row" onClick={() => setEditing({ kind: 'goal', id: goal.id })}>
+                    <span class="plan-pill__dot" style={{ background: s.color }} />
+                    <span class="plan-row__main">
+                      <strong>{goal.name}</strong>
+                      <small>{goal.targetCents > 0 ? S.plan.goalLine(progress.progressCents, goal.targetCents) : S.plan.goalOpen(progress.progressCents)}</small>
+                      {goal.targetCents > 0 && <Meter left={progress.progressCents} of={goal.targetCents} />}
+                    </span>
+                    <span class="plan-row__amt">
+                      <Amount c={perPeriodCents} />
+                      <small>{Math.round(pct(perPeriodCents))}%</small>
+                    </span>
+                    <ChevronRight />
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+          <button type="button" class="onb-add" onClick={() => setEditing({ kind: 'newGoal' })}>
+            <PlusIcon /> {S.plan.addGoal}
+          </button>
+        </>
+      )}
 
       {editing && (
         <Sheet label={S.plan.title} onClose={() => setEditing(null)}>
@@ -262,6 +343,14 @@ export function Plan() {
             {editing.kind === 'newCat' && <NewCategory taken={slices.map((x) => x.name)} usedColors={slices.map((x) => x.color)} onDone={() => (setEditing(null), bump())} />}
             {editing.kind === 'newGoal' && <NewGoal accounts={accounts} onSaved={(f) => (setFlags(f), setEditing(null), bump())} />}
             {editing.kind === 'suggest' && <Suggest name={name} onDone={() => (setEditing(null), bump())} flagText={flagText} />}
+            {editing.kind === 'periods' && periods && (
+              <PeriodPicker
+                kind={periods.kind}
+                periods={periods.periods}
+                value={viewing ?? periods.periods.find((p) => p.current)?.start}
+                onPick={(p) => (setViewing(p.current ? null : p.start), setSelected(undefined), setEditing(null))}
+              />
+            )}
           </div>
         </Sheet>
       )}
@@ -533,5 +622,53 @@ function NewGoal({ accounts, onSaved }: { accounts: Account[]; onSaved: (f: Goal
         </button>
       </div>
     </form>
+  );
+}
+
+const MONTHS = Array.from({ length: 12 }, (_, m) => new Date(2026, m, 15).toLocaleDateString('en-CA', { month: 'short' }));
+
+/** "September 2026" for a monthly period, else its dates. */
+function periodLabel(p: Period, kind?: 'monthly' | 'payday'): string {
+  const d = (x: string) => new Date(`${x}T12:00:00`);
+  if (kind !== 'payday') return d(p.start).toLocaleDateString('en-CA', { month: 'long', year: 'numeric' });
+  return `${fmtDate(p.start)} – ${fmtDate(p.end)}`;
+}
+
+/**
+ * The Plan's calendar: a year of months (or, paid by payday, each pay period), newest
+ * year first. Months with nothing recorded, and the future, are greyed out.
+ */
+function PeriodPicker(props: { kind: 'monthly' | 'payday'; periods: PlanPeriod[]; value?: string; onPick: (p: PlanPeriod) => void }) {
+  const years = [...new Set(props.periods.map((p) => Number(p.start.slice(0, 4))))].sort((a, b) => b - a);
+  const tile = (p: PlanPeriod | undefined, label: string, key: string) => (
+    <button
+      type="button"
+      key={key}
+      class={`period-tile${p && p.start === props.value ? ' on' : ''}${p?.current ? ' period-tile--now' : ''}`}
+      disabled={!p?.hasData}
+      aria-pressed={!!p && p.start === props.value}
+      onClick={() => p && props.onPick(p)}
+    >
+      {label}
+    </button>
+  );
+  return (
+    <div class="period-picker">
+      <h2>{S.plan.history}</h2>
+      <p class="muted">{S.plan.historySub}</p>
+      {years.map((y) => (
+        <section key={y}>
+          <p class="eyebrow">{y}</p>
+          <div class={`period-grid${props.kind === 'payday' ? ' period-grid--pay' : ''}`}>
+            {props.kind === 'payday'
+              ? props.periods.filter((p) => p.start.startsWith(String(y))).reverse().map((p) => tile(p, `${fmtDate(p.start)} – ${fmtDate(p.end)}`, p.start))
+              : MONTHS.map((m, i) => {
+                  const ym = `${y}-${String(i + 1).padStart(2, '0')}`;
+                  return tile(props.periods.find((p) => p.start.startsWith(ym)), m, ym);
+                })}
+          </div>
+        </section>
+      ))}
+    </div>
   );
 }

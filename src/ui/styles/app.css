@@ -5672,3 +5672,106 @@ body.tab-menu-open .tabbar {
 [data-theme='contrast'] .home-hero::before {
   display: none;
 }
+
+/* ---------- plan: past months ---------- */
+
+.plan-past {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s3);
+  margin: calc(-1 * var(--s3)) 0 var(--s4);
+  padding: var(--s3) var(--s4);
+  border-radius: var(--radius);
+  background: var(--surface);
+  animation: enter var(--t-slow) var(--glide) backwards;
+}
+
+.plan-past span {
+  display: grid;
+}
+
+.plan-past small {
+  font-size: var(--fs-xs);
+  color: var(--text-2);
+}
+
+.plan-past strong {
+  font-family: var(--font-display);
+  font-size: var(--fs-lg);
+  letter-spacing: -0.02em;
+}
+
+.plan-past .link {
+  margin: 0;
+  white-space: nowrap;
+}
+
+.plan-row--past {
+  cursor: default;
+}
+
+.period-picker h2 {
+  margin: 0 0 var(--s1);
+}
+
+.period-picker .muted {
+  margin: 0 0 var(--s4);
+  font-size: var(--fs-sm);
+}
+
+.period-picker section + section {
+  margin-top: var(--s4);
+}
+
+.period-picker .eyebrow {
+  margin: 0 0 var(--s2);
+}
+
+.period-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--s2);
+}
+
+.period-grid--pay {
+  grid-template-columns: repeat(2, 1fr);
+}
+
+.period-tile {
+  position: relative;
+  min-height: 48px;
+  margin: 0;
+  padding: 0 var(--s2);
+  border: 1px solid var(--line);
+  border-radius: var(--btn-r);
+  background: var(--bg);
+  font-size: var(--fs-sm);
+  font-weight: 550;
+}
+
+.period-tile.on {
+  background: var(--text);
+  border-color: var(--text);
+  color: var(--bg);
+}
+
+/* this month: a small dot under the label */
+.period-tile--now::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: 7px;
+  width: 4px;
+  height: 4px;
+  margin-left: -2px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.period-tile:disabled {
+  opacity: 1;
+  color: var(--text-3);
+  background: transparent;
+  border-style: dashed;
+}

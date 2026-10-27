@@ -60,6 +60,28 @@ export async function monthlyIncome(ctx: AppContext): Promise<Cents> {
 
 export const currentPeriod =async (ctx: AppContext): Promise<Period> => (await periodContext(ctx)).period;
 
+/** A budget period the Plan's calendar can show: past ones with something recorded can be opened. */
+export interface PlanPeriod extends Period {
+  hasData: boolean; // a closed-period snapshot or any transaction in it (the current period always)
+  current: boolean;
+}
+
+/** Every period from the first one with data (or the plan's start) up to the current one. */
+export async function planPeriods(ctx: AppContext): Promise<{ kind: Plan['period']['kind']; periods: PlanPeriod[] }> {
+  const { plan, schedule, period } = await periodContext(ctx);
+  const [transactions, snapshots] = await Promise.all([ctx.repos.transactions.all(), ctx.repos.snapshots.all()]);
+  const dates = transactions.filter((t) => t.status === 'posted').map((t) => t.date).sort();
+  const closed = new Set(snapshots.map((x) => x.periodStart));
+  const from = dates[0] && dates[0] < plan.startDate ? dates[0] : plan.startDate;
+  let i = 0; // dates are sorted, and so are the periods: walk both once
+  const periods = periodsBetween(plan.period, from < period.start ? from : period.start, period.start, schedule).map((p) => {
+    while (i < dates.length && dates[i]! < p.start) i++;
+    const current = p.start === period.start;
+    return { ...p, current, hasData: current || closed.has(p.start) || (i < dates.length && dates[i]! <= p.end) };
+  });
+  return { kind: plan.period.kind, periods };
+}
+
 export interface BudgetRow {
   category: Category;
   budget: CategoryBudget;
