@@ -1,7 +1,7 @@
 // Floating pill tab bar. The active tab sits in a solid circle.
 // Hold a tab for its shortcuts (add from Activity without opening it, and so on).
 
-import { useEffect, useState } from 'preact/hooks';
+import { useEffect, useRef, useState } from 'preact/hooks';
 import { S } from '../copy/strings';
 import { ActivityIcon, ArrowDownLeft, BellIcon, CameraIcon, CardIcon, GearIcon, HomeIcon, MoreIcon, PlanIcon, PlusIcon, SparkIcon, SwapIcon, UploadIcon } from './Icons';
 import type { MenuItem } from './CardMenu';
@@ -44,24 +44,28 @@ const SHORTCUTS: Record<TabKey, MenuItem[]> = {
 
 export function TabBar({ path }: { path: string }) {
   const active = (p: string) => (p === '/more' ? MORE_PATHS.includes(path) : path === p);
-  const [menu, setMenu] = useState<{ key: TabKey; rect: DOMRect } | null>(null);
+  const [menu, setMenu] = useState<{ key: TabKey; rect: DOMRect; barTop: number } | null>(null);
+  const held = useRef<Element | null>(null); // the tab still under the finger: its release can pick a shortcut
   useEffect(() => setMenu(null), [path]); // tapped another tab instead
   return (
     <>
       <nav class="tabbar" aria-label={S.nav.tabs}>
         {TABS.map(([p, key, Icon]) => (
-          <Tab key={p} path={p} label={S.nav[key]} current={active(p)} onHold={(rect) => setMenu({ key, rect })}>
+          <Tab key={p} path={p} label={S.nav[key]} current={active(p)} onHold={(el) => {
+              held.current = el;
+              setMenu({ key, rect: el.getBoundingClientRect(), barTop: el.closest('.tabbar')!.getBoundingClientRect().top });
+            }}>
             <Icon />
           </Tab>
         ))}
       </nav>
-      {menu && <TabMenu rect={menu.rect} items={SHORTCUTS[menu.key]} onClose={() => setMenu(null)} />}
+      {menu && <TabMenu rect={menu.rect} barTop={menu.barTop} holder={held} items={SHORTCUTS[menu.key]} onClose={() => setMenu(null)} />}
     </>
   );
 }
 
-function Tab(props: { path: string; label: string; current: boolean; onHold: (rect: DOMRect) => void; children: preact.ComponentChildren }) {
-  const hold = useLongPress((el) => props.onHold(el.getBoundingClientRect()));
+function Tab(props: { path: string; label: string; current: boolean; onHold: (el: HTMLElement) => void; children: preact.ComponentChildren }) {
+  const hold = useLongPress(props.onHold);
   return (
     <a class="tab" href={`#${props.path}`} aria-current={props.current ? 'page' : undefined} {...hold}>
       {props.children}

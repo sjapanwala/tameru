@@ -5,6 +5,13 @@ import type { Release } from '../domain/releases';
 
 export const RELEASES: Release[] = [
   {
+    version: '0.8.1',
+    items: [
+      { title: 'Hold and slide', body: 'Hold a tab, slide your finger up to a shortcut and let go to pick it, all in one motion.' },
+      { title: 'Home reaches the top', body: 'The dark panel on Home runs right up under the status bar again.' },
+    ],
+  },
+  {
     version: '0.8.0',
     items: [{ title: 'Themes', body: 'Pick Ink, Paper, Slate, Sage or Dusk in Settings. Same quiet look, on a different paper, each with a light and a dark version.' }],
   },
