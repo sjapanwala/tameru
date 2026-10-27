@@ -15,6 +15,13 @@
       /* Paints before any script or stylesheet. Matches --bg so there's no flash. */
       html { background: #ffffff; color: #111111; }
       @media (prefers-color-scheme: dark) { html { background: #0c0c0c; color: #f2f2f2; } }
+      /* Themes (see src/ui/theme.ts): the splash takes the theme's paper too. */
+      html[data-theme='paper'] { background: #f6f3ec; } html[data-theme='slate'] { background: #f7f8fa; }
+      html[data-theme='sage'] { background: #f6f7f3; } html[data-theme='dusk'] { background: #f8f6f7; }
+      @media (prefers-color-scheme: dark) {
+        html[data-theme='paper'] { background: #12110e; } html[data-theme='slate'] { background: #0b0e12; }
+        html[data-theme='sage'] { background: #0d0f0c; } html[data-theme='dusk'] { background: #100d0f; }
+      }
       #splash { position: fixed; inset: 0; z-index: 1000; display: grid; place-items: center; background: inherit; transition: opacity 0.2s ease-out; }
       #splash.splash--out { opacity: 0; pointer-events: none; }
       /* Shown only if loading takes a moment: no fake wait on a fast start. */
@@ -28,6 +35,10 @@
       @keyframes splash-gauge { 0% { stroke-dashoffset: 104; } 55% { stroke-dashoffset: 30; } 100% { stroke-dashoffset: 104; } }
       @media (prefers-reduced-motion: reduce) { #splash .fill { animation: none; stroke-dashoffset: 30; } }
     </style>
+    <script>
+      // The chosen theme before the first paint (src/ui/theme.ts keeps this in sync).
+      try { var t = localStorage.getItem('tameru-theme'); if (t) document.documentElement.dataset.theme = t; } catch (e) {}
+    </script>
   </head>
   <body>
     <div id="splash" aria-hidden="true">

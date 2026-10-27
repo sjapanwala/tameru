@@ -1,9 +1,11 @@
 /* Design tokens — "Ledger".
    Monochrome. Type does the work: a grotesk for words, a monospace for every figure,
    like a well-kept receipt. Ticks, rules and hatching stand in for colour.
-   Light and dark follow the system. */
+   Light and dark follow the system. Themes (bottom of this file) only tint the
+   greys: paper, ink and the dark hero, never a bright colour. */
 
-:root {
+:root,
+[data-theme='ink'] {
   --bg: #ffffff;
   --surface: #f5f5f5;
   --text: #111111;
@@ -70,7 +72,8 @@
 }
 
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root,
+  [data-theme='ink'] {
     --bg: #0c0c0c;
     --surface: #181818;
     --text: #f2f2f2;
@@ -88,5 +91,143 @@
     --hero-bg: radial-gradient(120% 140% at 0% 0%, #2e2e2e 0%, #1a1a1a 45%, #121212 100%);
     --scrim: rgb(0 0 0 / 0.6);
     color-scheme: dark;
+  }
+}
+
+/* ---------- themes: the same Ledger look on a different paper ---------- */
+
+[data-theme='paper'] {
+  --bg: #f6f3ec;
+  --surface: #ece8de;
+  --text: #1c1a16;
+  --text-2: #716b60;
+  --text-3: #aaa497;
+  --line: #e3ded2;
+  --line-strong: #1c1a16;
+  --accent: #1c1a16;
+  --accent-text: #f6f3ec;
+  --accent-soft: #efebe2;
+  --track: #e2ddd0;
+  --hero-bg: radial-gradient(120% 140% at 0% 0%, #36322b 0%, #1c1a16 45%, #0b0a08 100%);
+  --hero-text: #f6f3ec;
+}
+
+@media (prefers-color-scheme: dark) {
+  [data-theme='paper'] {
+    --bg: #12110e;
+    --surface: #1d1b17;
+    --text: #efeadf;
+    --text-2: #9c9688;
+    --text-3: #5f5a50;
+    --line: #2a2722;
+    --line-strong: #efeadf;
+    --accent: #efeadf;
+    --accent-text: #12110e;
+    --accent-soft: #221f1a;
+    --track: #302c26;
+    --hero-bg: radial-gradient(120% 140% at 0% 0%, #38342c 0%, #211e19 45%, #171511 100%);
+    --hero-text: #efeadf;
+  }
+}
+
+[data-theme='slate'] {
+  --bg: #f7f8fa;
+  --surface: #eef1f4;
+  --text: #10151b;
+  --text-2: #657080;
+  --text-3: #a0a9b5;
+  --line: #e3e7ec;
+  --line-strong: #10151b;
+  --accent: #10151b;
+  --accent-text: #ffffff;
+  --accent-soft: #eceff3;
+  --track: #e1e5ea;
+  --hero-bg: radial-gradient(120% 140% at 0% 0%, #2b323c 0%, #141920 45%, #06080b 100%);
+  --hero-text: #f3f6f9;
+}
+
+@media (prefers-color-scheme: dark) {
+  [data-theme='slate'] {
+    --bg: #0b0e12;
+    --surface: #151a20;
+    --text: #eef2f6;
+    --text-2: #8f9aa7;
+    --text-3: #56606c;
+    --line: #212831;
+    --line-strong: #eef2f6;
+    --accent: #eef2f6;
+    --accent-text: #0b0e12;
+    --accent-soft: #1a2028;
+    --track: #27303a;
+    --hero-bg: radial-gradient(120% 140% at 0% 0%, #2d3541 0%, #181e26 45%, #10141a 100%);
+    --hero-text: #eef2f6;
+  }
+}
+
+[data-theme='sage'] {
+  --bg: #f6f7f3;
+  --surface: #edefe8;
+  --text: #141812;
+  --text-2: #687062;
+  --text-3: #a3aa9c;
+  --line: #e2e6dc;
+  --line-strong: #141812;
+  --accent: #141812;
+  --accent-text: #f6f7f3;
+  --accent-soft: #eaede5;
+  --track: #dfe3d8;
+  --hero-bg: radial-gradient(120% 140% at 0% 0%, #2d3429 0%, #161a14 45%, #070806 100%);
+  --hero-text: #f3f5ef;
+}
+
+@media (prefers-color-scheme: dark) {
+  [data-theme='sage'] {
+    --bg: #0d0f0c;
+    --surface: #171a15;
+    --text: #eef1ea;
+    --text-2: #949b8d;
+    --text-3: #5a6154;
+    --line: #242820;
+    --line-strong: #eef1ea;
+    --accent: #eef1ea;
+    --accent-text: #0d0f0c;
+    --accent-soft: #1c2019;
+    --track: #2a2f26;
+    --hero-bg: radial-gradient(120% 140% at 0% 0%, #30372c 0%, #1b1f18 45%, #121510 100%);
+    --hero-text: #eef1ea;
+  }
+}
+
+[data-theme='dusk'] {
+  --bg: #f8f6f7;
+  --surface: #f0ecee;
+  --text: #181316;
+  --text-2: #73686e;
+  --text-3: #ada2a8;
+  --line: #e8e2e5;
+  --line-strong: #181316;
+  --accent: #181316;
+  --accent-text: #f8f6f7;
+  --accent-soft: #eee9ec;
+  --track: #e5dee2;
+  --hero-bg: radial-gradient(120% 140% at 0% 0%, #362d32 0%, #1b1619 45%, #090708 100%);
+  --hero-text: #f7f3f5;
+}
+
+@media (prefers-color-scheme: dark) {
+  [data-theme='dusk'] {
+    --bg: #100d0f;
+    --surface: #1b1719;
+    --text: #f3eef1;
+    --text-2: #9e9399;
+    --text-3: #62585e;
+    --line: #2a2427;
+    --line-strong: #f3eef1;
+    --accent: #f3eef1;
+    --accent-text: #100d0f;
+    --accent-soft: #211c1f;
+    --track: #312a2e;
+    --hero-bg: radial-gradient(120% 140% at 0% 0%, #393137 0%, #201b1e 45%, #161215 100%);
+    --hero-text: #f3eef1;
   }
 }

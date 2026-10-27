@@ -5495,3 +5495,99 @@ body.tab-menu-open .tabbar {
     animation: none;
   }
 }
+
+/* ---------- settings: theme picker ---------- */
+
+.theme-picker {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: var(--s2);
+  padding: var(--s3);
+}
+
+.theme-tile {
+  display: grid;
+  gap: var(--s2);
+  justify-items: center;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--text-2);
+  font-size: var(--fs-xs);
+}
+
+.theme-tile.on {
+  color: var(--text);
+  font-weight: 600;
+}
+
+/* drawn with the tile's own theme tokens (data-theme on the preview) */
+.theme-tile__preview {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 100%;
+  aspect-ratio: 3 / 4;
+  padding: 5px 5px 0;
+  border-radius: var(--btn-r);
+  background: var(--bg);
+  box-shadow: 0 0 0 1px var(--line);
+  overflow: hidden;
+  transition: box-shadow var(--t-fast) var(--glide), transform var(--t-fast) var(--glide);
+}
+
+.theme-tile:active .theme-tile__preview {
+  transform: scale(0.95);
+}
+
+.theme-tile.on .theme-tile__preview {
+  box-shadow: 0 0 0 2px var(--text);
+}
+
+.theme-tile__hero {
+  height: 52%;
+  border-radius: 7px 7px 9px 9px;
+  background: var(--hero-bg);
+}
+
+.theme-tile__line {
+  height: 4px;
+  margin: 3px 3px 0;
+  border-radius: 2px;
+  background: var(--text);
+  opacity: 0.85;
+}
+
+.theme-tile__line--short {
+  width: 55%;
+  margin-top: 0;
+  background: var(--text-3);
+}
+
+.theme-tile__check {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: grid;
+  place-items: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--hero-text);
+  color: #111;
+}
+
+.theme-tile__check svg {
+  width: 11px;
+  height: 11px;
+  stroke-width: 2.5;
+}
+
+.theme-tile__name {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

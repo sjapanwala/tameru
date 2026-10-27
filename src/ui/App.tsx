@@ -24,6 +24,7 @@ import { LockScreen } from './PinPad';
 import { Sheet } from './Sheet';
 import { ScanHost } from './scan';
 import { TabBar } from './TabBar';
+import { applyTheme } from './theme';
 import { ToastHost } from './toast';
 import { hideSplash } from './splash';
 import { announceUpdate, latestReleases } from './version';
@@ -69,6 +70,7 @@ function Screens({ offer, setOffer }: { offer: FreshStartOffer | null; setOffer:
   const [news, setNews] = useState<Release[]>([]);
   // Runs once the app (and so the toast host) has rendered.
   useEffect(() => void (settings && setNews(announceUpdate())), [!!settings]);
+  useEffect(() => void (settings && applyTheme(settings.theme)), [settings?.theme, !!settings]);
   if (!settings) return <div class="placeholder" />;
   // Debug stays reachable before onboarding so the sample data can be seeded.
   if (!settings.onboardedAt && route.path !== '/debug') {

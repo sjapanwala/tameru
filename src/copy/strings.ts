@@ -525,7 +525,9 @@ export const S = {
 
   settings: {
     title: 'Settings',
-    groups: { budget: 'Budget', notifications: 'Reminders', security: 'Security', freshStart: 'Fresh start' },
+    groups: { theme: 'Theme', budget: 'Budget', notifications: 'Reminders', security: 'Security', freshStart: 'Fresh start' },
+    themes: { ink: 'Ink', paper: 'Paper', slate: 'Slate', sage: 'Sage', dusk: 'Dusk' },
+    themeNote: 'Each one has a light and a dark version, and follows your phone’s setting.',
     addName: 'Add your name',
     profileSub: 'Your initials show on Home',
     name: 'Your name',

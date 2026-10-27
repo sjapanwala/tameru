@@ -5,7 +5,7 @@ import { useEffect, useState } from 'preact/hooks';
 import { money, S } from '../../copy/strings';
 import { exportCsv, exportJson, importCsv, importJson } from '../../data/exportImport';
 import { initials } from '../../domain/onboarding';
-import type { AppLock, PeriodConfig, Settings as SettingsT } from '../../domain/types';
+import { THEME_IDS, type AppLock, type PeriodConfig, type Settings as SettingsT, type ThemeId } from '../../domain/types';
 import { eraseAllData } from '../../services/app';
 import { checkPasscode, enablePasskey, passkeyAvailable, RELOCK_OPTIONS_MS, removeLock, setPasscode, updateLock } from '../../services/lock';
 import { periodContext, setPeriodConfig } from '../../services/plan';
@@ -63,6 +63,10 @@ export function Settings() {
         </span>
         <ChevronRight />
       </button>
+
+      <Group title={S.settings.groups.theme} note={S.settings.themeNote}>
+        <ThemePicker value={settings.theme ?? 'ink'} onChange={(theme) => update({ theme: theme === 'ink' ? undefined : theme })} />
+      </Group>
 
       <Group title={S.settings.groups.budget}>
         <Row label={S.settings.period} value={periodText} onClick={() => setEditing('period')} />
@@ -174,6 +178,29 @@ export function Settings() {
 }
 
 // ---------- list pieces ----------
+
+/** One tile per theme, each drawn in its own colours: a little hero over two lines of text. */
+function ThemePicker({ value, onChange }: { value: ThemeId; onChange: (t: ThemeId) => void }) {
+  return (
+    <div class="theme-picker" role="radiogroup" aria-label={S.settings.groups.theme}>
+      {THEME_IDS.map((id) => (
+        <button type="button" key={id} role="radio" aria-checked={value === id} class={`theme-tile${value === id ? ' on' : ''}`} onClick={() => onChange(id)}>
+          <span class="theme-tile__preview" data-theme={id} aria-hidden="true">
+            <span class="theme-tile__hero" />
+            <span class="theme-tile__line" />
+            <span class="theme-tile__line theme-tile__line--short" />
+            {value === id && (
+              <span class="theme-tile__check">
+                <CheckIcon />
+              </span>
+            )}
+          </span>
+          <span class="theme-tile__name">{S.settings.themes[id]}</span>
+        </button>
+      ))}
+    </div>
+  );
+}
 
 function Group(props: { title?: string; note?: string; children: preact.ComponentChildren }) {
   return (

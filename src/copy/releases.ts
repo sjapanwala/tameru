@@ -5,6 +5,10 @@ import type { Release } from '../domain/releases';
 
 export const RELEASES: Release[] = [
   {
+    version: '0.8.0',
+    items: [{ title: 'Themes', body: 'Pick Ink, Paper, Slate, Sage or Dusk in Settings. Same quiet look, on a different paper, each with a light and a dark version.' }],
+  },
+  {
     version: '0.7.0',
     items: [
       { title: 'Hold a tab for shortcuts', body: 'Press and hold a tab icon for quick actions. Hold Activity to add spending or income, or scan a receipt, without leaving the screen you’re on.' },
