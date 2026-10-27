@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { findDate, findLast4, findTotal, findVendor, parseReceipt } from './receiptParse';
+import { findDate, findLast4, findTotal, findVendor, findWallet, mergeDrafts, parseReceipt } from './receiptParse';
 
 const TODAY = '2026-10-19';
 
@@ -73,6 +73,9 @@ describe('receipt parsing', () => {
     expect(findLast4(['Phone 416 555 0123', 'Auth 004211'])).toBeUndefined();
     // real Tesseract output: the asterisks came back as letters
     expect(findLast4(['VISA            sorpkorkkokkokkk4821'])).toBe('4821');
+    expect(findLast4(['VISA            sorskskokkokkkkkxk4 821'])).toBe('4821');
+    expect(findLast4(['VISA            sctorkokokokokok 4821'])).toBe('4821');
+    expect(findLast4(['VISA            sctorkokokokokok 4821 5'])).toBeUndefined(); // more digits follow: not a last four
     expect(findLast4(['Reference ABCDEFGH1234'])).toBeUndefined(); // not a payment line
   });
   it('picks plausible dates only', () => {
@@ -84,9 +87,42 @@ describe('receipt parsing', () => {
     expect(findVendor(['Welcome to', '55 King St', 'LCBO', 'Store #12'])).toBe('LCBO');
     expect(findVendor(['(905) 555-1234', 'SHOPPERS DRUG MART'])).toBe('Shoppers Drug Mart');
     expect(findVendor(['12.00', '***'])).toBeUndefined();
+    expect(findVendor(['Ce eee', 'TIM HORTONS #4412'])).toBe('Tim Hortons'); // edge-of-paper noise
+    expect(findVendor(['IKEA'])).toBe('IKEA');
+  });
+  it('fixes letters misread inside prices', () => {
+    expect(findTotal(['TOTAL 1O.4S'])).toBe(1045);
+    expect(findTotal(['TOTAL $l2.99'])).toBe(1299);
+  });
+  it('checks the total against subtotal plus tax', () => {
+    // total misread, but the card line shows the real amount
+    expect(findTotal(['Subtotal 7.74', 'HST 1.01', 'TOTAL 8.15', 'VISA 8.75'])).toBe(875);
+    // the sum isn't printed anywhere else: trust the total
+    expect(findTotal(['Subtotal 7.74', 'HST 1.01', 'TOTAL 8.15'])).toBe(815);
+    // no total line at all
+    expect(findTotal(['Subtotal 10.00', 'GST 0.50', 'PST 0.70'])).toBe(1120);
+  });
+  it('spots tap-to-pay from a phone or watch', () => {
+    expect(findWallet(['VISA CONTACTLESS', 'APPLE PAY'])).toBe('apple_pay');
+    expect(findWallet(['Google Pay'])).toBe('google_pay');
+    expect(findWallet(['DPAN ****1234'])).toBe('device');
+    expect(findWallet(['VISA ****1234'])).toBeUndefined();
+    expect(findLast4(['DPAN ....1234'])).toBe('1234');
+  });
+  it('reads written-out month dates', () => {
+    expect(findDate(['27-Sep-2026'], TODAY)).toBe('2026-09-27');
+    expect(findDate(['14 Oct 26 12:01'], TODAY)).toBe('2026-10-14');
   });
   it('reports how much it found', () => {
     expect(parseReceipt('nothing useful', TODAY).confidence).toBe(0.25);
     expect(parseReceipt('', TODAY)).toEqual({ confidence: 0 });
+  });
+  it('fills what one read missed from the other', () => {
+    const photo = { amountCents: 875, merchant: 'Tim Hortons', confidence: 0.5 };
+    const sharp = { amountCents: 815, last4: '4821', date: '2026-10-19', confidence: 0.75 };
+    // the fuller read leads; the other fills its gaps
+    expect(mergeDrafts(photo, sharp)).toEqual({ amountCents: 815, merchant: 'Tim Hortons', last4: '4821', date: '2026-10-19', confidence: 1 });
+    // a read with no total never leads over one with a total
+    expect(mergeDrafts(photo, { last4: '1', date: '2026-10-19', merchant: 'x', confidence: 0.75 }).amountCents).toBe(875);
   });
 });

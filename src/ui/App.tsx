@@ -22,6 +22,7 @@ import { More } from './screens/More';
 import { QuickEditor } from './screens/QuickEditor';
 import { LockScreen } from './PinPad';
 import { Sheet } from './Sheet';
+import { ScanHost } from './scan';
 import { TabBar } from './TabBar';
 import { ToastHost } from './toast';
 import { hideSplash } from './splash';
@@ -124,6 +125,7 @@ function Screens({ offer, setOffer }: { offer: FreshStartOffer | null; setOffer:
       {route.path === '/whats-new' && <WhatsNew releases={latestReleases()} onClose={() => go(lastPath.current)} />}
       {/* Not over onboarding or another sheet: it waits for the next screen change. */}
       {news.length > 0 && !sheetOpen && <WhatsNew releases={news} onClose={() => setNews([])} />}
+      <ScanHost />
       <ToastHost />
     </>
   );

@@ -56,6 +56,9 @@ export interface CardFace {
   cardName?: string;
   color?: string; // #rrggbb, overrides the institution colour
   last4?: string; // shown as •••• 1234; never the full number
+  // Apple Pay / Google Pay pay with a device account number (DAN), so a receipt shows
+  // its last four instead of the card's. One per phone or watch.
+  deviceLast4?: string[];
 }
 
 /** An institution the user created because it isn't in the catalog. */

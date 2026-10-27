@@ -27,12 +27,14 @@ export interface NewAccount {
 const faceFields = (f?: CardFace): { face?: CardFace } => {
   if (!f) return {};
   const last4 = f.last4 ? cleanLast4(f.last4) : undefined;
+  const device = [...new Set((f.deviceLast4 ?? []).map(cleanLast4))].filter((d): d is string => !!d && d !== last4).slice(0, 6);
   const face: CardFace = {
     ...(f.artId ? { artId: f.artId } : {}),
     ...(f.institutionId ? { institutionId: f.institutionId } : {}),
     ...(f.cardName?.trim() ? { cardName: f.cardName.trim().slice(0, 40) } : {}),
     ...(isHexColor(f.color) ? { color: f.color.toLowerCase() } : {}),
     ...(last4 ? { last4 } : {}),
+    ...(device.length ? { deviceLast4: device } : {}),
   };
   return Object.keys(face).length ? { face } : {};
 };

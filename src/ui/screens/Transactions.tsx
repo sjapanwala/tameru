@@ -1,19 +1,18 @@
 // Activity: every transaction, grouped by day, with search, a type filter, and a
 // summary of this period. Tap a row for details. Upload or photograph a receipt to scan it.
 
-import { useMemo, useRef, useState } from 'preact/hooks';
+import { useMemo, useState } from 'preact/hooks';
 import { fmtDate, fmtWeekday, S } from '../../copy/strings';
 import { addDays, diffDays } from '../../domain/dates';
 import { isBudgetCategory } from '../../domain/defaults';
 import { merchantKey } from '../../domain/merchant';
-import { RECEIPT_TYPES } from '../../domain/receipt';
 import type { Account, Category, Cents, Split, Transaction } from '../../domain/types';
 import { currentPeriod } from '../../services/plan';
 import { confirmTransaction, deleteTransaction, listByDay, recategorise, restoreTransaction, TxValidationError, updateTransaction } from '../../services/transactions';
 import { Amount, CategorySelect, Message, monogram, MoneyInput, PageHeader } from '../components';
 import { useApp, useLoad } from '../hooks';
 import { ArrowDownLeft, CameraIcon, PencilIcon, PlusIcon, SearchIcon, SwapIcon, TrashIcon, UploadIcon } from '../Icons';
-import { ReceiptScanner } from '../ReceiptScanner';
+import { scanReceipt } from '../scan';
 import { Sheet } from '../Sheet';
 import { SpendCard } from '../SpendCard';
 import { SwipeRow } from '../SwipeRow';
@@ -41,10 +40,6 @@ export function Transactions() {
   const [open, setOpen] = useState<string>();
   const [editing, setEditing] = useState(false); // opened by swiping right: straight to the edit form
   const [msg, setMsg] = useState<string>();
-  const [scanning, setScanning] = useState<File | null>(null);
-  const lastSource = useRef<'upload' | 'camera'>('upload');
-  const uploadRef = useRef<HTMLInputElement>(null);
-  const cameraRef = useRef<HTMLInputElement>(null);
 
   const catName = (id?: string) => categories.find((c) => c.id === id)?.name;
   const acct = (id?: string) => accounts.find((a) => a.id === id)?.name ?? '';
@@ -99,18 +94,6 @@ export function Transactions() {
       });
   };
 
-  const onReceipt = (input: HTMLInputElement | null, source: 'upload' | 'camera') => {
-    const file = input?.files?.[0];
-    if (!file) return;
-    input!.value = '';
-    lastSource.current = source;
-    setScanning(file);
-  };
-  const pickAgain = () => {
-    setScanning(null);
-    (lastSource.current === 'camera' ? cameraRef : uploadRef).current?.click();
-  };
-
   const selected = open ? groups?.flatMap((g) => g.transactions).find((t) => t.id === open) : undefined;
   if (!groups) return <div class="placeholder" />;
 
@@ -120,10 +103,10 @@ export function Transactions() {
         title={S.transactions.title}
         action={
           <div class="head-actions">
-            <button type="button" class="icon-btn icon-btn--soft" aria-label={S.transactions.upload} onClick={() => uploadRef.current?.click()}>
+            <button type="button" class="icon-btn icon-btn--soft" aria-label={S.transactions.upload} onClick={() => scanReceipt('upload')}>
               <UploadIcon />
             </button>
-            <button type="button" class="icon-btn icon-btn--soft" aria-label={S.transactions.photo} onClick={() => cameraRef.current?.click()}>
+            <button type="button" class="icon-btn icon-btn--soft" aria-label={S.transactions.photo} onClick={() => scanReceipt('camera')}>
               <CameraIcon />
             </button>
             <a class="icon-btn icon-btn--plain" href="#/add" aria-label={S.nav.add}>
@@ -132,8 +115,6 @@ export function Transactions() {
           </div>
         }
       />
-      <input ref={uploadRef} type="file" accept={RECEIPT_TYPES} hidden onChange={(e) => onReceipt(e.target as HTMLInputElement, 'upload')} />
-      <input ref={cameraRef} type="file" accept="image/*" capture="environment" hidden onChange={(e) => onReceipt(e.target as HTMLInputElement, 'camera')} />
 
       <SpendCard
         spentCents={summary.spent}
@@ -213,12 +194,6 @@ export function Transactions() {
             catName={catName}
             onAction={(fn, done) => run(fn, done).then(() => (setOpen(undefined), setEditing(false)))}
           />
-        </Sheet>
-      )}
-
-      {scanning && (
-        <Sheet label={S.receipt.title} onClose={() => setScanning(null)}>
-          <ReceiptScanner key={scanning.name + scanning.size + scanning.lastModified} file={scanning} onClose={() => setScanning(null)} onRetake={pickAgain} />
         </Sheet>
       )}
     </section>

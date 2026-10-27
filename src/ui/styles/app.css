@@ -5360,3 +5360,138 @@ button.danger {
 .whats-new__earlier {
   margin-top: var(--s4);
 }
+
+/* ---------- card editor: Apple Pay / Google Pay numbers ---------- */
+
+.device-numbers__boxes {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--s4);
+}
+
+.device-numbers__hint {
+  display: block;
+  color: var(--text-3);
+  margin-top: var(--s2);
+  line-height: 1.4;
+}
+
+.scanner__which {
+  margin-top: var(--s4);
+  text-align: left;
+}
+
+.scanner__which .muted {
+  font-size: var(--fs-xs);
+  margin: var(--s2) 0 0;
+}
+
+/* ---------- tab bar hold menu ---------- */
+
+.tab {
+  -webkit-touch-callout: none; /* no link preview on a long press */
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.tab-menu {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+}
+
+.tab-menu__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgb(0 0 0 / 0.16);
+  -webkit-backdrop-filter: blur(10px) saturate(1.2);
+  backdrop-filter: blur(10px) saturate(1.2);
+  animation: fade-in 0.24s var(--glide) both;
+}
+
+/* first item sits nearest the tab; the column grows upwards */
+.tab-menu__stack {
+  position: absolute;
+  display: flex;
+  flex-direction: column-reverse;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tab-menu__stack li {
+  /* each one rises out of the tab, a beat after the one below it, from behind it */
+  position: relative;
+  z-index: calc(var(--n) - var(--i));
+  animation: tab-rise 0.42s cubic-bezier(0.32, 1.32, 0.56, 1) both;
+  animation-delay: calc(var(--i) * 38ms);
+}
+
+@keyframes tab-rise {
+  from {
+    opacity: 0;
+    transform: translateY(calc((var(--i) + 1) * 60px)) scale(0.4);
+  }
+  40% {
+    opacity: 1;
+  }
+}
+
+.tab-menu__stack button {
+  display: grid;
+  place-items: center;
+  width: 50px;
+  height: 50px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  color: var(--text);
+  background: color-mix(in srgb, var(--bg) 86%, transparent);
+  -webkit-backdrop-filter: blur(24px) saturate(1.6);
+  backdrop-filter: blur(24px) saturate(1.6);
+  box-shadow: var(--shadow-lg);
+  transition: transform 0.18s var(--glide), background-color 0.18s var(--glide);
+}
+
+.tab-menu__stack button:active {
+  transform: scale(0.88);
+  background: var(--surface);
+}
+
+.tab-menu__stack svg {
+  width: 22px;
+  height: 22px;
+}
+
+/* closing: the top one goes first and they sink back into the tab */
+.tab-menu--closing .tab-menu__backdrop {
+  opacity: 0;
+  transition: opacity 0.22s var(--glide);
+}
+
+.tab-menu--closing .tab-menu__stack li {
+  animation: tab-sink 0.2s cubic-bezier(0.5, 0, 0.75, 0) both;
+  animation-delay: calc((var(--n) - 1 - var(--i)) * 22ms);
+}
+
+@keyframes tab-sink {
+  to {
+    opacity: 0;
+    transform: translateY(calc((var(--i) + 1) * 60px)) scale(0.4);
+  }
+}
+
+/* the held tab stays sharp above the blur, as the held card does */
+body.tab-menu-open .tabbar {
+  z-index: 41;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tab-menu__stack li,
+  .tab-menu--closing .tab-menu__stack li {
+    animation: none;
+  }
+}

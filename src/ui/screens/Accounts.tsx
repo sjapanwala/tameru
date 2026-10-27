@@ -34,7 +34,7 @@ export function Accounts() {
     if (v) setMenu({ view: v, rect: el.getBoundingClientRect() });
   });
   if (!views || !txs) return <div class="placeholder" />;
-  const initial = Math.max(0, views.findIndex((v) => v.account.id === wanted));
+  const initial = wanted === 'new' ? views.length : Math.max(0, views.findIndex((v) => v.account.id === wanted)); // 'new': the tab bar's Add account
   const count = views.length + 1; // last slide: add an account
   const current = views[index];
 
@@ -80,7 +80,7 @@ export function Accounts() {
         }
       />
       <Carousel
-        key={wanted ?? ''}
+        key={`carousel:${wanted ?? ''}`}
         initial={initial}
         count={count}
         label={S.accounts.title}
@@ -197,6 +197,7 @@ function AccountDetails({ v, txs, categories }: { v: AccountView; txs: Transacti
   }
   if (v.pendingCents !== 0) tiles.push({ label: S.status.pending, value: <Amount c={v.pendingCents} />, sub: S.accounts.tiles.awaiting });
   if (a.face?.last4) tiles.push({ label: S.cards.last4Short, value: `•••• ${a.face.last4}` });
+  if (a.face?.deviceLast4?.length) tiles.push({ label: S.cards.deviceShort, value: a.face.deviceLast4.map((d) => `•••• ${d}`).join(', ') });
 
   return (
     <div class="acct">

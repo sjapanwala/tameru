@@ -10,9 +10,9 @@ import {
   CARD_COLORS,
   cardLabels,
   cardsOf,
-  countries,
+  continents,
   customInstitutionId,
-  defaultCountry,
+  defaultContinent,
   institutionInitials,
   institutionName,
   institutions,
@@ -108,11 +108,17 @@ const NEW_INSTITUTION = '__new__';
 const NOT_LISTED = '__custom__';
 
 /**
- * Pick the country, then the institution, then the card, from dropdowns. The country
+ * Pick the continent, then the institution, then the card, from dropdowns. The continent
  * starts on the current institution's (or the home currency's) so the list stays short.
  * - Card not listed: name it; it's drawn in the institution's colour with its badge.
  * - Institution not listed: add it with a name and a colour.
  */
+/** The digits a face carries through a change of bank or card. */
+const numbersOf = (f?: Face): Pick<Face, 'last4' | 'deviceLast4'> => ({
+  ...(f?.last4 ? { last4: f.last4 } : {}),
+  ...(f?.deviceLast4?.length ? { deviceLast4: f.deviceLast4 } : {}),
+});
+
 export function CardPicker({ value, onChange, kind, fallbackName }: { value?: Face; onChange: (f: Face) => void; kind: 'credit' | 'debit'; fallbackName: string }) {
   const { app, bump } = useApp();
   const catalog = useCatalog();
@@ -122,8 +128,8 @@ export function CardPicker({ value, onChange, kind, fallbackName }: { value?: Fa
   const customInst: CustomInstitution | undefined = instId ? custom.find((i) => i.id === instId) : undefined;
   // undefined = not chosen yet (follow the default); '' = all countries.
   const [pickedCountry, setPickedCountry] = useState<string>();
-  const countryList = countries(catalog);
-  const country = pickedCountry ?? (customInst ? undefined : defaultCountry(catalog, currency, instId)) ?? '';
+  const countryList = continents(catalog);
+  const country = pickedCountry ?? (customInst ? undefined : defaultContinent(catalog, currency, instId)) ?? '';
   const list = institutions(catalog, custom, country || undefined);
   const cards = instId ? cardsOf(catalog, instId, country || undefined) : [];
   const labels = cardLabels(cards);
@@ -144,19 +150,19 @@ export function CardPicker({ value, onChange, kind, fallbackName }: { value?: Fa
     // The chosen bank isn't in that country: start the bank over.
     if (instId && c && !institutions(catalog, custom, c).some((i) => i.id === instId)) {
       setAwaitingCard(false);
-      onChange({ last4: value?.last4 });
+      onChange(numbersOf(value));
     }
   };
   const pickInstitution = (id: string) => {
     if (id === NEW_INSTITUTION) return setAddingInstitution(true);
     setAddingInstitution(false);
     setAwaitingCard(true);
-    onChange({ last4: value?.last4, ...(id ? { institutionId: id } : {}) });
+    onChange({ ...numbersOf(value), ...(id ? { institutionId: id } : {}) });
   };
   const pickCard = (id: string) => {
     setAwaitingCard(false);
-    if (id === NOT_LISTED) return onChange({ last4: value?.last4, institutionId: instId, cardName: value?.cardName ?? '' });
-    onChange({ last4: value?.last4, institutionId: instId, ...(id ? { artId: id } : {}) }); // a new card starts from its catalog default
+    if (id === NOT_LISTED) return onChange({ ...numbersOf(value), institutionId: instId, cardName: value?.cardName ?? '' });
+    onChange({ ...numbersOf(value), institutionId: instId, ...(id ? { artId: id } : {}) }); // a new card starts from its catalog default
   };
   const addInstitution = async () => {
     if (!newName.trim()) return;
@@ -165,11 +171,11 @@ export function CardPicker({ value, onChange, kind, fallbackName }: { value?: Fa
     setAddingInstitution(false);
     setNewName('');
     setAwaitingCard(false);
-    onChange({ last4: value?.last4, institutionId: inst.id, cardName: value?.cardName ?? '' });
+    onChange({ ...numbersOf(value), institutionId: inst.id, cardName: value?.cardName ?? '' });
   };
 
   const previewFace: Face = addingInstitution
-    ? { institutionId: customInstitutionId(newName || 'New'), cardName: value?.cardName || newName || fallbackName, color: newColor, ...(value?.last4 ? { last4: value.last4 } : {}) }
+    ? { institutionId: customInstitutionId(newName || 'New'), cardName: value?.cardName || newName || fallbackName, color: newColor, ...numbersOf(value) }
     : { ...value, ...(notListed && !value?.cardName ? { cardName: fallbackName } : {}) };
 
   return (
@@ -269,7 +275,34 @@ export function CardPicker({ value, onChange, kind, fallbackName }: { value?: Fa
           onInput={(e) => onChange({ ...value, last4: (e.target as HTMLInputElement).value.replace(/\D/g, '').slice(0, 4) || undefined })}
         />
       </label>
+
+      <DeviceNumbers value={value?.deviceLast4 ?? []} onChange={(deviceLast4) => onChange({ ...value, deviceLast4 })} />
     </div>
+  );
+}
+
+/**
+ * The last fours Apple Pay / Google Pay use for this card (Wallet → card → Device
+ * Account Number). One box per number, with an empty box at the end for another.
+ */
+function DeviceNumbers({ value, onChange }: { value: string[]; onChange: (v: string[]) => void }) {
+  const rows = value.length < 6 && value[value.length - 1] !== '' ? [...value, ''] : value;
+  const set = (i: number, raw: string) => {
+    const next = [...rows];
+    next[i] = raw.replace(/\D/g, '').slice(0, 4);
+    while (next.length && next[next.length - 1] === '') next.pop();
+    onChange(next);
+  };
+  return (
+    <label class="device-numbers">
+      {S.cards.deviceLast4}
+      <div class="device-numbers__boxes">
+        {rows.map((d, i) => (
+          <input key={i} inputMode="numeric" maxLength={4} value={d} placeholder={i === 0 ? '5678' : S.cards.deviceAnother} aria-label={S.cards.deviceLast4} onInput={(e) => set(i, (e.target as HTMLInputElement).value)} />
+        ))}
+      </div>
+      <span class="device-numbers__hint">{S.cards.deviceHint}</span>
+    </label>
   );
 }
 

@@ -10,6 +10,7 @@ export interface ReceiptDraft {
   date?: LocalDate;
   last4?: string; // card used, as printed (masked) on the receipt
   network?: CardNetwork;
+  wallet?: 'apple_pay' | 'google_pay' | 'device'; // paid by phone/watch: last4 is a device number
   confidence?: number; // 0..1: share of the main fields that were found
 }
 

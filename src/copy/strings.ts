@@ -48,6 +48,18 @@ export const S = {
     debug: 'Debug',
   },
 
+  // Hold a tab for these.
+  tabMenu: {
+    spend: 'Add spending',
+    income: 'Add income',
+    transfer: 'Transfer',
+    photo: 'Scan a receipt',
+    upload: 'Receipt from photos',
+    suggest: 'Suggest a plan',
+    addAccount: 'Add an account',
+    whatsNew: 'What’s new',
+  },
+
   common: {
     monthlyOn: (d: number) => `Every month on the ${ordinal(d)}`,
     save: 'Save',
@@ -184,8 +196,11 @@ export const S = {
 
   receipt: {
     title: 'Receipt',
-    preparing: 'Getting the reader ready…',
-    reading: 'Reading your receipt…',
+    phase: { preparing: 'Getting the reader ready…', reading: 'Reading your receipt…', checking: 'Taking a closer look…' },
+    wallet: { apple_pay: 'Apple Pay', google_pay: 'Google Pay', device: 'Phone' },
+    whichCard: (last4: string) => `Which card ends in ${last4}?`,
+    walletHint: 'Paid with a phone or watch, so the receipt shows its own number. Pick the card once and it’s remembered.',
+    rememberHint: 'Pick the card once and this number is remembered for next time.',
     found: 'Found on the receipt',
     noVendor: 'Vendor not found',
     card: 'Card',
@@ -213,8 +228,8 @@ export const S = {
   },
 
   cards: {
-    country: 'Country',
-    allCountries: 'All countries',
+    country: 'Continent',
+    allCountries: 'Everywhere',
     institution: 'Bank or institution',
     chooseInstitution: 'Choose…',
     newInstitution: '+ Add a new institution',
@@ -232,6 +247,10 @@ export const S = {
     customColour: 'Pick any colour',
     last4: 'Last 4 digits (optional)',
     last4Short: 'Card',
+    deviceLast4: 'Apple Pay / Google Pay numbers (optional)',
+    deviceHint: 'Tap-to-pay receipts show a different last four. Find it in Wallet → this card → Device Account Number, one per phone or watch.',
+    deviceShort: 'Apple Pay',
+    deviceAnother: 'Another',
   },
 
   whatsNew: {

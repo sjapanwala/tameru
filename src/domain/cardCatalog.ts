@@ -13,7 +13,7 @@ export interface CatalogCard {
   institutionId: string; // the bank folder, e.g. "td"
   network: CardNetwork;
   kind: 'credit' | 'debit';
-  region?: string;
+  region?: string; // continent, e.g. "North America"
   file: string; // path inside card-art/
   cover?: PrintedCover; // the art has a sample name/number printed on it
 }
@@ -64,37 +64,44 @@ export function parseManifest(json: unknown): CatalogCard[] {
     seen.add(id);
     const label = str(raw.label) ?? id;
     const group = Array.isArray(raw.group) ? raw.group.filter((g): g is string => typeof g === 'string') : [];
-    // group[0] is a curator's note in this dataset; group[1] is the region.
-    const region = REGION_FIXES[id] ?? regionName(group[1]);
+    // group[0] is a curator's note in this dataset; group[1] is the country.
+    const region = regionName(group[1]);
     out.push({ id, name: label, institutionId: bank, network: networkFrom(label, bank), kind: kindFrom(label, group), ...(region ? { region } : {}), file });
   }
   return out;
 }
 
-// ---------- countries ----------
+// ---------- continents ----------
+// The picker groups by continent, not country: Canadian and US banks issue cards on
+// both sides of the border (TD, BMO, Amex), so one country often hid the right card.
 
-const REGION_NAMES: Record<string, string> = { UK: 'United Kingdom', 'EU?': 'Europe' };
-/** Cards the dataset files under the wrong country. */
-const REGION_FIXES: Record<string, string> = { 'td/aeroplan': 'Canada', 'td/first-class-travel': 'Canada' };
+const CONTINENT: Record<string, string> = {
+  'United States': 'North America', Canada: 'North America',
+  'Greater China': 'Asia', Japan: 'Asia', Singapore: 'Asia',
+  UK: 'Europe', 'EU?': 'Europe', Netherlands: 'Europe',
+  Australia: 'Oceania',
+};
 
-const regionName = (raw: string | undefined): string | undefined => (raw ? (REGION_NAMES[raw] ?? raw) : undefined);
+const regionName = (raw: string | undefined): string | undefined => (raw ? (CONTINENT[raw] ?? raw) : undefined);
 
-/** Countries that have card art, most cards first. */
-export function countries(cards: readonly CatalogCard[]): string[] {
+/** Continents that have card art, most cards first. */
+export function continents(cards: readonly CatalogCard[]): string[] {
   const n = new Map<string, number>();
   for (const c of cards) if (c.region) n.set(c.region, (n.get(c.region) ?? 0) + 1);
   return [...n.keys()].sort((a, b) => n.get(b)! - n.get(a)! || a.localeCompare(b));
 }
 
-const CURRENCY_COUNTRY: Record<string, string> = {
-  CAD: 'Canada', USD: 'United States', GBP: 'United Kingdom', EUR: 'Europe', JPY: 'Japan',
-  AUD: 'Australia', SGD: 'Singapore', CNY: 'Greater China', HKD: 'Greater China', TWD: 'Greater China',
+const CURRENCY_CONTINENT: Record<string, string> = {
+  CAD: 'North America', USD: 'North America', MXN: 'North America',
+  GBP: 'Europe', EUR: 'Europe', CHF: 'Europe', SEK: 'Europe', NOK: 'Europe', DKK: 'Europe',
+  JPY: 'Asia', SGD: 'Asia', CNY: 'Asia', HKD: 'Asia', TWD: 'Asia', KRW: 'Asia', INR: 'Asia',
+  AUD: 'Oceania', NZD: 'Oceania',
 };
 
-/** The country to open the picker on: the one the current institution is from, else the home currency's. */
-export function defaultCountry(cards: readonly CatalogCard[], currency: string, institutionId?: string): string | undefined {
-  const all = countries(cards);
-  const home = CURRENCY_COUNTRY[currency.toUpperCase()];
+/** The continent to open the picker on: the one the current institution is from, else the home currency's. */
+export function defaultContinent(cards: readonly CatalogCard[], currency: string, institutionId?: string): string | undefined {
+  const all = continents(cards);
+  const home = CURRENCY_CONTINENT[currency.toUpperCase()];
   if (institutionId) {
     const from = new Set(cards.filter((c) => c.institutionId === institutionId).map((c) => c.region));
     if (from.size) return home && from.has(home) ? home : all.find((r) => from.has(r));
@@ -119,7 +126,7 @@ export function institutionName(slug: string): string {
     .replace(/ \.com$/, '.com');
 }
 
-/** Institutions that have art (in `country`, when given), plus the user's own, sorted by name. */
+/** Institutions that have art (in the continent `country`, when given), plus the user's own, sorted by name. */
 export function institutions(cards: readonly CatalogCard[], custom: readonly Institution[] = [], country?: string): Institution[] {
   const ids = [...new Set(cards.filter((c) => !country || c.region === country).map((c) => c.institutionId))];
   const all: Institution[] = [...ids.map((id) => ({ id, name: institutionName(id) })), ...custom.map((c) => ({ ...c, custom: true }))];

@@ -12,7 +12,13 @@ import type { ReceiptDraft } from './receipt';
 // "12.45", "$12.45", "1,234.56", "12,45" (comma decimal), "$ 12.45", "12.45-" (credit)
 const AMOUNT = /(?:\$\s?)?(\d{1,6}(?:[ ,]\d{3})*)[.,](\d{2})(?!\d)/g;
 
-function amountsIn(line: string): number[] {
+/** OCR reads 0 as O and 1 as l or I inside prices: "1O.4S" → "10.45" only where digits surround them. */
+function fixDigits(line: string): string {
+  return line.replace(/\$?[\dOoIlS]+[.,][\dOoIlS]{2}(?![A-Za-z\d])/g, (w) => (/\d/.test(w) ? w.replace(/[Oo]/g, '0').replace(/[Il]/g, '1').replace(/S(?=\d|$)/g, '5') : w));
+}
+
+function amountsIn(raw: string): number[] {
+  const line = fixDigits(raw);
   const out: number[] = [];
   for (const m of line.matchAll(AMOUNT)) {
     const whole = m[1]!.replace(/[ ,]/g, '');
@@ -35,7 +41,32 @@ const TOTAL_KEYS: [RegExp, number][] = [
 const NOT_TOTAL = /\b(sub\s*-?\s*total|total\s*(savings|saved|discount|tax|items?|qty|quantity|points)|you\s*saved|savings|tax|gst|hst|pst|qst|tip|change|cash\s*back|rounding)\b/i;
 const PAYMENT_LINE = /\b(visa|master\s*card|mc|amex|american\s*express|debit|interac|credit|card|approved|tender)\b/i;
 
+const SUBTOTAL = /\bsub\s*-?\s*total\b/i;
+const TAX = /\b(tax|gst|hst|pst|qst|tps|tvq|vat)\b/i;
+
+/** Subtotal plus the tax lines, when both are printed: a check on (or stand-in for) the total. */
+function subtotalPlusTax(lines: readonly string[]): number | undefined {
+  let sub: number | undefined;
+  let tax = 0;
+  for (const raw of lines) {
+    const line = normaliseWords(raw);
+    const a = amountsIn(line);
+    if (!a.length) continue;
+    if (SUBTOTAL.test(line)) sub = a[a.length - 1];
+    else if (TAX.test(line) && !/\b(total|incl|included)\b/i.test(line)) tax += a[a.length - 1]!;
+  }
+  return sub !== undefined && tax > 0 ? sub + tax : undefined;
+}
+
 export function findTotal(lines: readonly string[]): number | undefined {
+  const labelled = findLabelledTotal(lines);
+  const sum = subtotalPlusTax(lines);
+  if (labelled === undefined || sum === undefined || labelled === sum) return labelled ?? sum;
+  // The total was misread (8.15 for 8.75) but the sum is printed elsewhere, e.g. on the card line.
+  return lines.some((l) => amountsIn(l).includes(sum)) ? sum : labelled;
+}
+
+function findLabelledTotal(lines: readonly string[]): number | undefined {
   let best: { cents: number; score: number; at: number } | undefined;
   lines.forEach((raw, i) => {
     const line = normaliseWords(raw);
@@ -62,20 +93,30 @@ export function findTotal(lines: readonly string[]): number | undefined {
 
 // ---------- card ----------
 
-const MASKED = /(?:[*xX•#]{2,}[\s-]*)+(\d{4})(?!\d)/;
+const MASKED = /(?:[*xX•#·.]{2,}[\s-]*)+(\d{4})(?!\d)/;
 const ENDING = /\b(?:ending|ends|last\s*4|last\s*four)\s*(?:in|with|digits)?\s*[:#]?\s*[*xX•]*(\d{4})(?!\d)/i;
-// OCR often reads a row of asterisks as letters ("sorpkorkkokk4821"). On a payment
-// line, a run of non-digit junk glued straight onto four digits is a masked number.
-const GARBLED = /[^\s\d]{6,}(\d{4})(?!\d)/;
-const CARD_LINE = /\b(visa|master\s*card|mc|amex|american\s*express|debit|interac|credit|card|acct|account)\b/i;
+// OCR often reads a row of asterisks as letters ("sorpkorkkokk4821", "sctorkokok 4821",
+// even "...xk4 821"). On a payment line, a run of non-digit junk followed by four digits
+// (a stray space allowed) is a masked number.
+const GARBLED = /[^\s\d]{6,}\s?(\d(?:\s?\d){3})(?!\s?\d)/;
+const CARD_LINE = /\b(visa|master\s*card|mc|amex|american\s*express|debit|interac|credit|card|acct|account|d?pan)\b/i;
 
 export function findLast4(lines: readonly string[]): string | undefined {
   // The payment block is at the bottom: prefer the last match.
   for (let i = lines.length - 1; i >= 0; i--) {
     const line = lines[i]!;
     const m = MASKED.exec(line) ?? ENDING.exec(line) ?? (CARD_LINE.test(line) ? GARBLED.exec(line) : null);
-    if (m) return m[1];
+    if (m) return m[1]!.replace(/\s/g, '');
   }
+  return undefined;
+}
+
+/** Paid by phone or watch: the last four printed is the device account number, not the card's. */
+export function findWallet(lines: readonly string[]): ReceiptDraft['wallet'] {
+  const text = lines.join(' ').toLowerCase();
+  if (/apple\s*pay|\bapple\b.*\bwallet\b/.test(text)) return 'apple_pay';
+  if (/google\s*pay|\bg\s*pay\b|android\s*pay|samsung\s*pay/.test(text)) return 'google_pay';
+  if (/\bd\s*pan\b|device\s*(acc(oun)?t|number)/.test(text)) return 'device';
   return undefined;
 }
 
@@ -117,11 +158,19 @@ export function findDate(lines: readonly string[], today: LocalDate): LocalDate 
         if (mo <= 12 && plausible(d)) return d;
       }
     }
-    m = /\b([A-Za-z]{3})[a-z]*\.?\s+(\d{1,2}),?\s+(20\d{2})\b/.exec(line) ?? null;
+    m = /\b([A-Za-z]{3})[a-z]*\.?[\s-]+(\d{1,2}),?[\s-]+(20\d{2}|\d{2})\b/.exec(line);
     if (m) {
       const mo = MONTHS.indexOf(m[1]!.toLowerCase()) + 1;
       if (mo > 0) {
-        const d = make(Number(m[3]), mo, Number(m[2]));
+        const d = make(year(m[3]!), mo, Number(m[2]));
+        if (plausible(d)) return d;
+      }
+    }
+    m = /\b(\d{1,2})[\s-]+([A-Za-z]{3})[a-z]*\.?[\s-]+(20\d{2}|\d{2})\b/.exec(line);
+    if (m) {
+      const mo = MONTHS.indexOf(m[2]!.toLowerCase()) + 1;
+      if (mo > 0) {
+        const d = make(year(m[3]!), mo, Number(m[1]));
         if (plausible(d)) return d;
       }
     }
@@ -145,13 +194,16 @@ const titleCase = (s: string) =>
     .map((w, i) => (i > 0 && SMALL_WORDS.has(w) ? w : w.charAt(0).toUpperCase() + w.slice(1)))
     .join(' ');
 
+/** Noise read off the paper's edge: "Ce eee", "Soo es". No word of three letters has three different ones. */
+const isSpeckle = (line: string) => !(line.match(/[A-Za-zÀ-ÿ]{3,}/g) ?? []).some((w) => new Set(w.toLowerCase()).size >= 3);
+
 /** The business name: the first real name line near the top. */
 export function findVendor(lines: readonly string[]): string | undefined {
   for (const raw of lines.slice(0, 8)) {
     const line = raw.replace(/[|_~=*]+/g, ' ').replace(/\s+/g, ' ').trim();
     const letters = (line.match(/[A-Za-zÀ-ÿ]/g) ?? []).length;
     if (letters < 3 || letters / Math.max(1, line.replace(/\s/g, '').length) < 0.6) continue;
-    if (SKIP_LINE.test(line) || ADDRESS.test(line) || PHONE.test(line) || POSTAL.test(line) || amountsIn(line).length) continue;
+    if (SKIP_LINE.test(line) || ADDRESS.test(line) || PHONE.test(line) || POSTAL.test(line) || amountsIn(line).length || isSpeckle(line)) continue;
     const name = line
       .replace(/\s*(#\s*\d+|\b(store|no\.?|unit|loc)\s*#?\s*\d+)\s*$/i, '') // trailing store numbers
       .replace(/^[^A-Za-zÀ-ÿ0-9]+|[^A-Za-zÀ-ÿ0-9'&!.)]+$/g, '')
@@ -175,13 +227,23 @@ export function parseReceipt(text: string, today: LocalDate): ReceiptDraft {
   const last4 = findLast4(lines);
   const network = findNetwork(lines);
   const date = findDate(lines, today);
+  const wallet = findWallet(lines);
   const found = [merchant, amountCents, last4, date].filter((x) => x !== undefined).length;
   return {
     ...(merchant ? { merchant } : {}),
     ...(amountCents !== undefined ? { amountCents } : {}),
     ...(last4 ? { last4 } : {}),
     ...(network ? { network } : {}),
+    ...(wallet ? { wallet } : {}),
     ...(date ? { date } : {}),
     confidence: found / 4,
   };
+}
+
+/** The better read leads; the other fills in whatever it missed. */
+export function mergeDrafts(a: ReceiptDraft, b: ReceiptDraft): ReceiptDraft {
+  const [lead, rest] = (b.confidence ?? 0) > (a.confidence ?? 0) || (a.amountCents === undefined && b.amountCents !== undefined) ? [b, a] : [a, b];
+  const merged: ReceiptDraft = { ...rest, ...Object.fromEntries(Object.entries(lead).filter(([, v]) => v !== undefined)) };
+  merged.confidence = [merged.merchant, merged.amountCents, merged.last4, merged.date].filter((x) => x !== undefined).length / 4;
+  return merged;
 }

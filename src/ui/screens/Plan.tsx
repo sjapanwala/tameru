@@ -17,11 +17,12 @@ import { addCategory, budgetsFor, plannedIncome, removeCategory, setAllocation, 
 import { acceptPlan, recommendPlan } from '../../services/regenerate';
 import { AccountSelect, AllocationInput, Amount, AmountModeToggle, ChipSelect, Message, Meter, MoneyInput, PageHeader, type AmountMode } from '../components';
 import { useApp, useLoad } from '../hooks';
-import { ChevronRight, PlusIcon } from '../Icons';
+import { ChevronRight, PlusIcon, SparkIcon } from '../Icons';
 import { PlanDial, TickRuler, type DialSlice } from '../PlanDial';
 import { ColorPicker } from '../cards';
 import { reducedMotion } from '../motion';
 import { Sheet } from '../Sheet';
+import { go, useRoute } from '../router';
 import { useWalletPull } from '../Wallet';
 
 const GROUP_ORDER: Category['group'][] = ['essentials', 'lifestyle', 'savings'];
@@ -58,6 +59,13 @@ export function Plan() {
   const [msg, setMsg] = useState<string>();
   const pull = useWalletPull();
   useEffect(() => pull.setTravel(180), []);
+  // Held the Plan tab → Suggest a plan.
+  const action = useRoute().params.get('do');
+  useEffect(() => {
+    if (action !== 'suggest') return;
+    setEditing({ kind: 'suggest' });
+    go('/plan'); // clear it, so holding again opens it again
+  }, [action]);
   if (!data || !goals || income === undefined) return <div class="placeholder" />;
   const animate = !pull.dragging && !reducedMotion();
 
@@ -261,12 +269,6 @@ export function Plan() {
     </section>
   );
 }
-
-const SparkIcon = () => (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-    <path d="M12 3.5v4M12 16.5v4M3.5 12h4M16.5 12h4M6 6l2.5 2.5M15.5 15.5 18 18M18 6l-2.5 2.5M8.5 15.5 6 18" />
-  </svg>
-);
 
 function CategorySheet(props: { row: { category: Category; budget: { remainingCents: Cents } }; cents: Cents; due: Cents; color: string; income: Cents; inUse: number; onDone: () => void }) {
   const { app } = useApp();

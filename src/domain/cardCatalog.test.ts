@@ -4,8 +4,8 @@ import {
   cardLabels,
   cardsOf,
   customInstitutionId,
-  countries,
-  defaultCountry,
+  continents,
+  defaultContinent,
   dominantColor,
   institutionInitials,
   institutionName,
@@ -29,35 +29,34 @@ const manifest = parseManifest([
   { id: 'evil', label: 'x', file: '../../etc/passwd', bank: 'x' },
 ]);
 
-describe('countries', () => {
-  it('lists countries by card count and filters institutions and cards by country', () => {
-    // td/aeroplan is filed under the US in the dataset and corrected to Canada.
-    expect(countries(manifest)).toEqual(['Canada', 'United States']);
-    expect(institutions(manifest, [], 'Canada').map((i) => i.id)).toEqual(['bmo', 'rbc', 'td']);
-    expect(institutions(manifest, [{ id: 'custom/koho', name: 'Koho' }], 'Canada').map((i) => i.id)).toContain('custom/koho');
-    expect(cardsOf(manifest, 'td', 'United States').map((c) => c.id)).toEqual(['td/debit-us']);
-    expect(cardsOf(manifest, 'bmo', 'United States').map((c) => c.id)).toEqual(['bmo/cashback']); // none there: show them all
+describe('continents', () => {
+  it('groups Canada and the US together, and filters institutions and cards by continent', () => {
+    expect(continents(manifest)).toEqual(['North America']);
+    expect(institutions(manifest, [], 'North America').map((i) => i.id)).toEqual(['american-express', 'bmo', 'rbc', 'td']);
+    expect(institutions(manifest, [{ id: 'custom/koho', name: 'Koho' }], 'North America').map((i) => i.id)).toContain('custom/koho');
+    // TD's US and Canadian cards show together
+    expect(cardsOf(manifest, 'td', 'North America').map((c) => c.id)).toEqual(['td/aeroplan', 'td/debit-us']);
+    expect(cardsOf(manifest, 'bmo', 'Europe').map((c) => c.id)).toEqual(['bmo/cashback']); // none there: show them all
   });
-  it('opens on the institution’s country, else the home currency’s', () => {
-    expect(defaultCountry(manifest, 'CAD')).toBe('Canada');
-    expect(defaultCountry(manifest, 'USD', 'td')).toBe('United States');
-    expect(defaultCountry(manifest, 'USD', 'bmo')).toBe('Canada');
-    expect(defaultCountry(manifest, 'XYZ')).toBeUndefined();
+  it('opens on the institution’s continent, else the home currency’s', () => {
+    expect(defaultContinent(manifest, 'CAD')).toBe('North America');
+    expect(defaultContinent(manifest, 'USD', 'td')).toBe('North America');
+    expect(defaultContinent(manifest, 'GBP', 'bmo')).toBe('North America');
+    expect(defaultContinent(manifest, 'GBP')).toBeUndefined(); // no European art in this sample
+    expect(defaultContinent(manifest, 'XYZ')).toBeUndefined();
   });
-  it('cleans up region names and known mislabels', () => {
-    const [uk, td] = parseManifest([
-      { id: 'monzo/debit', label: 'Monzo', group: [NOTE, 'UK'], file: 'monzo/debit.png', bank: 'monzo' },
-      { id: 'td/first-class-travel', label: 'TD First Class', group: [NOTE, 'United States'], file: 'td/fct.png', bank: 'td' },
-    ]);
-    expect(uk!.region).toBe('United Kingdom');
-    expect(td!.region).toBe('Canada');
+  it('maps each country in the dataset to its continent', () => {
+    const regions = parseManifest(
+      ['UK', 'EU?', 'Netherlands', 'Japan', 'Greater China', 'Singapore', 'Australia', 'Canada'].map((r, i) => ({ id: `x/${i}`, label: 'x', group: [NOTE, r], file: 'x.png', bank: 'x' })),
+    ).map((c) => c.region);
+    expect(regions).toEqual(['Europe', 'Europe', 'Europe', 'Asia', 'Asia', 'Asia', 'Oceania', 'North America']);
   });
 });
 
 describe('manifest', () => {
   it('parses entries and skips bad, duplicate and path-escaping ones', () => {
     expect(manifest.map((c) => c.id)).toEqual(['td/aeroplan', 'td/debit-us', 'bmo/cashback', 'rbc/avion-visa-infinite', 'american-express/blue-cash-everyday']);
-    expect(manifest[0]).toMatchObject({ institutionId: 'td', kind: 'credit', region: 'Canada', file: 'td/aeroplan.jpeg' });
+    expect(manifest[0]).toMatchObject({ institutionId: 'td', kind: 'credit', region: 'North America', file: 'td/aeroplan.jpeg' });
     expect(manifest[1]!.kind).toBe('debit');
     expect(parseManifest({ cards: [] })).toEqual([]);
   });
