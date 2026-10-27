@@ -103,7 +103,6 @@ export function Plan() {
   return (
     <section class="plan">
       <PageHeader
-        eyebrow={S.plan.period(data.period.start, data.period.end)}
         title={S.plan.title}
         action={
           <button type="button" class="icon-btn icon-btn--soft plan__suggest" aria-label={S.plan.regenerate} onClick={() => setEditing({ kind: 'suggest' })}>

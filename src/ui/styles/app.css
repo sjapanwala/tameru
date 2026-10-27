@@ -1184,6 +1184,11 @@ summary::after {
   position: relative;
   width: 44px;
   height: 44px;
+  min-height: 0;
+  margin: 0; /* as a <button> it would otherwise take the button margin and padding and sit off-centre */
+  padding: 0;
+  border: 0;
+  flex: none;
   border-radius: 50%;
   display: grid;
   place-items: center;

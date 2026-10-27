@@ -452,7 +452,6 @@ export const S = {
 
   plan: {
     title: 'Plan',
-    period: (from: string, to: string) => `${shortDate(from)} – ${shortDate(to)}`,
     allocation: 'Planned',
     behaviour: 'When the period ends',
     regenerate: 'Suggest a new plan',
