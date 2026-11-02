@@ -275,11 +275,11 @@ export interface Settings {
   // The cover prompt only returns if that category goes further over.
   coversHandled?: Record<string, Cents>;
   lock?: AppLock; // absent = no passcode
-  theme?: ThemeId; // absent = ink
+  theme?: ThemeId; // absent = paper
 }
 
 /** Themes: moods built from the same parts (paper, ink, type, the hero). */
-export const THEME_IDS = ['ink', 'receipt', 'almanac', 'night', 'contrast'] as const;
+export const THEME_IDS = ['paper', 'harbor', 'kiln'] as const;
 export type ThemeId = (typeof THEME_IDS)[number];
 
 /** The optional app lock. Only a salted hash of the passcode is kept. */

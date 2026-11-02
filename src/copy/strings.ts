@@ -112,6 +112,17 @@ export const S = {
 
   home: {
     safeToSpend: 'Safe to spend',
+    greeting: (hour: number) => (hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening'),
+    safeToday: 'Safe to spend today',
+    spentOf: (spent: Cents, of: Cents) => `${$(spent)} of ${$(of)}`,
+    leftUntil: (c: Cents, d: string) => `${$(c)} left to ${shortDate(d)}`,
+    allAccounts: 'All accounts',
+    cardCount: (n: number) => plural(n, 'card'),
+    swipeCards: 'Swipe to switch',
+    showCard: (name: string) => `Show ${name}`,
+    recentActivity: 'Recent activity',
+    cardActivity: (name: string) => `${name} activity`,
+    swipeToRemove: 'Swipe ← to remove',
     perDay: (c: Cents, days: number) => `${$(c)} a day for ${plural(days, 'day')}`,
     perDayShort: 'a day',
     recent: 'Recent',
@@ -222,12 +233,8 @@ export const S = {
     } as Record<string, string>,
   },
 
-  wallet: {
-    open: 'Show all cards',
-    close: 'Put cards away',
-  },
-
   cards: {
+    kind: { credit: 'Credit', debit: 'Debit' },
     country: 'Continent',
     allCountries: 'Everywhere',
     institution: 'Bank or institution',
@@ -532,8 +539,8 @@ export const S = {
   settings: {
     title: 'Settings',
     groups: { theme: 'Theme', budget: 'Budget', notifications: 'Reminders', security: 'Security', freshStart: 'Fresh start' },
-    themes: { ink: 'Ink', receipt: 'Receipt', almanac: 'Almanac', night: 'Night', contrast: 'Contrast' },
-    themeNote: 'Night is always dark. The others follow your phone’s light or dark setting.',
+    themes: { paper: 'Paper', harbor: 'Harbor', kiln: 'Kiln' },
+    themeNote: 'Each follows your phone’s light or dark setting.',
     addName: 'Add your name',
     profileSub: 'Your initials show on Home',
     name: 'Your name',

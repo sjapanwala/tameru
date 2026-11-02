@@ -65,7 +65,7 @@ export function Settings() {
       </button>
 
       <Group title={S.settings.groups.theme} note={S.settings.themeNote}>
-        <ThemePicker value={settings.theme ?? 'ink'} onChange={(theme) => update({ theme: theme === 'ink' ? undefined : theme })} />
+        <ThemePicker value={settings.theme && THEME_IDS.includes(settings.theme) ? settings.theme : 'paper'} onChange={(theme) => update({ theme: theme === 'paper' ? undefined : theme })} />
       </Group>
 
       <Group title={S.settings.groups.budget}>

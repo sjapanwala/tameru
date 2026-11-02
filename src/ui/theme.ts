@@ -8,20 +8,19 @@ export const THEME_KEY = 'tameru-theme';
 
 /** Each theme's page colour, light and dark (as in tokens.css), for theme-color. */
 export const THEME_BG: Record<ThemeId, [light: string, dark: string]> = {
-  ink: ['#ffffff', '#0e0e0e'],
-  receipt: ['#f6f2ea', '#15130f'],
-  almanac: ['#fbf8f1', '#12110d'],
-  night: ['#070a10', '#070a10'],
-  contrast: ['#ffffff', '#000000'],
+  paper: ['#f6f4ef', '#191815'],
+  harbor: ['#f2f5f6', '#0e1720'],
+  kiln: ['#f7f0e8', '#1c130e'],
 };
 
 export function applyTheme(theme: ThemeId | undefined): void {
-  const id: ThemeId = theme && THEME_IDS.includes(theme) ? theme : 'ink';
+  // Paper is the default; a theme that no longer exists falls back to it.
+  const id: ThemeId = theme && THEME_IDS.includes(theme) ? theme : 'paper';
   const root = document.documentElement;
-  if (id === 'ink') delete root.dataset.theme;
+  if (id === 'paper') delete root.dataset.theme;
   else root.dataset.theme = id;
   try {
-    if (id === 'ink') localStorage.removeItem(THEME_KEY);
+    if (id === 'paper') localStorage.removeItem(THEME_KEY);
     else localStorage.setItem(THEME_KEY, id);
   } catch {
     // private mode: it's still applied from settings on every launch

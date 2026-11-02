@@ -39,9 +39,10 @@ export function useCatalog(): CatalogCard[] {
 
 const NETWORK_MARK: Record<string, string> = { visa: 'VISA', mastercard: 'mastercard', amex: 'AMEX', interac: 'Interac', discover: 'DISCOVER', unionpay: 'UnionPay' };
 
-export function CardFace({ account, face, catalog, name }: { account?: Account; face?: Face; catalog: CatalogCard[]; name?: string }) {
+export function CardFace({ account, face, catalog, name, kind }: { account?: Account; face?: Face; catalog: CatalogCard[]; name?: string; kind?: 'credit' | 'debit' }) {
   const f = face ?? account?.face;
   const custom = useLoad(customInstitutions) ?? [];
+  const holder = useLoad((a) => a.repos.settings.get())?.userName?.trim();
   const art = f?.artId ? catalog.find((c) => c.id === f.artId) : undefined;
   const instId = f?.institutionId ?? art?.institutionId;
   const customInst = instId ? custom.find((i) => i.id === instId) : undefined;
@@ -59,7 +60,7 @@ export function CardFace({ account, face, catalog, name }: { account?: Account; 
     const place = { left: `${Math.max(x0, 0.04) * 100}%`, top: `${((y0 + y1) / 2) * 100}%` };
     return (
       <div class="cardface cardface--art">
-        <img src={src} alt={art.name} loading="lazy" decoding="async" onError={() => setBroken(true)} />
+        <img src={src} alt={art.name} loading="lazy" decoding="async" draggable={false} onError={() => setBroken(true)} />
         {cover?.method === 'label' && (
           <span
             class="cardface__label"
@@ -89,16 +90,20 @@ export function CardFace({ account, face, catalog, name }: { account?: Account; 
   const instLabel = customInst?.name ?? (instId ? institutionName(instId) : undefined);
   const title = f?.cardName ?? (art ? shortCardName(art) : undefined) ?? name ?? account?.name ?? '';
   const style = color ? { '--card': color, '--card-ink': textOn(color) } : undefined;
+  const k = account ? (account.type === 'credit_card' ? 'credit' : 'debit') : (kind ?? art?.kind);
   return (
-    <div class={`cardface cardface--plain${color ? ' cardface--tinted' : ''}`} style={style}>
+    <div class={`cardface cardface--plain${color ? ' cardface--tinted' : ''}`} style={style} data-kind={k}>
       <span class="cardface__top">
-        {instLabel ? <span class="cardface__badge">{institutionInitials(instLabel)}</span> : <span />}
-        <span class="cardface__name">{title}</span>
+        <span class="cardface__title">
+          {instLabel && <span class="cardface__badge">{institutionInitials(instLabel)}</span>}
+          <span class="cardface__name">{title}</span>
+        </span>
+        {k && <span class="cardface__kind">{S.cards.kind[k]}</span>}
       </span>
       <span class="cardface__chip" />
       <span class="cardface__bottom">
         <span class="cardface__last4">{last4}</span>
-        <span class="cardface__network">{art ? (NETWORK_MARK[art.network] ?? '') : (instLabel ?? (account ? S.accountType[account.type] : ''))}</span>
+        <span class="cardface__network">{holder ? holder.toUpperCase() : art ? (NETWORK_MARK[art.network] ?? '') : (instLabel ?? (account ? S.accountType[account.type] : ''))}</span>
       </span>
     </div>
   );
@@ -181,7 +186,7 @@ export function CardPicker({ value, onChange, kind, fallbackName }: { value?: Fa
   return (
     <div class="card-picker">
       <div class="card-picker__preview">
-        <CardFace face={previewFace} catalog={catalog} name={fallbackName} />
+        <CardFace face={previewFace} catalog={catalog} name={fallbackName} kind={kind} />
       </div>
 
       <label>

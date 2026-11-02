@@ -5,6 +5,15 @@ import type { Release } from '../domain/releases';
 
 export const RELEASES: Release[] = [
   {
+    version: '0.11.0',
+    items: [
+      { title: 'A new Home', body: 'Your cards sit in a stack at the top. Swipe to switch between All accounts and each card; safe to spend today, the bar under it and the activity list follow the card you’re on. Swipe a transaction left to remove it.' },
+      { title: 'Each card’s share', body: 'Today’s safe to spend is split across your cards by where your spending went over the last 30 days, so the cards always add up to the total.' },
+      { title: 'Cards in their own colours', body: 'Each card takes the main colour of its own art. Cards drawn without art now have a chip, your name and Credit or Debit on them.' },
+      { title: 'New themes', body: 'Paper (the new default), Harbor and Kiln, each with a light and a dark version. They replace the earlier themes.' },
+    ],
+  },
+  {
     version: '0.10.0',
     items: [{ title: 'Look back at past months', body: 'Tap the calendar next to Plan to open an earlier month and see what you planned and spent in each category. Months with nothing recorded are greyed out.' }],
   },

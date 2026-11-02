@@ -1,25 +1,29 @@
 import { useEffect, useState } from 'preact/hooks';
-import { fmtDate, money, S } from '../../copy/strings';
+import { fmtDate, S } from '../../copy/strings';
 import { diffDays } from '../../domain/dates';
 import type { FreshStartOffer } from '../../domain/freshStart';
 import type { Notice } from '../../domain/notifications';
 import type { CoverOption } from '../../domain/reabsorb';
 import type { Account, Cents, Transaction } from '../../domain/types';
 import { doFreshStart } from '../../services/freshStart';
-import { getHome } from '../../services/home';
+import { getHome, isCard } from '../../services/home';
 import { takeTodaysNotices } from '../../services/notifications';
 import { applyCover } from '../../services/plan';
+import { customInstitutions } from '../../services/institutions';
+import { deleteTransaction, restoreTransaction } from '../../services/transactions';
 import { useCatalog } from '../cards';
-import { Amount, Message, monogram, Ticks } from '../components';
+import { CardStack } from '../CardStack';
+import { Amount, Message, monogram } from '../components';
 import { useApp, useLoad } from '../hooks';
 import { initials } from '../../domain/onboarding';
-import { ArrowDownLeft, ArrowUpRight, BellIcon, PersonIcon, SwapIcon } from '../Icons';
+import { ArrowDownLeft, ArrowUpRight, BellIcon, PersonIcon, SwapIcon, TrashIcon } from '../Icons';
+import { useCardColors } from '../institutionColor';
 import { useTween } from '../motion';
 import { QuickRow } from '../QuickRow';
-import { useWalletPull, Wallet } from '../Wallet';
 import { Sheet } from '../Sheet';
-import { StatusTint } from '../StatusTint';
-import { orderedAccounts, reorderAccounts } from '../../services/accounts';
+import { SwipeRow } from '../SwipeRow';
+import { toast } from '../toast';
+import { orderedAccounts } from '../../services/accounts';
 
 export function Home(props: { offer: FreshStartOffer | null; clearOffer: () => void }) {
   const { app, bump } = useApp();
@@ -35,10 +39,17 @@ export function Home(props: { offer: FreshStartOffer | null; clearOffer: () => v
   useEffect(() => {
     takeTodaysNotices(app).then(setNotices);
   }, []);
-  useHeroTop();
-  const shownSafe = useTween(data?.sts.safeCents ?? 0, 'safe-to-spend');
-  const pull = useWalletPull();
-  const [walletOrder, setWalletOrder] = useState<string[] | null>(null);
+  const custom = useLoad(customInstitutions) ?? [];
+  // Cards in the stack: credit and debit (chequing), in the user's order.
+  const cards = (accounts ?? []).filter(isCard);
+  const colors = useCardColors(cards, catalog, custom);
+  const [stackIndex, setStackIndex] = useState(0);
+  // The card on top of the stack (none for All accounts) picks the figures and activity shown.
+  const index = Math.min(stackIndex, cards.length);
+  const card: Account | undefined = index > 0 ? cards[index - 1] : undefined;
+  const share = card ? data?.perCard[card.id] : undefined;
+  const safeToday = share?.safeTodayCents ?? data?.safeTodayCents ?? 0;
+  const shownSafe = useTween(safeToday, 'safe-to-spend');
   if (!data || !accounts) return <div class="placeholder" />;
   const { sts } = data;
   const b = sts.breakdown;
@@ -75,14 +86,26 @@ export function Home(props: { offer: FreshStartOffer | null; clearOffer: () => v
     </li>
   );
 
-  // Cards in the wallet: credit and debit (chequing), in the user's order.
-  const cards = accounts.filter((a) => !a.archived && (a.type === 'credit_card' || a.type === 'chequing'));
-  // Show a just-dropped order immediately, before the save round-trips.
-  const walletCards: Account[] = walletOrder
-    ? [...cards].sort((a, b) => (walletOrder.indexOf(a.id) + 1 || 99) - (walletOrder.indexOf(b.id) + 1 || 99))
-    : cards;
-  const periodDays = diffDays(data.period.start, data.period.end) + 1;
-  const dayIndex = diffDays(data.period.start, today);
+  const activity = data.recent.filter((t) => !card || t.accountId === card.id || t.toAccountId === card.id).slice(0, 5);
+  const spent = share?.spentTodayCents ?? data.spentTodayCents;
+  const left = share?.leftCents ?? sts.safeCents;
+  const allowance = Math.max(0, safeToday) + spent;
+  const spentPct = allowance > 0 ? Math.min(100, (spent / allowance) * 100) : left < 0 ? 100 : 0;
+  const now = new Date();
+  const firstName = settings?.userName?.trim().split(/\s+/)[0];
+
+  const swipeDelete = async (t: Transaction) => {
+    const before = await deleteTransaction(app, t.id);
+    bump();
+    if (before)
+      toast(t.originKey ? S.transactions.skipped : S.transactions.deleted, {
+        label: S.common.undo,
+        run: async () => {
+          await restoreTransaction(app, before);
+          bump();
+        },
+      });
+  };
 
   const title = (t: Transaction) =>
     t.type === 'transfer' ? `${acctName(t.accountId)} → ${acctName(t.toAccountId)}` : (t.merchant ?? (catName(t.categoryId) || S.txType[t.type]));
@@ -94,36 +117,42 @@ export function Home(props: { offer: FreshStartOffer | null; clearOffer: () => v
 
   return (
     <section class="home">
-      <StatusTint target=".home-hero" />
-      <div ref={pull.ref} class={`home-hero${pull.open ? ' home-hero--open' : ''}`} {...pull.bind}>
-        <div class="home-hero__top">
-          <a class="mark" href="#/settings" aria-label={S.home.profile}>
-            {initials(settings?.userName) || <PersonIcon />}
-          </a>
-          <a class="icon-btn" href="#/recurring" aria-label={S.home.upcoming}>
+      <div class="home-head">
+        <div class="home-head__who">
+          <span class="datetile" aria-hidden="true">
+            <span>{new Date(`${today}T12:00`).toLocaleString('en-CA', { month: 'short' }).replace('.', '').toUpperCase()}</span>
+            <span>{today.slice(8, 10)}</span>
+          </span>
+          <span class="home-head__text">
+            <span class="home-head__greet">{S.home.greeting(now.getHours())}</span>
+            {firstName && <span class="home-head__name">{firstName}</span>}
+          </span>
+        </div>
+        <div class="head-actions">
+          <a class="icon-btn icon-btn--line" href="#/recurring" aria-label={S.home.upcoming}>
             <BellIcon />
             {(data.upcoming.length > 0 || data.pendingCount > 0) && <span class="icon-btn__dot" />}
           </a>
+          <a class="mark mark--line" href="#/settings" aria-label={S.home.profile}>
+            {initials(settings?.userName) || <PersonIcon />}
+          </a>
         </div>
-        <p class="home-hero__label">{S.home.safeToSpend}</p>
-        <button type="button" class="home-hero__amount" aria-label={S.home.showBreakdown} onClick={() => setShowBreakdown(true)}>
+      </div>
+
+      {cards.length > 0 && <CardStack cards={cards} colors={colors} perCard={data.perCard} totalCents={data.safeTodayCents} catalog={catalog} index={index} onIndex={setStackIndex} />}
+
+      <div class="today">
+        <p class="today__label">{S.home.safeToday}</p>
+        <button type="button" class="today__amount" aria-label={S.home.showBreakdown} onClick={() => setShowBreakdown(true)}>
           <Amount c={shownSafe} />
         </button>
-        <p class="home-hero__pill">
-          <span class="num">{money(sts.dailyCents)}</span> {S.home.perDayShort} · {S.home.daysLeft(sts.daysLeft)}
-        </p>
-        <div class="home-hero__ticks">
-          <Ticks total={periodDays} done={dayIndex} label={S.home.daysLeft(sts.daysLeft)} />
+        <div class={`today__bar${left < 0 ? ' today__bar--over' : ''}`}>
+          <span style={{ width: `${spentPct}%` }} />
         </div>
-        <Wallet
-          accounts={walletCards}
-          catalog={catalog}
-          pull={pull}
-          onReorder={(ids) => {
-            setWalletOrder(ids);
-            reorderAccounts(app, ids).then(bump);
-          }}
-        />
+        <p class="today__meta">
+          <span>{S.home.spentOf(spent, allowance)}</span>
+          <span>{S.home.leftUntil(left, data.period.end)}</span>
+        </p>
       </div>
 
       <div class="actions">
@@ -176,28 +205,41 @@ export function Home(props: { offer: FreshStartOffer | null; clearOffer: () => v
       ))}
 
       <div class="section-head">
-        <h2>{S.home.recent}</h2>
+        <h2>{card ? S.home.cardActivity(card.face?.cardName ?? card.name) : S.home.recentActivity}</h2>
         <a href="#/transactions">{S.home.viewAll}</a>
       </div>
-      {data.recent.length === 0 ? (
+      {activity.length === 0 ? (
         <p class="muted">{S.common.none}</p>
       ) : (
-        <ul class="txlist">
-          {data.recent.map((t) => (
-            <li key={t.id}>
-              <span class="avatar" aria-hidden="true">
-                {t.type === 'transfer' ? <SwapIcon /> : t.type === 'income' ? <ArrowDownLeft /> : monogram(title(t))}
-              </span>
-              <span class="txlist__main">
-                <span class="txlist__title">{title(t)}</span>
-                <span class="txlist__meta">{when(t)}</span>
-              </span>
-              <span class={`txlist__amt${t.status === 'pending' ? ' muted' : ''}`}>
-                <Amount c={t.type === 'expense' ? -t.amountCents : t.amountCents} sign={t.type === 'income' || t.type === 'refund' ? '+' : undefined} />
-              </span>
-            </li>
-          ))}
-        </ul>
+        <>
+          <ul class="txlist">
+            {activity.map((t) => (
+              <li key={t.id}>
+                <SwipeRow
+                  onDelete={() => swipeDelete(t)}
+                  deleteLabel={t.originKey ? S.transactions.skip : S.common.delete}
+                  editLabel={S.common.edit}
+                  deleteIcon={<TrashIcon />}
+                  editIcon={null}
+                >
+                  <div class={`txrow${t.status === 'pending' ? ' txrow--pending' : ''}`}>
+                    <span class="avatar" aria-hidden="true">
+                      {t.type === 'transfer' ? <SwapIcon /> : t.type === 'income' ? <ArrowDownLeft /> : monogram(title(t))}
+                    </span>
+                    <span class="txlist__main">
+                      <span class="txlist__title">{title(t)}</span>
+                      <span class="txlist__meta">{[when(t), t.type === 'transfer' ? '' : catName(t.categoryId), card ? '' : acctName(t.accountId)].filter(Boolean).join(' · ')}</span>
+                    </span>
+                    <span class={`txlist__amt${t.type === 'income' || t.type === 'refund' ? ' txlist__amt--in' : ''}`}>
+                      <Amount c={t.type === 'expense' ? -t.amountCents : t.amountCents} sign={t.type === 'income' || t.type === 'refund' ? '+' : undefined} />
+                    </span>
+                  </div>
+                </SwipeRow>
+              </li>
+            ))}
+          </ul>
+          <p class="home-hint">{S.home.swipeToRemove}</p>
+        </>
       )}
 
       {showBreakdown && (
@@ -222,21 +264,3 @@ export function Home(props: { offer: FreshStartOffer | null; clearOffer: () => v
   );
 }
 
-/**
- * While Home is showing, the area revealed by pulling the page down (the root
- * background) takes the hero's colour, as does theme-color for iOS versions before 26
- * (iOS 26 ignores it; StatusTint covers that).
- */
-function useHeroTop() {
-  useEffect(() => {
-    const top = getComputedStyle(document.documentElement).getPropertyValue('--hero-top').trim();
-    const metas = [...document.querySelectorAll<HTMLMetaElement>('meta[name="theme-color"]')];
-    const before = metas.map((m) => m.content);
-    if (top) metas.forEach((m) => (m.content = top));
-    document.documentElement.classList.add('hero-top');
-    return () => {
-      metas.forEach((m, i) => (m.content = before[i]!));
-      document.documentElement.classList.remove('hero-top');
-    };
-  }, []);
-}

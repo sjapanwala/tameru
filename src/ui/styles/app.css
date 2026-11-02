@@ -43,26 +43,6 @@ select,
 }
 
 
-/* Home: pulling the page down past the top shows the hero's colour, not white. */
-html.hero-top {
-  background: var(--hero-top);
-}
-
-/* see StatusTint.tsx: a strip in the hero's colour that iOS takes the status bar colour from */
-.status-tint {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  z-index: 15; /* above the page, below sheets and menus */
-  height: max(var(--safe-t), 4px);
-  background: var(--hero-top);
-}
-
-.status-tint[hidden] {
-  display: none;
-}
-
 ::selection {
   background: var(--text);
   color: var(--bg);
@@ -1109,49 +1089,97 @@ summary::after {
 }
 
 
-/* ---------- home: hero panel ---------- */
+/* ---------- home: header ---------- */
 
-/* Hangs from the top edge like a fixture: it runs up under the status bar, and its top
-   band is one flat colour (--hero-top) so the bar, tinted to match by StatusTint, joins
-   it without a seam. Only the bottom corners are rounded. */
-.home-hero {
-  position: relative;
-  overflow: hidden;
-  margin: calc(-1 * (var(--safe-t) + var(--s4))) calc(-1 * var(--s5)) 0;
-  padding: calc(var(--safe-t) + var(--s4)) var(--s5) 0;
-  border-radius: 0 0 36px 36px;
-  background: var(--hero-bg);
-  color: var(--hero-text);
-  text-align: center;
-  isolation: isolate;
-}
-
-/* the flat top band, over the glow, fading into it below the status bar */
-.home-hero::after {
-  content: '';
-  position: absolute;
-  z-index: -1;
-  inset: 0 0 auto;
-  height: calc(var(--safe-t) + 160px);
-  background: linear-gradient(to bottom, var(--hero-top) var(--safe-t), color-mix(in srgb, var(--hero-top) 55%, transparent) calc(var(--safe-t) + 50px), transparent);
-  pointer-events: none;
-}
-
-/* soft light from above, like the reference's glow but in greys */
-.home-hero::before {
-  content: '';
-  position: absolute;
-  z-index: -1;
-  inset: -20% -10% auto;
-  height: 80%;
-  background: radial-gradient(60% 60% at 50% 30%, rgb(255 255 255 / 0.12), transparent 70%);
-}
-
-.home-hero__top {
+.home-head {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: var(--s6);
+  gap: var(--s3);
+}
+
+.home-head__who {
+  display: flex;
+  align-items: center;
+  gap: var(--s3);
+  min-width: 0;
+}
+
+/* a tear-off calendar leaf: month on a band, the day below */
+.datetile {
+  flex: none;
+  width: 48px;
+  height: 52px;
+  border-radius: 12px;
+  box-shadow: inset 0 0 0 1.5px var(--text);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.datetile span:first-child {
+  padding: 3px 0 2px;
+  background: var(--text);
+  color: var(--bg);
+  font-family: var(--font-num);
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-align: center;
+}
+
+.datetile span:last-child {
+  flex: 1;
+  display: grid;
+  place-items: center;
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  line-height: 1;
+}
+
+.home-head__text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.home-head__greet {
+  font-size: var(--fs-sm);
+  color: var(--text-2);
+  white-space: nowrap;
+}
+
+.home-head__name {
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.home-head .icon-btn--line,
+.home-head .mark--line {
+  background: transparent;
+  color: var(--text);
+  box-shadow: inset 0 0 0 1.5px var(--rule, var(--line));
+}
+
+.home-head .mark--line {
+  box-shadow: inset 0 0 0 1.5px var(--text);
+}
+
+.home-head .icon-btn--line .icon-btn__dot {
+  top: 10px;
+  right: 11px;
+  width: 8px;
+  height: 8px;
+  background: var(--neg, var(--text));
+  box-shadow: 0 0 0 2px var(--bg);
 }
 
 .mark {
@@ -1219,86 +1247,281 @@ summary::after {
   box-shadow: 0 0 0 2px #1a1a1a;
 }
 
-.home-hero__label {
-  font-size: var(--fs-md);
-  font-weight: 500;
-  color: var(--hero-dim);
-  margin: 0 0 var(--s2);
+/* ---------- home: card stack ---------- */
+
+.stack {
+  margin-top: var(--s5);
+  padding-top: 28px; /* room above for the cards fanned up behind the top one */
+  user-select: none;
+  -webkit-user-select: none;
 }
 
-.home-hero__amount {
-  font-family: var(--font-display);
-  font-size: clamp(3rem, 15vw, 4.25rem);
+.stack__frame {
+  position: relative;
+  aspect-ratio: 1.586;
+  touch-action: pan-y;
+  cursor: grab;
+}
+
+/* the frame handles the swipe: the card art mustn't start the browser's own image drag
+   or iOS's press-and-hold preview */
+.stack__frame,
+.stack__frame img {
+  -webkit-touch-callout: none;
+  -webkit-user-drag: none;
+}
+
+.stack__card * {
+  pointer-events: none;
+}
+
+.stack__card {
+  position: absolute;
+  inset: 0;
+  transform-origin: 50% 0;
+  will-change: transform;
+}
+
+.stack__card--animate {
+  transition: transform var(--t-mid) var(--glide), opacity var(--t-mid) var(--glide);
+}
+
+.stack__card .cardface {
+  height: 100%;
+  border-radius: 22px;
+}
+
+.stack__card[aria-hidden='true'] .cardface {
+  box-shadow: 0 -2px 10px -4px rgb(0 0 0 / 0.25);
+}
+
+.stack__foot {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--s3);
+  margin-top: 14px;
+}
+
+.stack__pager {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.stack__pager button {
+  width: 10px;
+  height: 4px;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 2px;
+  background: var(--rule, var(--line));
+  transition: width var(--t-mid) var(--glide), background-color var(--t-mid) var(--glide);
+}
+
+.stack__pager button.on {
+  width: 28px;
+  background: var(--text);
+}
+
+.stack__hint,
+.home-hint {
+  font-size: var(--fs-sm);
+  color: var(--text-2);
+  white-space: nowrap;
+}
+
+.home-hint {
+  margin: var(--s2) 0 0;
+  text-align: center;
+}
+
+/* All accounts: the page's own colour, outlined, with what's available split by card */
+.allcard {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 20px 22px;
+  background: var(--bg);
+  color: var(--text);
+  box-shadow: inset 0 0 0 1.5px var(--text);
+}
+
+.allcard__top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.allcard__title {
+  font-size: 1.125rem;
   font-weight: 600;
-  letter-spacing: -0.045em;
-  line-height: 1;
-  margin: 0 0 var(--s4);
-  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
 }
 
-.home-hero__amount .amt {
-  font-family: inherit;
-  letter-spacing: inherit;
+.allcard__count {
+  font-family: var(--font-num);
+  font-size: var(--fs-xs);
+  color: var(--text-2);
+}
+
+.allcard__total {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.allcard__label {
+  font-size: 0.8125rem;
+  color: var(--text-2);
+}
+
+.allcard__total .amt {
+  font-family: var(--font-display);
+  font-size: 2.5rem;
+  font-weight: 600;
+  letter-spacing: -0.04em;
+  line-height: 1;
+}
+
+.allcard__total .amt__c {
+  font-size: 1em;
+  color: var(--text-3);
+}
+
+.allcard__split {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.allcard__bar {
+  display: flex;
+  gap: 3px;
+  height: 8px;
+}
+
+.allcard__bar span,
+.allcard__legend i {
+  border-radius: 2px;
+  background: var(--seg, var(--text-3));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--text) 12%, transparent);
+  transition: width var(--t-mid) var(--glide);
+}
+
+.allcard__legend {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--s2);
+  min-width: 0;
+}
+
+.allcard__legend > span {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  font-size: var(--fs-xs);
+}
+
+.allcard__legend i {
+  flex: none;
+  width: 8px;
+  height: 8px;
+}
+
+.allcard__name {
+  color: var(--text-2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.allcard__legend .num {
+  font-size: 0.6875rem;
+}
+
+/* ---------- home: safe to spend today ---------- */
+
+.today {
+  margin-top: 30px;
+}
+
+.today__label {
+  margin: 0 0 var(--s1);
+  font-size: 0.9375rem;
+  color: var(--text-2);
 }
 
 /* the amount is a button: tap it to see where the number comes from */
-button.home-hero__amount {
+.today__amount {
   display: block;
-  width: 100%;
   min-height: 0;
+  margin: 0;
   padding: 0;
   border: 0;
   border-radius: var(--radius-sm);
   background: none;
   color: inherit;
   cursor: pointer;
+  text-align: left;
+  font-family: var(--font-display);
+  font-size: clamp(3.25rem, 17vw, 4.25rem);
+  font-weight: 600;
+  letter-spacing: -0.045em;
+  line-height: 1;
 }
 
-.home-hero__amount .amt__c {
+.today__amount .amt {
+  font-family: inherit;
+  letter-spacing: inherit;
+}
+
+.today__amount .amt__c {
   font-size: 1em;
-  opacity: 0.4;
+  color: var(--text-3);
+  opacity: 1;
 }
 
-.home-hero__pill {
-  display: inline-block;
-  font-size: var(--fs-sm);
-  color: var(--hero-text);
-  padding: 6px 14px;
-  border-radius: var(--pill);
-  background: rgb(255 255 255 / 0.1);
-  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.1);
-  margin: 0;
+.today__bar {
+  height: 6px;
+  margin-top: var(--s4);
+  border-radius: 3px;
+  background: var(--track);
+  overflow: hidden;
 }
 
-.home-hero__pill .num {
-  text-align: inherit;
+.today__bar span {
+  display: block;
+  height: 100%;
+  background: var(--text);
+  transition: width var(--t-slow) var(--glide);
 }
 
-.home-hero__ticks {
-  max-width: 240px;
-  margin: var(--s4) auto 0;
-  opacity: 0.9;
+/* over for the period: hatched, never an alarm */
+.today__bar--over span {
+  background: repeating-linear-gradient(135deg, var(--neg, var(--text)) 0 3px, transparent 3px 6px);
 }
 
-.home-hero .ticks {
-  height: 12px;
+/* money in, in themes with a positive colour */
+.txlist__amt--in {
+  color: var(--pos, inherit);
 }
 
-.home-hero .ticks span {
-  height: 5px;
-  background: var(--hero-line);
+.today__meta {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--s3);
+  margin: 10px 0 0;
+  font-family: var(--font-num);
+  font-size: var(--fs-xs);
+  color: var(--text-2);
+  white-space: nowrap;
 }
 
-.home-hero .ticks span.on {
-  background: rgb(255 255 255 / 0.3);
-}
-
-.home-hero .ticks span.now {
-  height: 12px;
-  background: var(--hero-text);
-}
-
-/* ---------- card faces & wallet stack ---------- */
+/* ---------- card faces ---------- */
 
 .cardface {
   position: relative;
@@ -1324,13 +1547,32 @@ button.home-hero__amount {
 }
 
 .cardface--plain {
+  --stripe: color-mix(in srgb, currentColor 6%, transparent);
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  padding: 7% 7% 6%;
-  color: #f2f2f2;
-  background: linear-gradient(135deg, #3a3a3a 0%, #1f1f1f 55%, #2b2b2b 100%);
+  padding: 6% 6.3%;
+  color: var(--plain-ink, #f2f2f2);
+  background:
+    repeating-linear-gradient(118deg, var(--stripe) 0 1px, transparent 1px 8px),
+    var(--plain-bg, linear-gradient(135deg, #3a3a3a 0%, #1f1f1f 55%, #2b2b2b 100%));
   box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.08);
+}
+
+/* A drawn card with no colour of its own takes the theme's card colour for its kind,
+   in themes that have one (Paper, Harbor, Kiln); the rest keep the graphite face. */
+.cardface--plain[data-kind='credit'] {
+  --plain-own: var(--card-credit);
+  --plain-ink: var(--card-credit-ink);
+}
+
+.cardface--plain[data-kind='debit'] {
+  --plain-own: var(--card-debit);
+  --plain-ink: var(--card-debit-ink);
+}
+
+.cardface--plain[data-kind] {
+  --plain-bg: linear-gradient(135deg, var(--plain-own) 0%, color-mix(in srgb, var(--plain-own) 80%, black) 100%);
 }
 
 .cardface__name {
@@ -1340,11 +1582,15 @@ button.home-hero__amount {
 }
 
 .cardface__chip {
-  width: 13%;
-  aspect-ratio: 1.3;
-  border-radius: 4px;
-  background: linear-gradient(135deg, #8a8a8a, #4a4a4a);
-  opacity: 0.6;
+  --contact: rgb(0 0 0 / 0.25);
+  width: 12%;
+  aspect-ratio: 1.31;
+  border-radius: 18% / 24%;
+  background:
+    linear-gradient(to bottom, transparent calc(50% - 0.5px), var(--contact) calc(50% - 0.5px) calc(50% + 0.5px), transparent calc(50% + 0.5px)),
+    linear-gradient(to right, transparent calc(35% - 0.5px), var(--contact) calc(35% - 0.5px) calc(35% + 0.5px), transparent calc(35% + 0.5px) calc(65% - 0.5px), var(--contact) calc(65% - 0.5px) calc(65% + 0.5px), transparent calc(65% + 0.5px)),
+    linear-gradient(135deg, #eedfb0 0%, #d3b878 55%, #c2a466 100%);
+  box-shadow: inset 0 0 0 1px rgb(0 0 0 / 0.12);
 }
 
 .cardface__bottom {
@@ -1367,112 +1613,27 @@ button.home-hero__amount {
   opacity: 0.85;
 }
 
-/* The stack peeks out of the bottom of the hero, cut off by its rounded edge. */
-/* ---------- wallet (Home hero): closed stack ↔ open list ---------- */
-
-.wallet {
-  position: relative;
-  margin: var(--s6) var(--s2) 0;
-  cursor: pointer;
-}
-
-.wallet--open {
-  cursor: default;
-}
-
-.wallet__card {
-  position: absolute;
-  left: 0;
-  right: 0;
-  top: 0;
-  display: block;
-  width: 100%;
-  min-height: 0;
-  padding: 0;
-  margin: 0;
-  border: 0;
-  background: none;
-  border-radius: 14px;
-  transform-origin: top center;
-  box-shadow: 0 -8px 24px rgb(0 0 0 / 0.28);
-  will-change: transform, opacity;
-}
-
-.wallet--open .wallet__card {
-  cursor: pointer;
-}
-
-/* the finger drives positions while dragging; on release everything glides */
-.wallet--animate,
-.wallet--animate .wallet__card {
-  transition: height var(--t-slow) var(--glide), transform var(--t-slow) var(--glide), opacity var(--t-slow) var(--glide);
-}
-
-.wallet__card:active .cardface {
-  filter: brightness(0.94);
-}
-
-.wallet--open .wallet__card:focus-visible {
-  outline: 2px solid var(--hero-text);
-  outline-offset: 3px;
-}
-
-/* handle on the hero's bottom edge: tap to open/close (and a hint that it pulls) */
-.wallet__handle {
-  position: absolute;
-  left: 50%;
-  bottom: 0;
-  z-index: 5;
-  transform: translateX(-50%);
-  width: 64px;
-  height: 22px;
-  min-height: 0;
-  padding: 0;
-  margin: 0;
-  border: 0;
-  background: none;
-  display: grid;
-  place-items: center;
-}
-
-.wallet__handle span {
-  width: 36px;
-  height: 5px;
-  border-radius: 3px;
-  background: rgb(255 255 255 / 0.35);
-  box-shadow: 0 1px 4px rgb(0 0 0 / 0.4);
-  transition: background-color var(--t-mid) var(--glide), width var(--t-mid) var(--glide);
-}
-
-.wallet__handle:hover span,
-.home-hero--open .wallet__handle span {
-  background: rgb(255 255 255 / 0.6);
-}
-
-.home-hero {
-  user-select: none;
-  -webkit-user-select: none;
-}
-
 /* ---------- home: actions ---------- */
 
 .actions {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: var(--s2);
-  margin: var(--s4) 0 var(--s2);
+  gap: 10px;
+  margin: 26px 0 var(--s2);
 }
 
 .action {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: var(--s2);
-  min-height: 52px;
+  gap: 10px;
+  min-height: 56px;
   padding: 0 var(--s4);
   border-radius: var(--pill);
-  background: var(--surface);
+  background: transparent;
+  box-shadow: inset 0 0 0 1.5px var(--text);
   color: var(--text);
+  font-size: 1.125rem;
   font-weight: 600;
   text-decoration: none;
   transition: transform var(--t-fast) var(--glide), background-color var(--t-mid) var(--glide);
@@ -2243,7 +2404,7 @@ main ul.txlist > li:has(> .txrow, > .swipe) {
 
 .swipe__action--delete {
   justify-content: flex-end;
-  background: #e5383b; /* red, as for the card menu's destructive action */
+  background: var(--neg, #e5383b); /* red, as for the card menu's destructive action */
 }
 
 .swipe[data-swipe='edit'] .swipe__action--edit,
@@ -2440,6 +2601,7 @@ main ul.txlist > li:has(> .txrow, > .swipe) {
 .cardface--tinted {
   color: var(--card-ink);
   background:
+    repeating-linear-gradient(118deg, var(--stripe) 0 1px, transparent 1px 8px),
     radial-gradient(120% 140% at 0% 0%, color-mix(in srgb, var(--card) 70%, white) 0%, transparent 55%),
     linear-gradient(135deg, var(--card) 0%, color-mix(in srgb, var(--card) 72%, black) 100%);
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--card-ink) 10%, transparent);
@@ -2473,8 +2635,45 @@ main ul.txlist > li:has(> .txrow, > .swipe) {
   text-overflow: ellipsis;
 }
 
-.cardface--tinted .cardface__chip {
-  background: linear-gradient(135deg, color-mix(in srgb, var(--card-ink) 55%, var(--card)), color-mix(in srgb, var(--card-ink) 25%, var(--card)));
+.cardface__top {
+  justify-content: space-between;
+}
+
+.cardface__title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.cardface__title .cardface__name {
+  font-size: 1.125rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cardface__kind {
+  flex: none;
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.cardface--plain .cardface__last4 {
+  font-size: 1rem;
+  letter-spacing: 0.08em;
+}
+
+.cardface--plain .cardface__network {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  letter-spacing: 0.06em;
 }
 
 .cardface__network {
@@ -2563,19 +2762,6 @@ main ul.txlist > li:has(> .txrow, > .swipe) {
 
 .cardface--art .cardface__last4 {
   z-index: 1;
-}
-
-/* a card picked up to rearrange: follows the finger exactly, floats above the rest */
-.wallet--animate .wallet__card--lifted,
-.wallet__card--lifted {
-  transition: none;
-  box-shadow: 0 18px 40px rgb(0 0 0 / 0.45), 0 4px 12px rgb(0 0 0 / 0.25);
-  cursor: grabbing;
-}
-
-.wallet--open .wallet__card {
-  -webkit-touch-callout: none;
-  touch-action: none; /* a held card is dragged, not scrolled */
 }
 
 /* ---------- hold a card: iOS-style context menu ---------- */
@@ -5544,7 +5730,7 @@ body.tab-menu-open .tabbar {
 
 .theme-picker {
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  grid-template-columns: repeat(3, 1fr);
   gap: var(--s2);
   padding: var(--s3);
 }
@@ -5641,36 +5827,6 @@ body.tab-menu-open .tabbar {
   max-width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
-}
-
-/* ---------- theme moods: the parts tokens can't express ---------- */
-
-/* Receipt: a faint paper grain over everything (fractal noise, drawn once, no image file). */
-[data-theme='receipt'] body::after {
-  content: '';
-  position: fixed;
-  inset: 0;
-  z-index: 2147483000;
-  pointer-events: none;
-  opacity: var(--grain);
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.35 0 0 0 0 0.3 0 0 0 0 0.22 0 0 0 0.55 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-}
-
-/* Receipt: printed type sits a little lighter and wider. */
-[data-theme='receipt'] h1,
-[data-theme='receipt'] .home-hero__amount {
-  letter-spacing: -0.05em;
-}
-
-/* Almanac: serif headings read better a touch less tight. */
-[data-theme='almanac'] h1,
-[data-theme='almanac'] h2 {
-  letter-spacing: -0.01em;
-}
-
-/* Contrast: a flat hero, no glow. */
-[data-theme='contrast'] .home-hero::before {
-  display: none;
 }
 
 /* ---------- plan: past months ---------- */

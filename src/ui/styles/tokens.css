@@ -1,22 +1,21 @@
 /* Design tokens — "Ledger".
-   Monochrome. Type does the work: a grotesk for words, a monospace for every figure,
-   like a well-kept receipt. Ticks, rules and hatching stand in for colour.
-   Light and dark follow the system. Themes (bottom of this file) are moods built
-   from the same parts: paper, ink, type and the dark hero. */
+   Quiet colour. Type does the work: a grotesk for words, a monospace for every figure,
+   like a well-kept receipt. Paper is the default; the themes at the bottom of this
+   file (Harbor, Kiln) swap the colours. Light and dark follow the system. */
 
 :root,
-[data-theme='ink'] {
-  --bg: #ffffff;
-  --surface: #f5f5f5;
-  --text: #111111;
-  --text-2: #6b6b6b;
-  --text-3: #a3a3a3;
-  --line: #ebebeb;
-  --line-strong: #111111;
-  --accent: #111111;
-  --accent-text: #ffffff;
-  --accent-soft: #f0f0f0;
-  --track: #e8e8e8;
+[data-theme='paper'] {
+  --bg: #f6f4ef;
+  --surface: #eae6de;
+  --text: #141414;
+  --text-2: #6e6a62;
+  --text-3: #b5b0a5;
+  --line: #e2ded5;
+  --line-strong: #141414;
+  --accent: #141414;
+  --accent-text: #f6f4ef;
+  --accent-soft: #eae6de;
+  --track: #e2ded5;
 
   /* Geist is bundled with the app (no network); system fonts are only a fallback. */
   --font: 'Geist Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -62,11 +61,17 @@
   --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.04), 0 1px 1px rgb(0 0 0 / 0.03);
   --shadow-md: 0 8px 24px -8px rgb(0 0 0 / 0.12), 0 2px 6px rgb(0 0 0 / 0.04);
   --shadow-lg: 0 24px 64px -16px rgb(0 0 0 / 0.28), 0 6px 18px rgb(0 0 0 / 0.08);
-  --hero-bg: radial-gradient(120% 140% at 0% 0%, #2b2b2b 0%, #141414 45%, #050505 100%);
-  --hero-top: #1c1c1c; /* flat band at the hero's top edge, and the status bar above it */
-  --hero-text: #f5f5f5;
+  --hero-bg: radial-gradient(120% 140% at 0% 0%, #1d5a40 0%, #143f2d 50%, #0c2a1d 100%);
+  --hero-text: #e7efe9;
   --hero-dim: rgb(255 255 255 / 0.5);
   --hero-line: rgb(255 255 255 / 0.1);
+  --rule: #cfcac0;
+  --pos: #1f7a4a;
+  --neg: #b8432f;
+  --card-credit: #d3b26a;
+  --card-credit-ink: #2b2210;
+  --card-debit: #143f2d;
+  --card-debit-ink: #e7efe9;
   --scrim: rgb(0 0 0 / 0.32);
 
   color-scheme: light;
@@ -74,170 +79,141 @@
 
 @media (prefers-color-scheme: dark) {
   :root,
-  [data-theme='ink'] {
-    --bg: #0c0c0c;
-    --surface: #181818;
-    --text: #f2f2f2;
-    --text-2: #999999;
-    --text-3: #5c5c5c;
-    --line: #232323;
-    --line-strong: #f2f2f2;
-    --accent: #f2f2f2;
-    --accent-text: #0c0c0c;
-    --accent-soft: #1d1d1d;
-    --track: #2a2a2a;
+  [data-theme='paper'] {
+    --bg: #191815;
+    --surface: #26241f;
+    --text: #f1eee7;
+    --text-2: #9e988c;
+    --text-3: #5e5a52;
+    --line: #2c2a25;
+    --line-strong: #f1eee7;
+    --accent: #f1eee7;
+    --accent-text: #191815;
+    --accent-soft: #26241f;
+    --track: #2c2a25;
     --shadow-sm: 0 0 0 1px rgb(255 255 255 / 0.04);
     --shadow-md: 0 0 0 1px rgb(255 255 255 / 0.06), 0 8px 24px -8px rgb(0 0 0 / 0.6);
     --shadow-lg: 0 0 0 1px rgb(255 255 255 / 0.07), 0 24px 64px -16px rgb(0 0 0 / 0.8);
-    --hero-bg: radial-gradient(120% 140% at 0% 0%, #2e2e2e 0%, #1a1a1a 45%, #121212 100%);
-    --hero-top: #222222;
+    --hero-bg: radial-gradient(120% 140% at 0% 0%, #26704f 0%, #1d5a40 50%, #143f2d 100%);
+    --rule: #3a3731;
+    --pos: #6fc08f;
+    --neg: #d9604a;
+    --hero-text: #e7efe9;
+    --card-credit: #d3b26a;
+    --card-credit-ink: #2b2210;
+    --card-debit: #1d5a40;
+    --card-debit-ink: #e7efe9;
     --scrim: rgb(0 0 0 / 0.6);
     color-scheme: dark;
   }
 }
 
-/* ---------- themes: moods ---------- */
+/* ---------- themes ---------- */
 
-/* Receipt: thermal paper. Everything is set in the monospace, printed in faded ink,
-   with a faint grain over the page (see app.css). */
-[data-theme='receipt'] {
-  --bg: #f6f2ea;
-  --surface: #ede7db;
-  --text: #2b2723;
-  --text-2: #7d766a;
-  --text-3: #b1a998;
-  --line: #e0d9cb;
-  --line-strong: #2b2723;
-  --accent: #2b2723;
-  --accent-text: #f6f2ea;
-  --accent-soft: #ebe5d8;
-  --track: #e1d9c9;
-  --font: var(--font-num);
-  --font-display: var(--font-num);
-  --hero-bg: radial-gradient(120% 140% at 0% 0%, #3a352e 0%, #24211c 50%, #171512 100%);
-  --hero-top: #2a2621;
-  --hero-text: #f6f2ea;
-  --grain: 0.22;
+/* Harbor: sea-mist greys, harbour-navy ink and hero, a coral card. */
+[data-theme='harbor'] {
+  --bg: #f2f5f6;
+  --surface: #e3e9ec;
+  --text: #0e1b26;
+  --text-2: #5d6b76;
+  --text-3: #a9b5bd;
+  --line: #dce3e7;
+  --line-strong: #0e1b26;
+  --rule: #c3cdd3;
+  --accent: #0e1b26;
+  --accent-text: #f2f5f6;
+  --accent-soft: #e3e9ec;
+  --track: #dce3e7;
+  --pos: #1e7a62;
+  --neg: #c2462e;
+  --hero-bg: radial-gradient(120% 140% at 0% 0%, #2a4c70 0%, #1c3550 50%, #0e1b26 100%);
+  --hero-text: #e9eff4;
+  --card-credit: #1c3550;
+  --card-credit-ink: #e9eff4;
+  --card-debit: #e07a5f;
+  --card-debit-ink: #2a120b;
 }
 
 @media (prefers-color-scheme: dark) {
-  [data-theme='receipt'] {
-    --bg: #15130f;
-    --surface: #201d18;
-    --text: #e8e0cf;
-    --text-2: #9d9584;
-    --text-3: #625b4e;
-    --line: #2c2822;
-    --line-strong: #e8e0cf;
-    --accent: #e8e0cf;
-    --accent-text: #15130f;
-    --accent-soft: #24201b;
-    --track: #332e27;
-    --hero-bg: radial-gradient(120% 140% at 0% 0%, #3b362e 0%, #26221c 50%, #1c1915 100%);
-    --hero-top: #2b2721;
-    --hero-text: #efe7d6;
-    --grain: 0.1;
+  [data-theme='harbor'] {
+    --bg: #0e1720;
+    --surface: #192530;
+    --text: #e8eef2;
+    --text-2: #8b9aa5;
+    --text-3: #4f5e6a;
+    --line: #1f2b35;
+    --line-strong: #e8eef2;
+    --rule: #2e3c47;
+    --accent: #e8eef2;
+    --accent-text: #0e1720;
+    --accent-soft: #192530;
+    --track: #1f2b35;
+    --pos: #5cc3a2;
+    --neg: #e8735b;
+    --hero-bg: radial-gradient(120% 140% at 0% 0%, #36608c 0%, #2a4c70 50%, #1c3550 100%);
+    --hero-text: #e9eff4;
+    --card-credit: #2a4c70;
+    --card-credit-ink: #e9eff4;
+    --card-debit: #e07a5f;
+    --card-debit-ink: #2a120b;
+    --shadow-sm: 0 0 0 1px rgb(255 255 255 / 0.04);
+    --shadow-md: 0 0 0 1px rgb(255 255 255 / 0.06), 0 8px 24px -8px rgb(0 0 0 / 0.6);
+    --shadow-lg: 0 0 0 1px rgb(255 255 255 / 0.07), 0 24px 64px -16px rgb(0 0 0 / 0.8);
+    --scrim: rgb(0 0 0 / 0.6);
+    color-scheme: dark;
   }
 }
 
-/* Almanac: an old ledger book. Ivory paper, serif headings and figures, ink-blue hero. */
-[data-theme='almanac'] {
-  --bg: #fbf8f1;
-  --surface: #f2ede2;
-  --text: #1d1a16;
-  --text-2: #6f685c;
-  --text-3: #aaa293;
-  --line: #e8e1d3;
-  --line-strong: #1d1a16;
-  --accent: #1d1a16;
-  --accent-text: #fbf8f1;
-  --accent-soft: #f0eadf;
-  --track: #e6dfd0;
-  --font-display: ui-serif, 'New York', 'Iowan Old Style', 'Palatino Linotype', Georgia, serif;
-  --hero-bg: radial-gradient(120% 140% at 0% 0%, #2c3447 0%, #182030 50%, #0d1220 100%);
-  --hero-top: #1f2738;
-  --hero-text: #f6f1e6;
+/* Kiln: fired clay. Sand paper, burnt-umber ink, a terracotta hero. */
+[data-theme='kiln'] {
+  --bg: #f7f0e8;
+  --surface: #efe3d6;
+  --text: #2a1a12;
+  --text-2: #7a6556;
+  --text-3: #c2ae9c;
+  --line: #e8dccf;
+  --line-strong: #2a1a12;
+  --rule: #d6c5b3;
+  --accent: #2a1a12;
+  --accent-text: #f7f0e8;
+  --accent-soft: #efe3d6;
+  --track: #e8dccf;
+  --pos: #4e6b2e;
+  --neg: #b23a1e;
+  --hero-bg: radial-gradient(120% 140% at 0% 0%, #d66a43 0%, #c4532d 50%, #9a3e20 100%);
+  --hero-text: #fff1e8;
+  --card-credit: #c4532d;
+  --card-credit-ink: #fff1e8;
+  --card-debit: #5e6b33;
+  --card-debit-ink: #f3f1e4;
 }
 
 @media (prefers-color-scheme: dark) {
-  [data-theme='almanac'] {
-    --bg: #12110d;
-    --surface: #1c1a15;
-    --text: #ece5d5;
-    --text-2: #9a9282;
-    --text-3: #5f594d;
-    --line: #29261f;
-    --line-strong: #ece5d5;
-    --accent: #ece5d5;
-    --accent-text: #12110d;
-    --accent-soft: #211e18;
-    --track: #302c24;
-    --hero-bg: radial-gradient(120% 140% at 0% 0%, #2f3850 0%, #1c2436 50%, #141a28 100%);
-    --hero-top: #232b3e;
-    --hero-text: #f1ebdd;
-  }
-}
-
-/* Night: always dark, whatever the phone is set to. Blue-black, a starlit hero. */
-[data-theme='night'] {
-  --bg: #070a10;
-  --surface: #0f141d;
-  --text: #dfe6f1;
-  --text-2: #8692a6;
-  --text-3: #4c5669;
-  --line: #19202c;
-  --line-strong: #dfe6f1;
-  --accent: #dfe6f1;
-  --accent-text: #070a10;
-  --accent-soft: #121925;
-  --track: #1d2533;
-  --shadow-sm: 0 0 0 1px rgb(255 255 255 / 0.04);
-  --shadow-md: 0 0 0 1px rgb(255 255 255 / 0.06), 0 8px 24px -8px rgb(0 0 0 / 0.7);
-  --shadow-lg: 0 0 0 1px rgb(255 255 255 / 0.07), 0 24px 64px -16px rgb(0 0 0 / 0.85);
-  --hero-bg: radial-gradient(90% 70% at 50% 0%, #22304d 0%, transparent 70%), radial-gradient(120% 140% at 0% 0%, #121a2b 0%, #0b1019 50%, #070a10 100%);
-  --hero-top: #18223a;
-  --hero-text: #eef3fb;
-  --scrim: rgb(0 0 0 / 0.6);
-  color-scheme: dark;
-}
-
-/* Contrast: pure black on pure white, crisp lines, a solid black hero. */
-[data-theme='contrast'] {
-  --bg: #ffffff;
-  --surface: #f2f2f2;
-  --text: #000000;
-  --text-2: #3d3d3d;
-  --text-3: #707070;
-  --line: #d4d4d4;
-  --line-strong: #000000;
-  --accent: #000000;
-  --accent-text: #ffffff;
-  --accent-soft: #ebebeb;
-  --track: #d9d9d9;
-  --hero-bg: #000000;
-  --hero-top: #000000;
-  --hero-text: #ffffff;
-  --hero-dim: rgb(255 255 255 / 0.7);
-  --hero-line: rgb(255 255 255 / 0.25);
-}
-
-@media (prefers-color-scheme: dark) {
-  [data-theme='contrast'] {
-    --bg: #000000;
-    --surface: #141414;
-    --text: #ffffff;
-    --text-2: #c2c2c2;
-    --text-3: #8a8a8a;
-    --line: #333333;
-    --line-strong: #ffffff;
-    --accent: #ffffff;
-    --accent-text: #000000;
-    --accent-soft: #1a1a1a;
-    --track: #2e2e2e;
-    --hero-bg: #101010;
-    --hero-top: #101010;
-    --shadow-sm: 0 0 0 1px rgb(255 255 255 / 0.12);
-    --shadow-md: 0 0 0 1px rgb(255 255 255 / 0.16);
-    --shadow-lg: 0 0 0 1px rgb(255 255 255 / 0.2);
+  [data-theme='kiln'] {
+    --bg: #1c130e;
+    --surface: #2a1e17;
+    --text: #f5eae0;
+    --text-2: #a8917f;
+    --text-3: #6b5546;
+    --line: #33251c;
+    --line-strong: #f5eae0;
+    --rule: #43322a;
+    --accent: #f5eae0;
+    --accent-text: #1c130e;
+    --accent-soft: #2a1e17;
+    --track: #33251c;
+    --pos: #9dbb6e;
+    --neg: #e0694a;
+    --hero-bg: radial-gradient(120% 140% at 0% 0%, #d66a43 0%, #c4532d 50%, #9a3e20 100%);
+    --hero-text: #fff1e8;
+    --card-credit: #c4532d;
+    --card-credit-ink: #fff1e8;
+    --card-debit: #6e7c3c;
+    --card-debit-ink: #f3f1e4;
+    --shadow-sm: 0 0 0 1px rgb(255 255 255 / 0.04);
+    --shadow-md: 0 0 0 1px rgb(255 255 255 / 0.06), 0 8px 24px -8px rgb(0 0 0 / 0.6);
+    --shadow-lg: 0 0 0 1px rgb(255 255 255 / 0.07), 0 24px 64px -16px rgb(0 0 0 / 0.8);
+    --scrim: rgb(0 0 0 / 0.6);
+    color-scheme: dark;
   }
 }

@@ -6,21 +6,19 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-title" content="Tameru" />
-    <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
-    <meta name="theme-color" content="#0e0e0e" media="(prefers-color-scheme: dark)" />
+    <meta name="theme-color" content="#f6f4ef" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#191815" media="(prefers-color-scheme: dark)" />
     <link rel="icon" href="./favicon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png" />
     <title>Tameru</title>
     <style>
       /* Paints before any script or stylesheet. Matches --bg so there's no flash. */
-      html { background: #ffffff; color: #111111; }
-      @media (prefers-color-scheme: dark) { html { background: #0c0c0c; color: #f2f2f2; } }
+      html { background: #f6f4ef; color: #141414; }
+      @media (prefers-color-scheme: dark) { html { background: #191815; color: #f1eee7; } }
       /* Themes (see src/ui/theme.ts): the splash takes the theme's paper too. */
-      html[data-theme='receipt'] { background: #f6f2ea; } html[data-theme='almanac'] { background: #fbf8f1; }
-      html[data-theme='night'] { background: #070a10; color: #dfe6f1; }
+      html[data-theme='harbor'] { background: #f2f5f6; color: #0e1b26; } html[data-theme='kiln'] { background: #f7f0e8; color: #2a1a12; }
       @media (prefers-color-scheme: dark) {
-        html[data-theme='receipt'] { background: #15130f; } html[data-theme='almanac'] { background: #12110d; }
-        html[data-theme='contrast'] { background: #000000; }
+        html[data-theme='harbor'] { background: #0e1720; color: #e8eef2; } html[data-theme='kiln'] { background: #1c130e; color: #f5eae0; }
       }
       #splash { position: fixed; inset: 0; z-index: 1000; display: grid; place-items: center; background: inherit; transition: opacity 0.2s ease-out; }
       #splash.splash--out { opacity: 0; pointer-events: none; }
