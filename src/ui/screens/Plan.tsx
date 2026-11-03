@@ -1,12 +1,13 @@
-// Plan: where the period's income goes. A dial of 100 ticks (1% of income each) shows
+// Plan: where the period's income goes. A wheel of 100 ticks (1% of income each) shows
 // every category and goal as its share in its own colour; tap a colour to pick it, then
-// scrub the tick ruler to set its percentage. Pull the card down for a label on every
-// colour. Below, each category and goal opens a sheet for exact amounts (in dollars or
-// percent), its colour and settings.
+// drag round the wheel to resize it. Below, each category and goal is a row you slide
+// sideways to change its amount ($5 steps); tap one for whether its unspent money resets
+// or rolls over, and Edit for the full sheet (exact amount, colour, name). Reset undoes
+// this visit's changes. The calendar looks back at earlier months, read-only.
 
-import { useEffect, useState } from 'preact/hooks';
+import { useEffect, useRef, useState } from 'preact/hooks';
 import { fmtDate, money, reasonText, S } from '../../copy/strings';
-import { centsForPercent, percentOf, shareTicks } from '../../domain/allocation';
+import { percentOf, shareTicks } from '../../domain/allocation';
 import { CATEGORY_COLORS, categoryColor, isBudgetCategory, nextCategoryColor, SUGGESTED_CATEGORIES } from '../../domain/defaults';
 import { periodLength, type Period } from '../../domain/period';
 import type { GeneratedPlan, GoalFlag } from '../../domain/planGenerator';
@@ -15,17 +16,17 @@ import { orderedAccounts } from '../../services/accounts';
 import { addGoalToPlan, contribute, listGoals, removeGoal, setGoalContribution, updateGoal } from '../../services/goals';
 import { addCategory, budgetsFor, plannedIncome, planPeriods, removeCategory, setAllocation, updateCategory, type PlanPeriod } from '../../services/plan';
 import { acceptPlan, recommendPlan } from '../../services/regenerate';
-import { AccountSelect, AllocationInput, Amount, AmountModeToggle, ChipSelect, Message, Meter, MoneyInput, PageHeader, type AmountMode } from '../components';
+import { AccountSelect, AllocationInput, Amount, AmountModeToggle, ChipSelect, Message, MoneyInput, PageHeader, type AmountMode } from '../components';
 import { useApp, useLoad } from '../hooks';
-import { CalendarIcon, ChevronRight, PlusIcon, SparkIcon } from '../Icons';
-import { PlanDial, TickRuler, type DialSlice } from '../PlanDial';
+import { CalendarIcon, PlusIcon, SparkIcon } from '../Icons';
+import { PlanWheel } from '../PlanWheel';
+import { PlanRow, rowScale } from '../PlanRow';
 import { ColorPicker } from '../cards';
-import { reducedMotion } from '../motion';
 import { Sheet } from '../Sheet';
 import { go, useRoute } from '../router';
-import { useWalletPull } from '../Wallet';
 
 const GROUP_ORDER: Category['group'][] = ['essentials', 'lifestyle', 'savings'];
+const BEHAVIOURS: BudgetBehaviour[] = ['reset', 'rollover', 'fund'];
 
 /** Categories use their own colour; goals take palette colours no category is using. */
 function colorOf(s: { kind: 'cat' | 'goal'; color?: string }, i: number, all: readonly { kind: 'cat' | 'goal'; color?: string }[]): string {
@@ -63,8 +64,9 @@ export function Plan() {
   const [editing, setEditing] = useState<Editing | null>(null);
   const [flags, setFlags] = useState<GoalFlag[]>([]);
   const [msg, setMsg] = useState<string>();
-  const pull = useWalletPull();
-  useEffect(() => pull.setTravel(180), []);
+  const [openRow, setOpenRow] = useState<string>(); // the row showing its options
+  // The plan as it was when this visit started, for Reset.
+  const baseline = useRef<{ cents: Record<string, Cents>; behaviour: Record<string, BudgetBehaviour> } | null>(null);
   // Held the Plan tab → Suggest a plan.
   const action = useRoute().params.get('do');
   useEffect(() => {
@@ -73,7 +75,6 @@ export function Plan() {
     go('/plan'); // clear it, so holding again opens it again
   }, [action]);
   if (!data || !goals || income === undefined) return <div class="placeholder" />;
-  const animate = !pull.dragging && !reducedMotion();
 
   // Looking back, each category shows what it had and spent then (from the snapshot when there is one).
   const then = (r: (typeof data.rows)[number]) => {
@@ -106,11 +107,47 @@ export function Plan() {
     return r ? then(r).spentCents : 0;
   };
   const ticks = shareTicks(slices, base);
-  const dial: DialSlice[] = slices.map((s, i) => ({ key: s.key, ticks: ticks[i]!.ticks, color: s.color, name: s.name, detail: `${Math.round(percentOf(s.cents, base))}% · ${money(s.cents)}` }));
+  const wheel = slices.map((s, i) => ({ key: s.key, ticks: ticks[i]!.ticks, color: s.color }));
   const pct = (c: Cents) => percentOf(c, base);
-  const freePct = Math.max(0, 100 - ticks.reduce((t, x) => t + x.ticks, 0));
   const current = slices.find((s) => s.key === selected);
   const days = periodLength(data.period);
+  const left = income - planned;
+  const scale = rowScale(Math.max(0, ...slices.map((x) => x.cents)));
+  // The most a slice can take: its own plus whatever income isn't planned yet.
+  const maxFor = (sl: Slice) => (income > 0 ? Math.max(sl.cents, income - (planned - sl.cents)) : Number.MAX_SAFE_INTEGER);
+
+  if (!past && !baseline.current)
+    baseline.current = {
+      cents: Object.fromEntries(slices.map((x) => [x.key, x.cents])),
+      behaviour: Object.fromEntries(rows.map((r) => [r.category.id, r.category.behaviour])),
+    };
+  const base0 = baseline.current;
+  const changed =
+    !past &&
+    !!base0 &&
+    (slices.some((x) => x.key in base0.cents && base0.cents[x.key] !== x.cents) ||
+      rows.some((r) => r.category.id in base0.behaviour && base0.behaviour[r.category.id] !== r.category.behaviour));
+  const reset = async () => {
+    if (!base0) return;
+    for (const x of slices) if (x.key in base0.cents && base0.cents[x.key] !== x.cents) await (x.kind === 'cat' ? setAllocation(app, x.id, base0.cents[x.key]!) : setGoalContribution(app, x.id, base0.cents[x.key]!));
+    for (const r of rows) {
+      const b = base0.behaviour[r.category.id];
+      if (b && b !== r.category.behaviour) await updateCategory(app, r.category.id, { behaviour: b });
+    }
+    setSelected(undefined);
+    setOpenRow(undefined);
+    bump();
+  };
+
+  // Dragging round the wheel moves the picked slice's end to the tick under the finger.
+  const dragTo = (tick: number) => {
+    const k = slices.findIndex((x) => x.key === selected);
+    if (k < 0 || income <= 0) return;
+    const sl = slices[k]!;
+    const start = slices.slice(0, k).reduce((t, x) => t + x.cents, 0);
+    const want = Math.round((((tick + 1) / 100) * income - start) / 500) * 500;
+    setLive({ key: sl.key, cents: Math.max(0, Math.min(maxFor(sl), want)) });
+  };
 
   const save = async (s: Slice, cents: Cents) => {
     if (s.kind === 'cat') await setAllocation(app, s.id, cents);
@@ -122,13 +159,94 @@ export function Plan() {
   const flagText = (f: GoalFlag) =>
     f.code === 'date_unrealistic' ? S.goalFlag.date_unrealistic(name(f.goalId), f.realisticDate!, f.reachableByDateCents) : S.goalFlag.no_room_now(name(f.goalId));
 
-  const curPct = current ? Math.round(pct(current.cents)) : 0;
+  const centre = past ? (
+    // Looking back: how much of what was planned got spent.
+    <>
+      <span class="wheel__label">{current ? current.name : S.plan.spentLabel}</span>
+      <span class="wheel__pct">
+        {Math.round(percentOf(current ? spentOf(current.id) : spentThen, Math.max(1, current ? current.cents : planned)))}
+        <small>%</small>
+      </span>
+      <span class="wheel__sub">{S.plan.ofIncome(current ? spentOf(current.id) : spentThen, current ? current.cents : planned)}</span>
+    </>
+  ) : income <= 0 ? (
+    <>
+      <span class="wheel__label">{current ? current.name : S.plan.ofPlan}</span>
+      <span class="wheel__pct">
+        {current ? Math.round(pct(current.cents)) : 100}
+        <small>%</small>
+      </span>
+      <span class="wheel__sub">{current ? money(current.cents) : S.plan.noIncome}</span>
+    </>
+  ) : (
+    <>
+      <span class="wheel__label">{current ? current.name : S.plan.planned}</span>
+      <span class={`wheel__pct${!current && left < 0 ? ' wheel__pct--over' : ''}`}>
+        {Math.round(pct(current ? current.cents : planned))}
+        <small>%</small>
+      </span>
+      <span class="wheel__sub">{S.plan.ofIncome(current ? current.cents : planned, income)}</span>
+      <span class={`wheel__note${left < 0 ? ' wheel__note--over' : ''}`}>
+        {current ? S.plan.dayRate(Math.round(current.cents / days)) : left >= 0 ? S.plan.leftToPlan(left) : S.plan.over(-left)}
+      </span>
+    </>
+  );
+
+  const hint = past
+    ? S.plan.pastHint
+    : income <= 0
+      ? S.plan.noIncomeHint
+      : current
+        ? S.plan.dragHint(current.name)
+        : left < 0
+          ? S.plan.overHint
+          : S.plan.pickHint;
+
+  // A category's options: what happens to unspent money, and the full sheet.
+  const catOptions = (r: (typeof rows)[number]) => (
+    <div class="prow__opts">
+      <span>{S.plan.unspent}</span>
+      <div class="segmented prow__seg" role="radiogroup" aria-label={S.plan.unspent}>
+        <span class="segmented__thumb" style={{ width: 'calc((100% - 4px) / 3)', transform: `translateX(${BEHAVIOURS.indexOf(r.category.behaviour) * 100}%)` }} />
+        {BEHAVIOURS.map((bh) => (
+          <button
+            type="button"
+            role="radio"
+            key={bh}
+            aria-checked={r.category.behaviour === bh}
+            onClick={async () => {
+              if (bh === r.category.behaviour) return;
+              await updateCategory(app, r.category.id, { behaviour: bh });
+              bump();
+            }}
+          >
+            {S.plan.modes[bh]}
+          </button>
+        ))}
+      </div>
+      <button type="button" class="linkbtn linkbtn--accent prow__edit" onClick={() => setEditing({ kind: 'cat', id: r.category.id })}>
+        {S.common.edit}
+      </button>
+    </div>
+  );
+
+  const tap = (key: string) => {
+    setSelected(key);
+    setOpenRow(openRow === key ? undefined : key);
+  };
+
   return (
     <section class="plan">
       <PageHeader
         title={S.plan.title}
+        eyebrow={S.plan.budgetFor(periodLabel(data.period, periods?.kind))}
         action={
           <div class="head-actions">
+            {changed && (
+              <button type="button" class="plan__reset" onClick={reset}>
+                {S.plan.reset}
+              </button>
+            )}
             <button type="button" class={`icon-btn ${past ? 'icon-btn--plain' : 'icon-btn--soft'}`} aria-label={S.plan.history} onClick={() => setEditing({ kind: 'periods' })}>
               <CalendarIcon />
             </button>
@@ -153,67 +271,20 @@ export function Plan() {
         </div>
       )}
 
-      <div
-        ref={pull.ref}
-        class={`summary-card plan-card${animate ? ' plan-card--animate' : ''}`}
-        style={pull.bind.style}
-        // Scrubbing the ruler is its own gesture, never a pull.
-        onPointerDown={(e) => !(e.target as Element).closest('.tick-ruler') && pull.bind.onPointerDown(e)}
-        onPointerMove={pull.bind.onPointerMove}
-        onPointerUp={pull.bind.onPointerUp}
-        onPointerCancel={pull.bind.onPointerCancel}
-        onClickCapture={pull.bind.onClickCapture}
+      <PlanWheel
+        slices={wheel}
+        selected={selected}
+        onSelect={(key) => (setSelected(key), setOpenRow(undefined))}
+        onDrag={!past && income > 0 ? dragTo : undefined}
+        onDragEnd={() => {
+          const sl = slices.find((x) => x.key === live?.key);
+          if (sl && live) void save(sl, live.cents);
+        }}
+        label={S.plan.wheelLabel}
       >
-        <PlanDial slices={dial} selected={selected} p={pull.p} onSelect={setSelected}>
-          {past ? (
-            // Looking back: how much of what was planned got spent.
-            <>
-              <p class="plan-dial__label">{current ? current.name : S.plan.spentLabel}</p>
-              <p class="plan-dial__pct">
-                {Math.round(percentOf(current ? spentOf(current.id) : spentThen, Math.max(1, current ? current.cents : planned)))}
-                <span>%</span>
-              </p>
-              <p class="plan-dial__sub">{S.plan.ofIncome(current ? spentOf(current.id) : spentThen, current ? current.cents : planned)}</p>
-            </>
-          ) : current ? (
-            <>
-              <p class="plan-dial__label">{current.name}</p>
-              <p class="plan-dial__pct">
-                {Math.round(pct(current.cents))}
-                <span>%</span>
-              </p>
-              <p class="plan-dial__sub">
-                {money(current.cents)} · {S.plan.dayRate(Math.round(current.cents / days))}
-              </p>
-            </>
-          ) : (
-            <>
-              <p class="plan-dial__label">{income > 0 ? S.plan.planned : S.plan.ofPlan}</p>
-              <p class="plan-dial__pct">
-                {income > 0 ? Math.round(pct(planned)) : 100}
-                <span>%</span>
-              </p>
-              <p class="plan-dial__sub">{income <= 0 ? S.plan.noIncome : planned > income ? S.plan.over(planned - income) : S.plan.ofIncome(planned, income)}</p>
-            </>
-          )}
-        </PlanDial>
-        {past ? (
-          <p class="plan-card__hint">{S.plan.pastHint}</p>
-        ) : current && income > 0 ? (
-          <TickRuler
-            label={current.name}
-            value={curPct}
-            max={Math.min(100, curPct + freePct)}
-            onChange={(v) => setLive({ key: current.key, cents: centsForPercent(v, income) })}
-            onCommit={(v) => save(current, centsForPercent(v, income))}
-          />
-        ) : (
-          <p class="plan-card__hint">{income <= 0 ? S.plan.noIncomeHint : planned > income ? S.plan.overHint : S.plan.pickHint}</p>
-        )}
-        <button type="button" class="spend-card__handle" aria-label={pull.open ? S.plan.hideLabels : S.plan.showLabels} aria-expanded={pull.open} onClick={() => pull.setOpen(!pull.open)}>
-          <span />
-        </button>
-      </div>
+        {centre}
+      </PlanWheel>
+      <p class="plan__hint">{hint}</p>
 
       <Message text={msg} />
       {flags.map((f) => (
@@ -224,52 +295,37 @@ export function Plan() {
 
       <div class="section-head">
         <h2>{S.plan.categories}</h2>
+        {!past && <span class="section-head__note">{S.plan.slideToAdjust}</span>}
       </div>
-      <ul class="plan-list">
+      <div class="prow-list">
         {rows.map((r) => {
-          const s = slices.find((x) => x.key === `cat:${r.category.id}`)!;
-          if (past) {
-            const b = then(r);
-            return (
-              <li key={r.category.id}>
-                <div class="plan-row plan-row--past">
-                  <span class="plan-pill__dot" style={{ background: s.color }} />
-                  <span class="plan-row__main">
-                    <strong>{r.category.name}</strong>
-                    <small>
-                      {S.plan.spentOf(b.spentCents, b.availableCents)} · {S.plan.left(b.remainingCents)}
-                    </small>
-                    <Meter left={b.remainingCents} of={Math.max(b.availableCents, 1)} />
-                  </span>
-                  <span class="plan-row__amt">
-                    <Amount c={b.availableCents} />
-                    <small>{Math.round(pct(s.cents))}%</small>
-                  </span>
-                </div>
-              </li>
-            );
-          }
+          const sl = slices.find((x) => x.key === `cat:${r.category.id}`)!;
+          const b = past ? then(r) : r.budget;
+          // What's left moves with the amount while it's being changed.
+          const leftNow = past ? b.remainingCents : b.remainingCents + (sl.cents - planOf(r.category.id));
           return (
-            <li key={r.category.id}>
-              <button type="button" class="plan-row" onClick={() => setEditing({ kind: 'cat', id: r.category.id })}>
-                <span class="plan-pill__dot" style={{ background: s.color }} />
-                <span class="plan-row__main">
-                  <strong>{r.category.name}</strong>
-                  <small>
-                    {S.plan.left(r.budget.remainingCents)} · {S.behaviourShort[r.category.behaviour]}
-                  </small>
-                  <Meter left={r.budget.remainingCents} of={Math.max(r.budget.availableCents, 1)} />
-                </span>
-                <span class="plan-row__amt">
-                  <Amount c={s.cents} />
-                  <small>{Math.round(pct(s.cents))}%</small>
-                </span>
-                <ChevronRight />
-              </button>
-            </li>
+            <PlanRow
+              key={sl.key}
+              name={r.category.name}
+              color={sl.color}
+              cents={sl.cents}
+              spentCents={b.spentCents}
+              pct={`${Math.round(pct(sl.cents))}%`}
+              sub={past ? S.plan.spentOf(b.spentCents, b.availableCents) : `${S.plan.left(leftNow)} · ${S.plan.modes[r.category.behaviour]}`}
+              scale={scale}
+              max={maxFor(sl)}
+              selected={selected === sl.key}
+              open={openRow === sl.key}
+              readOnly={past}
+              onChange={(c) => (setSelected(sl.key), setLive({ key: sl.key, cents: c }))}
+              onCommit={(c) => save(sl, c)}
+              onTap={() => !past && tap(sl.key)}
+            >
+              {past ? undefined : catOptions(r)}
+            </PlanRow>
           );
         })}
-      </ul>
+      </div>
       {!past && (
         <button type="button" class="onb-add" onClick={() => setEditing({ kind: 'newCat' })}>
           <PlusIcon /> {S.plan.addCategory}
@@ -281,28 +337,36 @@ export function Plan() {
           <div class="section-head">
             <h2>{S.plan.goals}</h2>
           </div>
-          <ul class="plan-list">
-            {goals.map(({ goal, progress, perPeriodCents }) => {
-              const s = slices.find((x) => x.key === `goal:${goal.id}`)!;
+          <div class="prow-list">
+            {goals.map(({ goal, progress }) => {
+              const sl = slices.find((x) => x.key === `goal:${goal.id}`)!;
               return (
-                <li key={goal.id}>
-                  <button type="button" class="plan-row" onClick={() => setEditing({ kind: 'goal', id: goal.id })}>
-                    <span class="plan-pill__dot" style={{ background: s.color }} />
-                    <span class="plan-row__main">
-                      <strong>{goal.name}</strong>
-                      <small>{goal.targetCents > 0 ? S.plan.goalLine(progress.progressCents, goal.targetCents) : S.plan.goalOpen(progress.progressCents)}</small>
-                      {goal.targetCents > 0 && <Meter left={progress.progressCents} of={goal.targetCents} />}
-                    </span>
-                    <span class="plan-row__amt">
-                      <Amount c={perPeriodCents} />
-                      <small>{Math.round(pct(perPeriodCents))}%</small>
-                    </span>
-                    <ChevronRight />
-                  </button>
-                </li>
+                <PlanRow
+                  key={sl.key}
+                  name={goal.name}
+                  color={sl.color}
+                  cents={sl.cents}
+                  spentCents={0}
+                  pct={`${Math.round(pct(sl.cents))}%`}
+                  sub={goal.targetCents > 0 ? S.plan.goalLine(progress.progressCents, goal.targetCents) : S.plan.goalOpen(progress.progressCents)}
+                  scale={scale}
+                  max={maxFor(sl)}
+                  selected={selected === sl.key}
+                  open={openRow === sl.key}
+                  onChange={(c) => (setSelected(sl.key), setLive({ key: sl.key, cents: c }))}
+                  onCommit={(c) => save(sl, c)}
+                  onTap={() => tap(sl.key)}
+                >
+                  <div class="prow__opts">
+                    <span>{S.plan.perPeriod(sl.cents)}</span>
+                    <button type="button" class="linkbtn linkbtn--accent prow__edit" onClick={() => setEditing({ kind: 'goal', id: goal.id })}>
+                      {S.common.edit}
+                    </button>
+                  </div>
+                </PlanRow>
               );
             })}
-          </ul>
+          </div>
           <button type="button" class="onb-add" onClick={() => setEditing({ kind: 'newGoal' })}>
             <PlusIcon /> {S.plan.addGoal}
           </button>

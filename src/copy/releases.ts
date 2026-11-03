@@ -5,6 +5,14 @@ import type { Release } from '../domain/releases';
 
 export const RELEASES: Release[] = [
   {
+    version: '0.13.0',
+    items: [
+      { title: 'A new Plan', body: 'Your income is a wheel of 100 ticks, one colour per category and goal. Tap a colour, then drag around the wheel to resize it; tap the middle when you’re done.' },
+      { title: 'Slide to adjust', body: 'Drag any category or goal sideways to change its amount in $5 steps. The ticks underneath show what’s spent (faded) and what’s left. Tap a row to choose whether unspent money resets, rolls over or builds up, or Edit for everything else.' },
+      { title: 'Reset', body: 'Changed your mind? Reset puts the plan back the way it was when you opened it. Past months are still on the calendar.' },
+    ],
+  },
+  {
     version: '0.12.0',
     items: [
       { title: 'A tidier card stack', body: 'All accounts is now a summary of what’s left, with your cards resting behind it. Pull down (or tap) to fan them out and tap one to pick it; pull up or tap Done to close. With a card in front, swipe sideways to switch; Show all goes back to the summary.' },

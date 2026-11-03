@@ -6950,6 +6950,344 @@ body.tab-menu-open .tabbar {
   overflow: hidden;
 }
 
+/* ---------- Plan (v5): tick wheel and sliding category rows ---------- */
+
+.plan__reset {
+  min-height: 0;
+  height: 36px;
+  margin: 0;
+  padding: 0 14px;
+  border: 0;
+  border-radius: var(--btn-r);
+  background: var(--fill);
+  color: var(--accent);
+  font-size: 0.9375rem;
+  font-weight: 400;
+  animation: logged-rise 320ms var(--glide) both;
+  transition: transform var(--t-fast) var(--glide);
+}
+
+.plan__reset:active {
+  transform: scale(0.92);
+}
+
+/* 100 ticks round a circle; sizes are fractions of the wheel's width (310px in the design) */
+.wheel {
+  position: relative;
+  width: min(310px, 100%);
+  aspect-ratio: 1;
+  margin: 16px auto 0;
+  container-type: inline-size;
+  touch-action: none;
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.wheel__tick {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 3px;
+  height: 7.1cqw;
+  margin-left: -1.5px;
+  border-radius: 2px;
+  background: var(--fill-2);
+  transform-origin: 50% 0;
+  transform: rotate(var(--a)) translateY(-47.1cqw);
+  transition:
+    height 450ms cubic-bezier(0.32, 1.28, 0.48, 1),
+    transform 450ms cubic-bezier(0.32, 1.28, 0.48, 1),
+    background-color 300ms ease,
+    opacity 300ms ease;
+}
+
+.wheel__tick--on {
+  height: 9.7cqw;
+  transform: rotate(var(--a)) translateY(-49cqw);
+}
+
+.wheel__tick--dim {
+  opacity: 0.3;
+}
+
+.wheel__centre {
+  position: absolute;
+  inset: 20.6cqw;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  text-align: center;
+  pointer-events: none;
+}
+
+.wheel__label {
+  max-width: 100%;
+  font-size: 0.9375rem;
+  color: var(--text-2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.wheel__pct {
+  font-family: var(--font-display);
+  font-size: 4rem; /* 64 */
+  font-weight: 600;
+  letter-spacing: -0.035em;
+  line-height: 1;
+  transition: color var(--t-fast) var(--glide);
+}
+
+.wheel__pct small {
+  font-size: 1.75rem; /* 28 */
+  color: var(--text-3);
+}
+
+.wheel__pct--over {
+  color: var(--neg);
+}
+
+.wheel__sub {
+  font-size: 0.8125rem;
+  color: var(--text-2);
+  white-space: nowrap;
+}
+
+.wheel__note {
+  margin-top: 2px;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--accent);
+  white-space: nowrap;
+}
+
+.wheel__note--over {
+  color: var(--neg);
+}
+
+.plan__hint {
+  margin: 4px 0 0;
+  padding: 0 24px;
+  font-size: 0.8125rem;
+  color: var(--text-2);
+  text-align: center;
+  text-wrap: pretty;
+}
+
+.plan .section-head {
+  padding: 0 4px;
+}
+
+.plan .section-head h2 {
+  font-size: 1.375rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.plan .section-head__note {
+  font-size: 0.8125rem;
+  white-space: nowrap;
+}
+
+.prow-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.prow {
+  border-radius: 18px;
+  background: var(--surface);
+  overflow: hidden;
+  transition: transform 450ms cubic-bezier(0.32, 1.28, 0.48, 1), box-shadow 300ms ease;
+}
+
+.prow--active {
+  transform: scale(1.015);
+}
+
+.prow__face {
+  padding: 14px 16px 12px;
+  touch-action: pan-y; /* vertical stays with the page; sideways sets the amount */
+  cursor: ew-resize;
+  outline-offset: -2px;
+}
+
+.prow__face * {
+  pointer-events: none;
+}
+
+.prow__top {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.prow__dot {
+  flex: none;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--c);
+}
+
+.prow__name {
+  flex: 1;
+  min-width: 0;
+  font-size: 1.0625rem;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.prow__amt {
+  font-size: 1.0625rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.prow__amt small {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--text-3);
+}
+
+.prow__ticks {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 22px;
+  margin-top: 12px;
+}
+
+.prow__ticks i {
+  flex: 1;
+  height: 6px;
+  border-radius: 1.5px;
+  background: var(--fill-2);
+  transition: height 400ms cubic-bezier(0.32, 1.28, 0.48, 1), background-color 250ms ease, opacity 250ms ease;
+}
+
+.prow__ticks i.on {
+  height: 14px;
+  background: var(--c);
+}
+
+.prow__ticks i.edge {
+  height: 18px;
+}
+
+/* already spent: faded */
+.prow__ticks i.used {
+  opacity: 0.35;
+}
+
+.prow--active .prow__ticks i {
+  height: 8px;
+}
+
+.prow--active .prow__ticks i.on {
+  height: 18px;
+}
+
+.prow--active .prow__ticks i.edge {
+  height: 22px;
+}
+
+.prow__foot {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 8px;
+  font-size: 0.8125rem;
+  color: var(--text-2);
+  white-space: nowrap;
+}
+
+.prow__foot span:first-child {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.prow__more {
+  display: grid;
+  grid-template-rows: 0fr;
+  opacity: 0;
+  transition: grid-template-rows 450ms var(--glide), opacity 250ms ease;
+}
+
+.prow__more[data-on='true'] {
+  grid-template-rows: 1fr;
+  opacity: 1;
+}
+
+.prow__more > div {
+  min-height: 0;
+  overflow: hidden;
+}
+
+.prow__opts {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px 12px;
+  padding: 4px 16px 16px;
+  font-size: 0.9375rem;
+  color: var(--text-2);
+}
+
+.prow__seg.segmented {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  flex: 1 1 220px;
+  height: 32px;
+  margin: 0;
+  padding: 2px;
+  border: 0;
+  border-radius: 9px;
+  background: var(--fill);
+}
+
+.prow__seg .segmented__thumb {
+  top: 2px;
+  bottom: 2px;
+  left: 2px;
+  border-radius: 7px;
+  background: var(--thumb);
+  box-shadow: 0 3px 8px rgb(0 0 0 / 0.12);
+}
+
+.prow__seg button {
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  font-size: 0.8125rem;
+  font-weight: 400;
+}
+
+.prow__seg button[aria-checked='true'] {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.prow__edit {
+  margin-left: auto;
+}
+
+.plan .onb-add {
+  margin-top: 8px;
+}
+
 
 /* ---------- startup error (see Boot in App.tsx) ---------- */
 
