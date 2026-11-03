@@ -361,11 +361,14 @@ export const S = {
 
   accounts: {
     title: 'Accounts',
+    count: (n: number) => plural(n, 'account'),
     add: 'Add an account',
     addTitle: 'New account',
     balance: 'Balance',
     remove: 'Remove',
     holdHint: 'Hold a card for options',
+    rollHint: 'Swipe up or down · hold for options',
+    position: (i: number, n: number) => `${i} of ${n}`,
     comingUp: 'Coming up',
     days: (n: number) => `${n} days`,
     trendLabel: (n: number) => `Last ${n} days`,

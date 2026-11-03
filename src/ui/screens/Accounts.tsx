@@ -5,9 +5,10 @@ import type { AccountType, CardFace as CardFaceT, Category, Cents, Compounding, 
 import { CardFace, CardPicker, useCatalog } from '../cards';
 import { CardMenu } from '../CardMenu';
 import { accountInsights, createAccount, listAccounts, removeAccount, reorderAccounts, restoreAccount, updateAccount, type AccountView } from '../../services/accounts';
-import { Carousel } from '../Carousel';
+import { CardRoll } from '../CardRoll';
 import { Amount, monogram, MoneyInput, MonthlyDayInput, PageHeader } from '../components';
-import { ArrangeIcon, PencilIcon, PlusIcon, SwapIcon, TrashIcon } from '../Icons';
+import { ArrangeIcon, ChevronRight, PencilIcon, PlusIcon, SwapIcon, TrashIcon } from '../Icons';
+import { isCard } from '../../services/home';
 import { useApp, useLoad } from '../hooks';
 import { useTween } from '../motion';
 import { RearrangeGrid } from '../RearrangeGrid';
@@ -70,22 +71,23 @@ export function Accounts() {
     );
 
   return (
-    <section>
+    <section class="accounts">
       <PageHeader
         title={S.accounts.title}
+        eyebrow={S.accounts.count(views.length)}
         action={
-          <a class="icon-btn icon-btn--plain" href="#/add?type=transfer" aria-label={S.accounts.transfer}>
-            <SwapIcon />
-          </a>
+          <div class="head-actions">
+            <a class="icon-btn icon-btn--plain" href="#/add?type=transfer" aria-label={S.accounts.transfer}>
+              <SwapIcon />
+            </a>
+          </div>
         }
       />
-      <Carousel
-        key={`carousel:${wanted ?? ''}`}
+      <CardRoll
+        key={`roll:${wanted ?? ''}:${count}`}
         initial={initial}
         count={count}
         label={S.accounts.title}
-        prevLabel={S.accounts.prev}
-        nextLabel={S.accounts.next}
         onChange={setIndex}
         renderSlide={(i, active) =>
           i < views.length ? (
@@ -100,7 +102,9 @@ export function Accounts() {
           )
         }
       />
-      {current && <p class="hold-hint">{S.accounts.holdHint}</p>}
+      <p class="hold-hint">
+        <span class="num">{S.accounts.position(index + 1, count)}</span> · {current ? S.accounts.rollHint : S.accounts.add}
+      </p>
       <div class="account-panel" key={current?.account.id ?? 'new'}>
         {current ? <AccountDetails v={current} txs={txs} categories={categories ?? []} /> : <NewAccountForm onDone={bump} />}
       </div>
@@ -199,25 +203,33 @@ function AccountDetails({ v, txs, categories }: { v: AccountView; txs: Transacti
   if (a.face?.last4) tiles.push({ label: S.cards.last4Short, value: `•••• ${a.face.last4}` });
   if (a.face?.deviceLast4?.length) tiles.push({ label: S.cards.deviceShort, value: a.face.deviceLast4.map((d) => `•••• ${d}`).join(', ') });
 
+  // Whether the change over the trend is good news: owing less on a card, more elsewhere.
+  const better = a.type === 'credit_card' ? change < 0 : change > 0;
   return (
     <div class="acct">
       <div class="acct__head">
-        <p class="eyebrow">{S.accountType[a.type]}</p>
-        <h2>{a.name}</h2>
+        <p class="acct__label">
+          {a.face?.cardName ?? a.name} · {headlineLabel}
+        </p>
         <p class="acct__amount">
           <Amount c={shownHeadline} />
         </p>
         <p class="acct__sub">
-          {headlineLabel}
+          {/* the type, unless the name already says it ("Chequing") */}
+          {S.accountType[a.type] !== (a.face?.cardName ?? a.name) && <span>{S.accountType[a.type]}</span>}
           {series.length > 1 && change !== 0 && (
-            <span class="chip-change">
+            <span class={`chip-change${better ? ' chip-change--good' : ' chip-change--bad'}`}>
               {change > 0 ? '↑' : '↓'} {money(Math.abs(change))} · {S.accounts.days(series.length)}
             </span>
           )}
         </p>
       </div>
 
-      {series.length > 1 && <Sparkline values={series} label={S.accounts.trendLabel(series.length)} />}
+      {series.length > 1 && (
+        <div class="acct-panel">
+          <Sparkline values={series} label={S.accounts.trendLabel(series.length)} />
+        </div>
+      )}
 
       {tiles.length > 0 && (
         <div class="tiles">
@@ -232,7 +244,7 @@ function AccountDetails({ v, txs, categories }: { v: AccountView; txs: Transacti
           <div class="section-head">
             <h2>{S.accounts.comingUp}</h2>
           </div>
-          <ul class="txlist">
+          <ul class="txlist txlist--group">
             {insights.upcoming.map((u) => (
               <li key={`${u.name}${u.date}`}>
                 <span class="avatar" aria-hidden="true">
@@ -253,12 +265,11 @@ function AccountDetails({ v, txs, categories }: { v: AccountView; txs: Transacti
 
       <div class="section-head">
         <h2>{S.home.recent}</h2>
-        <a href="#/transactions">{S.home.viewAll}</a>
       </div>
       {recent.length === 0 ? (
         <p class="muted">{S.common.none}</p>
       ) : (
-        <ul class="txlist">
+        <ul class="txlist txlist--group">
           {recent.map((t) => {
             const out = t.type === 'expense' || (t.type === 'transfer' && t.accountId === a.id);
             const title = t.merchant ?? catName(t.categoryId) ?? S.txType[t.type];
@@ -279,6 +290,11 @@ function AccountDetails({ v, txs, categories }: { v: AccountView; txs: Transacti
           })}
         </ul>
       )}
+      {/* Activity can scope itself to a card (credit or chequing); other accounts open it unfiltered. */}
+      <a class="seemore" href={isCard(a) ? `#/transactions?card=${encodeURIComponent(a.id)}` : '#/transactions'}>
+        {S.home.seeMore}
+        <ChevronRight />
+      </a>
     </div>
   );
 }

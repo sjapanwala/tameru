@@ -23,6 +23,7 @@ const DEPTH = 3; // cards drawn in a closed stack; the rest hide behind the last
 const ROW = 76; // px of each card showing when the stack is open
 const ALL_ROW = 56; // the All accounts row, and the gap under it
 const LEGEND = 3; // cards named under the summary bar
+const SUMMARY_GAP = 30; // px between the summary's legend and the cards resting under it
 
 export function CardStack(props: {
   cards: Account[];
@@ -178,7 +179,7 @@ export function CardStack(props: {
   const pull = Math.max(0, drag.y);
   const pullUp = Math.min(0, drag.y);
   const animate = !drag.on && !reducedMotion();
-  const cardsTop = sumH + 16;
+  const cardsTop = sumH + SUMMARY_GAP;
   const height = open
     ? ALL_ROW + Math.max(0, n - 1) * ROW + h
     : sel < 0

@@ -5,6 +5,13 @@ import type { Release } from '../domain/releases';
 
 export const RELEASES: Release[] = [
   {
+    version: '0.14.0',
+    items: [
+      { title: 'Your cards, in a stack', body: 'Accounts is now a stack you flick through: swipe up or down to bring the next card to the front (it goes round and round), or tap a card peeking out above or below. Hold the front card for its options, as before.' },
+      { title: 'Accounts, refreshed', body: 'Under the stack: the account’s balance, its trend in your accent colour, and whether it’s moved the right way in green or red. Coming up and Recent sit in their own panels, with See more to open that card’s activity.' },
+    ],
+  },
+  {
     version: '0.13.0',
     items: [
       { title: 'A new Plan', body: 'Your income is a wheel of 100 ticks, one colour per category and goal. Tap a colour, then drag around the wheel to resize it; tap the middle when you’re done.' },
