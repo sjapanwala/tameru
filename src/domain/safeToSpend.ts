@@ -1,6 +1,7 @@
 // Safe-to-spend: the hero number.
 //
-//   safe = spendable balance now (chequing + cash, minus card balances owing if opted in)
+//   safe = spendable balance now (chequing + cash, minus card balances owing if opted in,
+//          plus any credit sitting on a card: an overpaid card is money you have)
 //        + expected income until period end
 //        − upcoming bills until period end
 //        − remaining goal contributions this period
@@ -57,6 +58,7 @@ export interface SafeToSpend {
     spendableCents: Cents;
     accounts: { accountId: Id; balanceCents: Cents }[];
     cardsOwingCents: Cents;
+    cardsCreditCents: Cents; // credit sitting on overpaid cards, counted as spendable
     incomeCents: Cents;
     incomeLines: FlowLine[];
     billsCents: Cents;
@@ -78,10 +80,11 @@ export function safeToSpend(i: SafeToSpendInput): SafeToSpend {
   const live = i.accounts.filter((a) => !a.archived);
   const spendableAccounts = live.filter((a) => SPENDABLE.has(a.type));
   const accounts = spendableAccounts.map((a) => ({ accountId: a.id, balanceCents: balanceAsOf(a, i.transactions, i.today) }));
-  const cardsOwingCents = i.subtractCardBalances
-    ? live.filter((a) => a.type === 'credit_card').reduce((s, a) => s + cardOwing(balanceAsOf(a, i.transactions, i.today)), 0)
-    : 0;
-  const spendableCents = accounts.reduce((s, a) => s + a.balanceCents, 0) - cardsOwingCents;
+  const cardBalances = i.subtractCardBalances ? live.filter((a) => a.type === 'credit_card').map((a) => balanceAsOf(a, i.transactions, i.today)) : [];
+  const cardsOwingCents = cardBalances.reduce((s, b) => s + cardOwing(b), 0);
+  // Paying a card off and then some leaves credit on it; that credit is spendable.
+  const cardsCreditCents = cardBalances.reduce((s, b) => s + Math.max(0, b), 0);
+  const spendableCents = accounts.reduce((s, a) => s + a.balanceCents, 0) + cardsCreditCents - cardsOwingCents;
 
   // Which accounts' flows affect the number: spendable ones, plus cards when card balances are subtracted.
   const affects = (accountId: Id) => {
@@ -143,7 +146,7 @@ export function safeToSpend(i: SafeToSpendInput): SafeToSpend {
     safeCents,
     dailyCents: safeCents > 0 ? Math.floor(safeCents / left) : 0,
     daysLeft: left,
-    breakdown: { spendableCents, accounts, cardsOwingCents, incomeCents, incomeLines, billsCents, billLines, goalsCents, goalLines, plannedCents, plannedLines, bufferCents: i.bufferCents },
+    breakdown: { spendableCents, accounts, cardsOwingCents, cardsCreditCents, incomeCents, incomeLines, billsCents, billLines, goalsCents, goalLines, plannedCents, plannedLines, bufferCents: i.bufferCents },
     shortfallCents,
   };
   if (shortfallCents > 0) result.recovery = chooseRecovery(shortfallCents, goalLines, billLines);

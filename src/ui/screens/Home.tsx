@@ -131,7 +131,7 @@ export function Home(props: { offer: FreshStartOffer | null; clearOffer: () => v
         <div class="head-actions">
           <a class="icon-btn icon-btn--line" href="#/recurring" aria-label={S.home.upcoming}>
             <BellIcon />
-            {(data.upcoming.length > 0 || data.pendingCount > 0) && <span class="icon-btn__dot" />}
+            {data.attention && <span class="icon-btn__dot" />}
           </a>
           <a class="mark mark--line" href="#/settings" aria-label={S.home.profile}>
             {initials(settings?.userName) || <PersonIcon />}
@@ -274,7 +274,8 @@ export function Home(props: { offer: FreshStartOffer | null; clearOffer: () => v
         <Sheet label={S.home.showBreakdown} onClose={() => setShowBreakdown(false)}>
           <h2>{S.home.showBreakdown}</h2>
           <ul class="receipt">
-            {line(S.home.breakdown.spendable, b.spendableCents + b.cardsOwingCents)}
+            {line(S.home.breakdown.spendable, b.spendableCents + b.cardsOwingCents - b.cardsCreditCents)}
+            {b.cardsCreditCents > 0 && line(S.home.breakdown.cardsCredit, b.cardsCreditCents, '+')}
             {b.cardsOwingCents > 0 && line(S.home.breakdown.cardsOwing, b.cardsOwingCents, '−')}
             {line(S.home.breakdown.income, b.incomeCents, '+')}
             {b.incomeLines.map((l) => line(`${l.label} · ${fmtDate(l.date)}`, l.amountCents, undefined, 'sub'))}

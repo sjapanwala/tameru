@@ -4,6 +4,7 @@ import { spendingWeights, spentToday, splitByWeight } from '../domain/cardSplit'
 import { safeToSpend, type SafeToSpend } from '../domain/safeToSpend';
 import type { Account, Cents, Id } from '../domain/types';
 import type { AppContext } from './context';
+import { hasNewAttention } from './attention';
 import { budgetsFor } from './plan';
 import { upcoming } from './recurring';
 
@@ -42,12 +43,13 @@ export interface CardShare {
 
 export async function getHome(ctx: AppContext) {
   const today = ctx.clock.today();
-  const [sts, budgets, next7, txs, accounts] = await Promise.all([
+  const [sts, budgets, next7, txs, accounts, attention] = await Promise.all([
     safeToSpendNow(ctx),
     budgetsFor(ctx),
     upcoming(ctx, 7),
     ctx.repos.transactions.all(),
     ctx.repos.accounts.all(),
+    hasNewAttention(ctx),
   ]);
   // For a negative number, name the flexible category with the most left (one concrete action).
   const easeCategory =
@@ -86,6 +88,7 @@ export async function getHome(ctx: AppContext) {
     overs: budgets.overs,
     upcoming: next7,
     pendingCount: txs.filter((t) => t.status === 'pending').length,
+    attention, // something new since Upcoming was last opened: lights the bell
     reviewCount: txs.filter((t) => t.needsReview && t.status !== 'skipped').length,
   };
 }

@@ -2,7 +2,7 @@
 // category and account are already picked by the suggestion engine. One tap to save.
 
 import { useEffect, useState } from 'preact/hooks';
-import { fmtWeekday, S } from '../../copy/strings';
+import { fmtDate, fmtWeekday, S } from '../../copy/strings';
 import { entryDisplay, entryToCents, keyFromKeyboard, pressKey, type KeypadKey } from '../../domain/amountEntry';
 import { isBudgetCategory } from '../../domain/defaults';
 import { centsToDecimal } from '../../domain/money';
@@ -92,7 +92,13 @@ export function Add({ onDone, initialType = 'expense' }: { onDone: () => void; i
       if (merchant.trim()) rows.push([S.logged.merchant, merchant.trim()]);
       rows.push([S.transactions.date, date === app.clock.today() ? S.home.today : fmtWeekday(date)]);
       if (note.trim()) rows.push([S.transactions.note, note.trim()]);
+      // An account's balance starts on the day it was added; anything dated earlier is
+      // history and doesn't move it. Say so, or it looks like nothing happened.
+      const early = [accountId, type === 'transfer' ? toAccountId : undefined]
+        .map((id) => accounts.find((a) => a.id === id))
+        .find((a) => a && date < a.openingDate);
       showLogged({
+        note: early ? S.logged.beforeOpening(early.name, fmtDate(early.openingDate)) : undefined,
         kind: S.txType[type],
         amountCents: type === 'expense' ? -amount : amount,
         sign: type === 'income' || type === 'refund' ? '+' : undefined,

@@ -50,6 +50,15 @@ describe('safeToSpend', () => {
     expect(r.daysLeft).toBe(21);
     expect(r.dailyCents).toBe(Math.floor(80000 / 21));
   });
+  it('paying a card off and then some: the credit on it stays spendable', () => {
+    // $200 owing, $300 paid from chequing: chequing −$300, the card $100 in credit.
+    const pay = tx({ id: 'p', type: 'transfer', accountId: 'chq', toAccountId: 'card', amountCents: 30000, date: '2026-01-10' });
+    const r = safeToSpend(base({ transactions: [pay] }));
+    expect(r.breakdown.cardsOwingCents).toBe(0);
+    expect(r.breakdown.cardsCreditCents).toBe(10000);
+    expect(r.breakdown.spendableCents).toBe(100000 - 30000 + 5000 + 10000); // same as before paying: 85000
+    expect(r.breakdown.spendableCents).toBe(safeToSpend(base()).breakdown.spendableCents);
+  });
   it('card balances are optional', () => {
     expect(safeToSpend(base({ subtractCardBalances: false })).breakdown.spendableCents).toBe(105000);
   });

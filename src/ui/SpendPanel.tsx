@@ -13,8 +13,6 @@ import { haptic } from './motion';
 
 const H = 128; // tallest bar, px
 const PULL = 25; // px a drag on Categories needs to open or close it
-/** Category colours, largest first. */
-const SHADES = ['var(--accent)', 'var(--text)', 'var(--text-2)', 'var(--text-3)', 'var(--fill-2)'];
 
 export function SpendPanel(props: {
   transactions: Transaction[]; // already scoped to the chosen card
@@ -22,6 +20,7 @@ export function SpendPanel(props: {
   selected: string | null;
   onSelect: (date: string | null) => void;
   catName: (id?: string) => string | undefined;
+  catColor: (id: string) => string | undefined; // a category's own colour (as on Plan)
   dayLabel: (date: string) => string;
 }) {
   const { dates, selected } = props;
@@ -39,8 +38,12 @@ export function SpendPanel(props: {
   const inFocus = (t: Transaction) => (focus == null ? dates.includes(t.date) : t.date === dates[focus]);
   const spent = focus == null ? chart.days.reduce((s, d) => s + d.totalCents, 0) : chart.days[focus]!.totalCents;
   const received = posted.filter((t) => t.type === 'income' && inFocus(t)).reduce((s, t) => s + t.amountCents, 0);
-  const cats = spendChart(posted, focus == null ? dates : [dates[focus]!]);
-  const catTotal = cats.keys.reduce((s, k) => s + (cats.totals[k] ?? 0), 0);
+  // Each bar is split by category, in the categories' own colours, and the legend uses the
+  // same colours: the 14 days' biggest categories, the rest as Other.
+  const color = (key: string) => (key === OTHER ? 'var(--text-3)' : key === UNCATEGORISED ? 'var(--text-2)' : (props.catColor(key) ?? 'var(--accent)'));
+  const legend: { key: string; cents: number }[] =
+    focus == null ? chart.keys.map((k) => ({ key: k, cents: chart.totals[k] ?? 0 })).filter((x) => x.cents > 0) : chart.days[focus]!.parts.map((p) => ({ key: p.key, cents: p.cents }));
+  const catTotal = legend.reduce((t, x) => t + x.cents, 0);
   const catLabel = (key: string) => (key === OTHER ? S.transactions.chart.other : key === UNCATEGORISED ? S.common.uncategorised : (props.catName(key) ?? S.common.uncategorised));
   const barH = (v: number) => (v > 0 ? Math.max(8, Math.sqrt(v / max) * H) : 4);
 
@@ -96,7 +99,10 @@ export function SpendPanel(props: {
               key={d.date}
               class={`act-chart__bar${d.totalCents > 0 ? ' act-chart__bar--some' : ''}${focus != null ? (i === focus ? ' act-chart__bar--on' : ' act-chart__bar--off') : ''}`}
               style={{ height: `${barH(d.totalCents)}px` }}
-            />
+            >
+              {/* stacked bottom-up in the legend's order */}
+              {d.totalCents > 0 && d.parts.map((p) => <i key={p.key} style={{ flexGrow: p.cents, background: color(p.key) }} />)}
+            </span>
           ))}
           {chart.averageCents > 0 && (
             <div class="act-chart__avg" style={{ bottom: `${Math.sqrt(chart.averageCents / max) * H}px` }}>
@@ -127,21 +133,21 @@ export function SpendPanel(props: {
         </button>
         <div class="act-cats" data-on={expanded}>
           <div class="act-cats__inner">
-            {cats.keys.length === 0 ? (
+            {legend.length === 0 ? (
               <p class="act-cats__empty">{S.transactions.chart.empty}</p>
             ) : (
               <>
                 <div class="act-cats__bar">
-                  {cats.keys.map((k, i) => (
-                    <span key={k} style={{ width: `${((cats.totals[k] ?? 0) / catTotal) * 100}%`, background: SHADES[i] ?? SHADES[4] }} />
+                  {legend.map((x) => (
+                    <span key={x.key} style={{ width: `${(x.cents / catTotal) * 100}%`, background: color(x.key) }} />
                   ))}
                 </div>
                 <ul class="act-cats__legend">
-                  {cats.keys.map((k, i) => (
-                    <li key={k}>
-                      <i style={{ background: SHADES[i] ?? SHADES[4] }} />
-                      <span class="act-cats__name">{catLabel(k)}</span>
-                      <span class="num">{money(cats.totals[k] ?? 0)}</span>
+                  {legend.map((x) => (
+                    <li key={x.key}>
+                      <i style={{ background: color(x.key) }} />
+                      <span class="act-cats__name">{catLabel(x.key)}</span>
+                      <span class="num">{money(x.cents)}</span>
                     </li>
                   ))}
                 </ul>

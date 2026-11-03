@@ -13,6 +13,7 @@ export interface LoggedEntry {
   amountCents: Cents;
   sign?: '+' | '−';
   rows: [label: string, value: string][];
+  note?: string; // something worth knowing about what was logged (e.g. it won't move a balance)
   origin?: { x: number; y: number }; // where the flood starts, in viewport px
   undo?: () => Promise<void>;
 }
@@ -95,6 +96,7 @@ export function LoggedHost() {
             </li>
           ))}
         </ul>
+        {entry.note && <p class="logged__note">{entry.note}</p>}
       </div>
       <div class="logged__actions">
         <button type="button" ref={done} class="logged__done" onClick={close}>

@@ -19,6 +19,9 @@ const SWIPE = 70; // px past which a sideways release moves to the next card
 const PULL = 40; // px past which a vertical release opens or closes
 const AXIS = 8; // px before a drag picks an axis
 const PEEK = 11; // px of each card showing behind the one in front
+// At rest under the summary: how much of the front card shows, and of each card behind it.
+const REST_FRONT = 58;
+const REST_PEEK = 16;
 const DEPTH = 3; // cards drawn in a closed stack; the rest hide behind the last
 const ROW = 76; // px of each card showing when the stack is open
 const ALL_ROW = 56; // the All accounts row, and the gap under it
@@ -40,6 +43,7 @@ export function CardStack(props: {
   const { cards, index, open } = props;
   const n = cards.length;
   const frame = useRef<HTMLDivElement>(null);
+  const handle = useRef<HTMLButtonElement>(null); // "Pull down to browse cards": draggable too
   const summary = useRef<HTMLDivElement>(null);
   const [w, setW] = useState(0);
   const [sumH, setSumH] = useState(112);
@@ -72,7 +76,7 @@ export function CardStack(props: {
   useEffect(() => {
     let ours = false;
     const onStart = (e: TouchEvent) => {
-      ours = !!frame.current && e.target instanceof Node && frame.current.contains(e.target);
+      ours = e.target instanceof Node && (!!frame.current?.contains(e.target) || !!handle.current?.contains(e.target));
     };
     const onMove = (e: TouchEvent) => {
       if (ours && e.cancelable) e.preventDefault();
@@ -183,7 +187,7 @@ export function CardStack(props: {
   const height = open
     ? ALL_ROW + Math.max(0, n - 1) * ROW + h
     : sel < 0
-      ? cardsTop + (Math.min(n, DEPTH) - 1) * PEEK + 14 + pull * 1.1
+      ? cardsTop + (Math.min(n, DEPTH) - 1) * REST_PEEK + REST_FRONT + pull * 1.1
       : (DEPTH - 1) * PEEK + 2 + h + pull * 0.9;
 
   // The summary splits what's left by card; each segment is that card's share.
@@ -192,7 +196,7 @@ export function CardStack(props: {
   const segs = total > 0 ? cards.filter((a) => left(a) > 0) : [];
 
   return (
-    <div class={`stack${open ? ' stack--open' : ''}`}>
+    <div class={`stack${open ? ' stack--open' : ''}${!open && sel < 0 && !drag.on ? ' stack--rest' : ''}`}>
       <div
         ref={frame}
         class="stack__frame"
@@ -249,13 +253,14 @@ export function CardStack(props: {
             y = ALL_ROW + i * ROW + pullUp * 0.4 * i;
             z = i + 1;
           } else if (sel < 0) {
-            // resting behind the summary: the first card furthest back, the last in front
-            const d = n - 1 - i;
+            // resting behind the summary: the first card in front, the rest tucked behind it
+            // in order (the same front card as Accounts' stack)
+            const d = i;
             depth = Math.min(d, DEPTH - 1);
             hidden = d >= DEPTH;
             // pulled, they fan out: the front card keeps pace with the growing frame, the ones behind lag
-            y = cardsTop + (DEPTH - 1 - depth) * PEEK - (DEPTH - Math.min(n, DEPTH)) * PEEK + pull * (1.1 - depth * 0.375);
-            z = i + 1;
+            y = cardsTop + (DEPTH - 1 - depth) * REST_PEEK - (DEPTH - Math.min(n, DEPTH)) * REST_PEEK + pull * (1.1 - depth * 0.375);
+            z = n - i;
           } else {
             const k = (i - sel + n) % n;
             depth = Math.min(k, DEPTH - 1);
@@ -294,7 +299,23 @@ export function CardStack(props: {
           );
         })}
       </div>
-      <button type="button" class="stack__hint" onClick={() => (haptic(6), props.onOpen(!open))}>
+      <button
+        ref={handle}
+        type="button"
+        class="stack__hint"
+        onClick={() => (haptic(6), props.onOpen(!open))}
+        // Dragging the handle pulls the stack open (or pushes it closed), like the cards.
+        // A plain tap is left to onClick.
+        onTouchStart={onTouchStart}
+        onTouchMove={onTouchMove}
+        onTouchEnd={(e) => {
+          const t = e.changedTouches[0];
+          if (!g.current?.axis || !t) return void (g.current = null);
+          e.preventDefault();
+          end(-1 - t.identifier);
+        }}
+        onTouchCancel={cancel}
+      >
         <span class="stack__grabber" aria-hidden="true" />
         <span>{open ? S.home.stackHint.open : sel < 0 ? S.home.stackHint.all : n > 1 ? S.home.stackHint.card : S.home.stackHint.cardOnly}</span>
       </button>

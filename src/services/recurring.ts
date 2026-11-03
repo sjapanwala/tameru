@@ -79,7 +79,21 @@ export async function syncCardFee(ctx: AppContext, account: Account): Promise<vo
     archived: false,
   };
   if (existing) {
-    await ctx.repos.recurring.put(stamp(ctx, { ...existing, ...fields }));
+    // A new statement day mustn't charge a month twice: once a fee has posted, the new
+    // day only applies from the following month.
+    let startDate = existing.startDate;
+    const oldDay = existing.schedule.freq === 'monthly' ? existing.schedule.day : undefined;
+    if (oldDay !== day) {
+      const last = (await ctx.repos.transactions.all())
+        .filter((t) => t.recurringId === existing.id)
+        .reduce<string | undefined>((m, t) => (!m || t.date > m ? t.date : m), undefined);
+      if (last) {
+        const [y, mo] = last.split('-').map(Number) as [number, number];
+        const next = mo === 12 ? `${y + 1}-01-01` : `${y}-${String(mo + 1).padStart(2, '0')}-01`;
+        if (next > startDate) startDate = next;
+      }
+    }
+    await ctx.repos.recurring.put(stamp(ctx, { ...existing, ...fields, startDate }));
     return;
   }
   // First fee on the next statement day on or after the card was added.

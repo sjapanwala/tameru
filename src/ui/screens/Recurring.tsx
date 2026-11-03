@@ -3,6 +3,7 @@
 // recurring item, each opening a sheet. Adding one is a sheet too.
 
 import { useEffect, useRef, useState } from 'preact/hooks';
+import { markAttentionSeen } from '../../services/attention';
 import { fmtDate, fmtWeekday, S } from '../../copy/strings';
 import { centsForPercent, percentOf } from '../../domain/allocation';
 import { diffDays } from '../../domain/dates';
@@ -26,6 +27,10 @@ type Tab = 'bills' | 'income';
 
 export function Recurring() {
   const { app, bump } = useApp();
+  // Opening Upcoming is looking: what needed attention now counts as seen (Home's bell).
+  useEffect(() => {
+    void markAttentionSeen(app);
+  }, []);
   const items = useLoad(listRecurring);
   const pending = useLoad(pendingRecurring) ?? [];
   const detected = useLoad(detectedSuggestions) ?? [];
@@ -48,51 +53,81 @@ export function Recurring() {
     return n === 0 ? S.home.today : n === 1 ? S.upcoming.tomorrow : n < 7 ? fmtWeekday(d) : fmtDate(d);
   };
 
+  const attention = pending.length + detected.length;
+  const dayOut = (list: typeof soon) => list.filter((u) => u.item.kind !== 'income').reduce((t, u) => t + u.amountCents, 0);
+  const dayIn = (list: typeof soon) => list.filter((u) => u.item.kind === 'income').reduce((t, u) => t + u.amountCents, 0);
+
   return (
     <section class="upcoming">
       <PageHeader
-        eyebrow={S.upcoming.eyebrow}
         title={S.upcoming.title}
+        eyebrow={S.upcoming.nextDays(DAYS_AHEAD)}
         action={
-          <button type="button" class="icon-btn icon-btn--plain" aria-label={S.recurring.add} onClick={() => setOpen('new')}>
-            <PlusIcon />
-          </button>
+          <div class="head-actions">
+            <button type="button" class="icon-btn icon-btn--soft" aria-label={S.calendar.addAll} onClick={async () => setMsg(await addAllToCalendar(app))}>
+              <CalendarIcon />
+            </button>
+            <button type="button" class="icon-btn icon-btn--plain" aria-label={S.recurring.add} onClick={() => setOpen('new')}>
+              <PlusIcon />
+            </button>
+          </div>
         }
       />
 
-      {(pending.length > 0 || detected.length > 0) && (
+      {/* what's going out over the next two weeks, like Activity's total */}
+      <div class="act-hero up-hero">
+        <span class="act-hero__label">{S.upcoming.goingOut}</span>
+        <span class="act-hero__amount">
+          <Amount c={out} />
+        </span>
+        <span class="act-hero__in">
+          {S.upcoming.comingIn} <span class="num">+<Amount c={inn} /></span>
+        </span>
+      </div>
+      <Message text={msg} />
+
+      {attention > 0 && (
         <>
           <div class="section-head">
             <h2>{S.upcoming.needsLook}</h2>
+            <span class="up-count" aria-label={S.home.pending(attention)}>
+              {attention}
+            </span>
           </div>
-          <div class="notice-list">
+          <div class="up-cards">
             {pending.map((t) => (
-              <div class="notice-card" key={t.id}>
-                <span class="notice-card__text">
+              <div class="up-card" key={t.id}>
+                <span class="avatar" aria-hidden="true">
+                  {monogram(name(t.recurringId) ?? t.merchant ?? '')}
+                </span>
+                <span class="up-card__text">
                   <strong>{name(t.recurringId) ?? t.merchant}</strong>
                   <small>{S.upcoming.pendingLine(t.amountCents, t.date)}</small>
                 </span>
-                <span class="notice-card__actions">
-                  <button type="button" class="primary" onClick={() => confirmTransaction(app, t.id).then(bump)}>
+                <span class="up-card__actions">
+                  <button type="button" class="up-btn up-btn--primary" onClick={() => confirmTransaction(app, t.id).then(bump)}>
                     {S.common.confirm}
                   </button>
-                  <button type="button" onClick={() => deleteTransaction(app, t.id).then(bump)}>
+                  <button type="button" class="up-btn" onClick={() => deleteTransaction(app, t.id).then(bump)}>
                     {S.upcoming.skip}
                   </button>
                 </span>
               </div>
             ))}
             {detected.map((d) => (
-              <div class="notice-card" key={d.merchantKey}>
-                <span class="notice-card__text">
+              <div class="up-card" key={d.merchantKey}>
+                <span class="avatar" aria-hidden="true">
+                  {monogram(d.merchant)}
+                </span>
+                <span class="up-card__text">
                   <strong>{d.merchant}</strong>
                   <small>{S.upcoming.detectedLine(d.amountCents, S.freq[d.freq], d.occurrences)}</small>
                 </span>
-                <span class="notice-card__actions">
-                  <button type="button" class="primary" onClick={() => acceptDetection(app, d).then(bump)}>
+                <span class="up-card__actions">
+                  <button type="button" class="up-btn up-btn--primary" onClick={() => acceptDetection(app, d).then(bump)}>
                     {S.recurring.track}
                   </button>
-                  <button type="button" onClick={() => dismissDetection(app, d.merchantKey).then(bump)}>
+                  <button type="button" class="up-btn" onClick={() => dismissDetection(app, d.merchantKey).then(bump)}>
                     {S.upcoming.notRepeat}
                   </button>
                 </span>
@@ -102,30 +137,9 @@ export function Recurring() {
         </>
       )}
 
-      <div class="summary-card upcoming-card">
-        <p class="summary-card__label">{S.upcoming.nextDays(DAYS_AHEAD)}</p>
-        <div class="upcoming-card__nums">
-          <p>
-            <span class="upcoming-card__k">{S.upcoming.goingOut}</span>
-            <Amount c={out} />
-          </p>
-          <p>
-            <span class="upcoming-card__k">{S.upcoming.comingIn}</span>
-            <Amount c={inn} sign="+" />
-          </p>
-        </div>
+      <div class="section-head">
+        <h2>{S.upcoming.timeline}</h2>
       </div>
-
-      <button type="button" class="calendar-row" onClick={async () => setMsg(await addAllToCalendar(app))}>
-        <CalendarIcon />
-        <span>
-          <strong>{S.calendar.addAll}</strong>
-          <small>{S.calendar.addAllSub}</small>
-        </span>
-        <ChevronRight />
-      </button>
-      <Message text={msg} />
-
       {soon.length === 0 ? (
         <p class="muted empty">{S.upcoming.nothingSoon}</p>
       ) : (
@@ -133,14 +147,9 @@ export function Recurring() {
           <div class="day" key={date}>
             <div class="day__head">
               <span>{dayLabel(date)}</span>
-              <span>
-                {S.upcoming.dayTotal(
-                  list.filter((u) => u.item.kind !== 'income').reduce((s, u) => s + u.amountCents, 0),
-                  list.filter((u) => u.item.kind === 'income').reduce((s, u) => s + u.amountCents, 0),
-                )}
-              </span>
+              <span>{S.upcoming.dayTotal(dayOut(list), dayIn(list))}</span>
             </div>
-            <ul class="txlist">
+            <ul class="txlist txlist--group">
               {list.map((u) => (
                 <li key={`${u.item.id}:${u.date}`}>
                   <button type="button" class="txrow" onClick={() => setOpen(u.item.id)}>
@@ -151,7 +160,7 @@ export function Recurring() {
                       <span class="txlist__title">{u.item.name}</span>
                       <span class="txlist__meta">{S.recurring.kind[u.item.kind]}</span>
                     </span>
-                    <span class="txlist__amt">
+                    <span class={`txlist__amt${u.item.kind === 'income' ? ' txlist__amt--in' : ''}`}>
                       <Amount c={u.item.kind === 'income' ? u.amountCents : -u.amountCents} sign={u.item.kind === 'income' ? '+' : undefined} />
                     </span>
                   </button>
@@ -164,35 +173,46 @@ export function Recurring() {
 
       <div class="section-head">
         <h2>{S.upcoming.allRecurring}</h2>
+        <span class="section-head__note">{S.upcoming.itemCount(listed.length)}</span>
       </div>
-      <div class="segmented" role="radiogroup" aria-label={S.upcoming.allRecurring}>
-        <span class="segmented__thumb" style={{ width: 'calc((100% - 6px) / 2)', transform: `translateX(${tab === 'income' ? 100 : 0}%)` }} />
-        {(['bills', 'income'] as const).map((t) => (
-          <button type="button" role="radio" aria-checked={tab === t} key={t} onClick={() => setTab(t)}>
-            {t === 'bills' ? S.recurring.bills : S.recurring.income}
-          </button>
-        ))}
-      </div>
-      <ul class="plan-list upcoming-list">
-        {listed.length === 0 && <p class="muted">{S.common.none}</p>}
-        {listed.map(({ item, next, amountCents }) => (
-          <li key={item.id}>
-            <button type="button" class="plan-row" onClick={() => setOpen(item.id)}>
-              <span class="plan-row__main">
-                <strong>{item.name}</strong>
-                <small>
-                  {S.freq[item.schedule.freq]} · {S.recurring.next(next)}
-                </small>
-              </span>
-              <span class="plan-row__amt">
-                <Amount c={amountCents} />
-                {'minCents' in item.amount && <small>{S.upcoming.range(item.amount.minCents, item.amount.maxCents)}</small>}
-              </span>
-              <ChevronRight />
+      <div class="act-tools up-tools">
+        <div class="segmented segmented--filters up-seg" role="radiogroup" aria-label={S.upcoming.allRecurring}>
+          <span class="segmented__thumb" style={{ width: 'calc((100% - 4px) / 2)', transform: `translateX(${tab === 'income' ? 100 : 0}%)` }} />
+          {(['bills', 'income'] as const).map((t) => (
+            <button type="button" role="radio" aria-checked={tab === t} key={t} onClick={() => setTab(t)}>
+              {t === 'bills' ? S.recurring.bills : S.recurring.income}
             </button>
-          </li>
-        ))}
-      </ul>
+          ))}
+        </div>
+      </div>
+      {listed.length === 0 ? (
+        <p class="muted">{S.common.none}</p>
+      ) : (
+        <ul class="txlist txlist--group up-all">
+          {listed.map(({ item, next, amountCents }) => (
+            <li key={item.id}>
+              <button type="button" class="txrow" onClick={() => setOpen(item.id)}>
+                <span class="avatar" aria-hidden="true">
+                  {item.kind === 'income' ? <ArrowDownLeft /> : monogram(item.name)}
+                </span>
+                <span class="txlist__main">
+                  <span class="txlist__title">{item.name}</span>
+                  <span class="txlist__meta">
+                    {S.freq[item.schedule.freq]} · {S.recurring.next(next)}
+                  </span>
+                </span>
+                <span class="up-all__amt">
+                  <span class="txlist__amt">
+                    <Amount c={amountCents} />
+                  </span>
+                  {'minCents' in item.amount && <small>{S.upcoming.range(item.amount.minCents, item.amount.maxCents)}</small>}
+                </span>
+                <ChevronRight />
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
 
       {open && (
         <Sheet label={S.upcoming.title} onClose={() => setOpen(null)}>

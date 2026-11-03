@@ -50,7 +50,7 @@ export const S = {
 
   // Hold a tab for these.
   tabMenu: {
-    spend: 'Add spending',
+    spend: 'Add expense',
     income: 'Add income',
     transfer: 'Transfer',
     photo: 'Scan a receipt',
@@ -114,7 +114,7 @@ export const S = {
     rollover: 'rolls over',
     fund: 'builds up',
   },
-  txType: { expense: 'Spent', income: 'Income', transfer: 'Transfer', refund: 'Refund' },
+  txType: { expense: 'Expense', income: 'Income', transfer: 'Transfer', refund: 'Refund' },
   status: { posted: '', pending: 'Pending', skipped: 'Skipped' },
 
   home: {
@@ -147,7 +147,7 @@ export const S = {
     recent: 'Recent',
     profile: 'Your profile and settings',
     viewAll: 'View all',
-    actions: { spent: 'Spent', income: 'Income' },
+    actions: { spent: 'Expense', income: 'Income' },
     today: 'Today',
     yesterday: 'Yesterday',
     daysLeft: (n: number) => `${plural(n, 'day')} left`,
@@ -157,6 +157,7 @@ export const S = {
     breakdown: {
       spendable: 'In chequing and cash',
       cardsOwing: 'Card balances',
+      cardsCredit: 'Credit on cards',
       income: 'Pay still coming',
       bills: 'Bills still to come',
       goals: 'Goal contributions left',
@@ -286,6 +287,13 @@ export const S = {
   },
 
   more: {
+    money: 'Money',
+    app: 'App',
+    profileSub: 'Your name, passcode and preferences',
+    nextUp: (name: string, amount: string, date: string) => `Next: ${name} · ${amount} · ${date}`,
+    nothingDue: 'Nothing due in the next 30 days',
+    accent: (name: string) => `${name} accent`,
+    debugSub: 'Dev tools',
     colophon: 'Tameru · stays on this device',
     updated: (v: string) => `Updated to v${v}`,
   },
@@ -318,6 +326,7 @@ export const S = {
     title: 'Logged',
     saved: (kind: string) => `${kind} logged`,
     merchant: 'Merchant',
+    beforeOpening: (account: string, date: string) => `Dated before you added ${account} (${date}), so it’s kept as history and doesn’t change its balance.`,
   },
 
   transactions: {
@@ -375,6 +384,9 @@ export const S = {
     dueIn: (n: number) => (n <= 0 ? 'Today' : n === 1 ? 'Tomorrow' : `in ${n} days`),
     tiles: {
       due: 'Payment due',
+      nothingDue: 'Nothing due',
+      paidOff: 'paid off',
+      inCredit: 'you’re in credit',
       statement: 'Statement',
       statementSub: 'next closes',
       creditUsed: 'Credit used',
@@ -408,6 +420,7 @@ export const S = {
     owing: (c: Cents) => `${$(c)} owing`,
     owingLabel: 'owing',
     inCreditLabel: 'nothing owing',
+    creditLabel: 'in credit',
     contributedLabel: 'contributed',
     inCredit: (c: Cents) => `${$(c)} in credit`,
     fee: (c: Cents) => `${$(c)} monthly fee`,
@@ -421,6 +434,7 @@ export const S = {
     compounding: 'Interest paid',
     compoundingOpt: { daily: 'Daily (paid monthly)', monthly: 'Monthly', quarterly: 'Quarterly', annually: 'Yearly' },
     monthlyFee: 'Monthly fee',
+    creditLimit: 'Credit limit (optional)',
     statementDay: 'Next statement date',
     dueDay: 'Next payment due',
     openingBalance: 'Current balance',
@@ -452,13 +466,15 @@ export const S = {
     skip: 'Skip',
     detectedLine: (c: Cents, freq: string, n: number) => `Looks like a repeat: ${$(c)} ${freq.toLowerCase()}, seen ${plural(n, 'time')}`,
     notRepeat: 'Not a repeat',
-    nextDays: (n: number) => `The next ${n} days`,
+    nextDays: (n: number) => `Next ${n} days`,
     goingOut: 'Going out',
     comingIn: 'Coming in',
     nothingSoon: 'Nothing due in the next two weeks.',
     dayTotal: (out: Cents, inc: Cents) => [out ? `${$(out)} out` : '', inc ? `${$(inc)} in` : ''].filter(Boolean).join(' · '),
     tomorrow: 'Tomorrow',
     allRecurring: 'Everything recurring',
+    timeline: 'Coming up',
+    itemCount: (n: number) => plural(n, 'item'),
     range: (lo: Cents, hi: Cents) => `${$(lo)}–${$(hi)}`,
     paidFrom: 'Paid from',
     depositTo: 'Goes into',

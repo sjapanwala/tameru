@@ -5,6 +5,22 @@ import type { Release } from '../domain/releases';
 
 export const RELEASES: Release[] = [
   {
+    version: '0.15.0',
+    items: [
+      { title: 'Slide between tabs', body: 'Put your finger on the tab bar and slide: the circle glides along under it, and letting go opens that tab. Tapping a tab glides the circle across too. Holding for shortcuts works as before.' },
+      { title: 'Cards easier to see', body: 'On Home, more of each card shows under All accounts, and your first card is in front, the same as on Accounts.' },
+      { title: 'A bell that means something', body: 'The red dot on Home’s bell now lights only when something new needs a look: an entry to confirm, a bill due tomorrow, or a reminder. Opening Upcoming clears it until the next thing comes in.' },
+      { title: 'Upcoming, redesigned', body: 'What’s going out over the next two weeks up top, things that need a look as cards with Confirm and Skip, a day-by-day timeline, and everything recurring in one list. Add to calendar is the button next to +.' },
+      { title: 'A new More', body: 'Your profile up top, then Upcoming (with what’s due next), Settings and What’s new, each with a little summary.' },
+      { title: 'Spending in colour', body: 'Activity’s bars are now split by category, in the same colours as the Categories legend and Plan.' },
+      { title: 'Adding an account', body: 'Use the + next to transfer on Accounts. The stack now holds only your cards.' },
+      { title: 'Paying off cards', body: 'Pay a card past zero and Accounts now shows the credit on it (“in credit”) instead of $0.00, with Nothing due on the payment tile. That credit counts toward safe to spend, so paying a card never makes money disappear.' },
+      { title: 'Card details you can change', body: 'Edit a card to set its credit limit (for the Credit used tile), statement date and due date. Moving the statement date never charges the monthly fee twice in one month.' },
+      { title: 'Entries before an account existed', body: 'An account’s balance starts on the day you added it. If you log something dated earlier, the confirmation now says it’s kept as history and won’t change the balance.' },
+      { title: 'Smaller fixes', body: 'Pull down on “Pull down to browse cards” on Home, not just on the cards. The transfer sheet no longer shows cards through it. Double-tapping no longer zooms the app. The Spent button is now Expense.' },
+    ],
+  },
+  {
     version: '0.14.0',
     items: [
       { title: 'Your cards, in a stack', body: 'Accounts is now a stack you flick through: swipe up or down to bring the next card to the front (it goes round and round), or tap a card peeking out above or below. Hold the front card for its options, as before.' },

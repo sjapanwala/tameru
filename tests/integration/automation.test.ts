@@ -36,6 +36,18 @@ describe('automations', () => {
     expect(fees).toHaveLength(3);
   });
 
+  it('moving a card statement day later never charges a month twice', async () => {
+    const app = await testApp('2026-01-01');
+    const card = await createAccount(app, { name: 'Visa', type: 'credit_card', card: { monthlyFeeCents: 499, statementDay: 5, dueDay: 25 } });
+    app.clock.set('2026-01-10');
+    await runAutomations(app); // January's fee, on the 5th
+    await updateAccount(app, card.id, { card: { ...card.card!, statementDay: 20 } });
+    app.clock.set('2026-02-25');
+    await runAutomations(app);
+    const fees = (await app.repos.transactions.all()).filter((t) => t.accountId === card.id).map((t) => t.date).sort();
+    expect(fees).toEqual(['2026-01-05', '2026-02-20']); // not also 2026-01-20
+  });
+
   it('posts savings interest monthly and only once', async () => {
     const app = await testApp('2026-01-01');
     await createAccount(app, { name: 'HISA', type: 'savings', openingBalanceCents: 1_000_000, interest: { rateBps: 400, kind: 'apy', compounding: 'monthly' } });

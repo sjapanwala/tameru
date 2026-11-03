@@ -5,7 +5,7 @@
 import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
 import { fmtDate, fmtWeekday, S } from '../../copy/strings';
 import { addDays, diffDays } from '../../domain/dates';
-import { isBudgetCategory } from '../../domain/defaults';
+import { categoryColor, isBudgetCategory } from '../../domain/defaults';
 import { merchantKey } from '../../domain/merchant';
 import type { Account, Category, Cents, Split, Transaction } from '../../domain/types';
 import { confirmTransaction, deleteTransaction, listByDay, recategorise, restoreTransaction, TxValidationError, updateTransaction } from '../../services/transactions';
@@ -24,6 +24,8 @@ import { orderedAccounts } from '../../services/accounts';
 
 const CARDS_OPEN_KEY = 'tameru-activity-cards';
 
+const GROUPS: Category['group'][] = ['essentials', 'lifestyle', 'savings']; // as on Plan
+
 type Filter = 'all' | 'spent' | 'income' | 'transfer';
 const FILTERS: Filter[] = ['all', 'spent', 'income', 'transfer'];
 
@@ -41,6 +43,9 @@ export function Transactions() {
   const catalog = useCatalog();
   const cards = accounts.filter(isCard);
   const budgetCats = categories.filter(isBudgetCategory).sort((a, b) => a.sortOrder - b.sortOrder);
+  // Plan's order (grouped, then the user's order): a category without its own colour gets
+  // its palette colour from its place here, so the chart matches Plan.
+  const planOrder = [...budgetCats].sort((a, b) => GROUPS.indexOf(a.group) - GROUPS.indexOf(b.group) || a.sortOrder - b.sortOrder);
   // Home's See more can arrive with a type already picked (#/transactions?type=spent).
   const [filter, setFilter] = useState<Filter>(() => {
     const t = route.params.get('type') as Filter | null;
@@ -162,6 +167,10 @@ export function Transactions() {
         selected={day}
         onSelect={setDay}
         catName={catName}
+        catColor={(id) => {
+          const i = planOrder.findIndex((c) => c.id === id);
+          return i >= 0 ? categoryColor(planOrder[i]!, i) : undefined;
+        }}
         dayLabel={(d) => dayLabel(d, today)}
       />
 

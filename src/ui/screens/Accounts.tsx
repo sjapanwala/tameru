@@ -1,4 +1,4 @@
-import { useState } from 'preact/hooks';
+import { useEffect, useState } from 'preact/hooks';
 import { fmtDate, money, S } from '../../copy/strings';
 import { sparkPath } from '../../domain/accountInsights';
 import type { AccountType, CardFace as CardFaceT, Category, Cents, Compounding, Transaction } from '../../domain/types';
@@ -23,8 +23,14 @@ export function Accounts() {
   const txs = useLoad((a) => a.repos.transactions.all());
   const categories = useLoad((a) => a.repos.categories.all());
   const catalog = useCatalog();
-  const wanted = useRoute().params.get('id'); // card tapped in Home's wallet
+  const wanted = useRoute().params.get('id'); // a card picked elsewhere, or 'new' (the tab bar's Add account)
   const [index, setIndex] = useState(0);
+  const [adding, setAdding] = useState(wanted === 'new');
+  const [focus, setFocus] = useState<string>(); // a just-added account, brought to the front
+  // The tab bar's Add account can arrive while this screen is already showing.
+  useEffect(() => {
+    if (wanted === 'new') setAdding(true);
+  }, [wanted]);
   // Hold a card → menu; the menu leads to edit, rearrange (jiggle mode) or remove.
   const [menu, setMenu] = useState<{ view: AccountView; rect: DOMRect } | null>(null);
   const [editing, setEditing] = useState<AccountView | null>(null);
@@ -35,9 +41,9 @@ export function Accounts() {
     if (v) setMenu({ view: v, rect: el.getBoundingClientRect() });
   });
   if (!views || !txs) return <div class="placeholder" />;
-  const initial = wanted === 'new' ? views.length : Math.max(0, views.findIndex((v) => v.account.id === wanted)); // 'new': the tab bar's Add account
-  const count = views.length + 1; // last slide: add an account
-  const current = views[index];
+  const initial = Math.max(0, views.findIndex((v) => v.account.id === (focus ?? wanted)));
+  const count = views.length;
+  const current = views[Math.min(index, count - 1)];
 
   const remove = async (v: AccountView) => {
     setRemoving(null);
@@ -77,38 +83,48 @@ export function Accounts() {
         eyebrow={S.accounts.count(views.length)}
         action={
           <div class="head-actions">
-            <a class="icon-btn icon-btn--plain" href="#/add?type=transfer" aria-label={S.accounts.transfer}>
+            <a class="icon-btn icon-btn--soft" href="#/add?type=transfer" aria-label={S.accounts.transfer}>
               <SwapIcon />
             </a>
+            <button type="button" class="icon-btn icon-btn--plain" aria-label={S.accounts.add} onClick={() => setAdding(true)}>
+              <PlusIcon />
+            </button>
           </div>
         }
       />
-      <CardRoll
-        key={`roll:${wanted ?? ''}:${count}`}
-        initial={initial}
-        count={count}
-        label={S.accounts.title}
-        onChange={setIndex}
-        renderSlide={(i, active) =>
-          i < views.length ? (
-            <div class="slide-hold" {...(active ? hold : {})}>
-              <CardFace account={views[i]!.account} catalog={catalog} />
-            </div>
-          ) : (
-            <div class="cardface cardface--new">
-              <PlusIcon />
-              <span>{S.accounts.add}</span>
-            </div>
-          )
-        }
-      />
-      <p class="hold-hint">
-        <span class="num">{S.accounts.position(index + 1, count)}</span> · {current ? S.accounts.rollHint : S.accounts.add}
-      </p>
-      <div class="account-panel" key={current?.account.id ?? 'new'}>
-        {current ? <AccountDetails v={current} txs={txs} categories={categories ?? []} /> : <NewAccountForm onDone={bump} />}
-      </div>
+      {count > 0 ? (
+        <>
+          <CardRoll
+            key={`roll:${focus ?? wanted ?? ''}:${count}`}
+            initial={initial}
+            count={count}
+            label={S.accounts.title}
+            onChange={setIndex}
+            renderSlide={(i, active) => (
+              <div class="slide-hold" {...(active ? hold : {})}>
+                <CardFace account={views[i]!.account} catalog={catalog} />
+              </div>
+            )}
+          />
+          <p class="hold-hint">
+            <span class="num">{S.accounts.position(Math.min(index, count - 1) + 1, count)}</span> · {count > 1 ? S.accounts.rollHint : S.accounts.holdHint}
+          </p>
+          <div class="account-panel" key={current!.account.id}>
+            <AccountDetails v={current!} txs={txs} categories={categories ?? []} />
+          </div>
+        </>
+      ) : (
+        <button type="button" class="cardface cardface--new accounts__empty" onClick={() => setAdding(true)}>
+          <PlusIcon />
+          <span>{S.accounts.add}</span>
+        </button>
+      )}
 
+      {adding && (
+        <Sheet label={S.accounts.addTitle} onClose={() => setAdding(false)}>
+          <NewAccountForm onDone={(id) => (setAdding(false), setFocus(id), bump())} />
+        </Sheet>
+      )}
       {menu && (
         <CardMenu
           rect={menu.rect}
@@ -137,7 +153,7 @@ export function Accounts() {
           <div class="confirm">
             <h2>{S.accounts.removeTitle(removing.account.name)}</h2>
             <p class="muted">{S.accounts.removeBody}</p>
-            {headlineOf(removing) !== 0 && <p class="note">{S.accounts.removeBalance(Math.abs(headlineOf(removing)), removing.account.type === 'credit_card')}</p>}
+            {headlineOf(removing) !== 0 && <p class="note">{S.accounts.removeBalance(Math.abs(headlineOf(removing)), (removing.owingCents ?? 0) > 0)}</p>}
             <button type="button" class="primary block" onClick={() => remove(removing)}>
               {S.accounts.removeConfirm}
             </button>
@@ -151,9 +167,12 @@ export function Accounts() {
   );
 }
 
-/** The figure an account leads with: amount owing for cards, contributions for investing, else balance. */
+/**
+ * The figure an account leads with: for a card, what's owing, or the credit on it once
+ * it's been paid past zero (never a misleading $0); contributions for investing; else balance.
+ */
 const headlineOf = (v: AccountView) =>
-  v.account.type === 'credit_card' ? (v.owingCents ?? 0) : v.account.type === 'investing' ? (v.netContributedCents ?? 0) : v.balanceCents;
+  v.account.type === 'credit_card' ? ((v.owingCents ?? 0) > 0 ? v.owingCents! : Math.max(0, v.balanceCents)) : v.account.type === 'investing' ? (v.netContributedCents ?? 0) : v.balanceCents;
 
 function AccountDetails({ v, txs, categories }: { v: AccountView; txs: Transaction[]; categories: Category[] }) {
   const a = v.account;
@@ -161,8 +180,17 @@ function AccountDetails({ v, txs, categories }: { v: AccountView; txs: Transacti
   const headline = headlineOf(v);
   // Rolls from the previous card's figure to this one's (the panel remounts per card).
   const shownHeadline = useTween(headline, 'account-panel', 800);
+  const owing = v.owingCents ?? 0;
   const headlineLabel =
-    a.type === 'credit_card' ? (v.owingCents ? S.accounts.owingLabel : S.accounts.inCreditLabel) : a.type === 'investing' ? S.accounts.contributedLabel : S.accounts.balance;
+    a.type === 'credit_card'
+      ? owing > 0
+        ? S.accounts.owingLabel
+        : v.balanceCents > 0
+          ? S.accounts.creditLabel
+          : S.accounts.inCreditLabel
+      : a.type === 'investing'
+        ? S.accounts.contributedLabel
+        : S.accounts.balance;
   const catName = (id?: string) => categories.find((c) => c.id === id)?.name;
   const recent = txs
     .filter((t) => (t.accountId === a.id || t.toAccountId === a.id) && t.status !== 'skipped')
@@ -176,12 +204,12 @@ function AccountDetails({ v, txs, categories }: { v: AccountView; txs: Transacti
   const tiles: TileProps[] = [];
   const i = insights;
   if (a.type === 'credit_card' && i?.card) {
-    tiles.push({
-      label: S.accounts.tiles.due,
-      value: S.accounts.dueIn(i.card.daysToDue),
-      sub: fmtDate(i.card.due),
-      strong: (v.owingCents ?? 0) > 0 && i.card.daysToDue <= 5,
-    });
+    // Nothing owing: there's no payment to make, whatever day it is.
+    tiles.push(
+      owing > 0
+        ? { label: S.accounts.tiles.due, value: S.accounts.dueIn(i.card.daysToDue), sub: fmtDate(i.card.due), strong: i.card.daysToDue <= 5 }
+        : { label: S.accounts.tiles.due, value: S.accounts.tiles.nothingDue, sub: v.balanceCents > 0 ? S.accounts.tiles.inCredit : S.accounts.tiles.paidOff },
+    );
     tiles.push({ label: S.accounts.tiles.statement, value: fmtDate(i.card.statement), sub: S.accounts.tiles.statementSub });
     if (i.creditUsed !== undefined) tiles.push({ label: S.accounts.tiles.creditUsed, value: `${Math.round(i.creditUsed * 100)}%`, bar: i.creditUsed });
     if ((a.card?.monthlyFeeCents ?? 0) > 0) tiles.push({ label: S.accounts.monthlyFee, value: <Amount c={a.card!.monthlyFeeCents} />, sub: S.accounts.tiles.perMonth });
@@ -345,12 +373,21 @@ function Sparkline({ values, label }: { values: number[]; label: string }) {
   );
 }
 
+/** A card's settings with no credit limit (clearing the field removes it). */
+const withoutLimit = <T extends { limitCents?: Cents }>(c: T): Omit<T, 'limitCents'> => {
+  const { limitCents: _drop, ...rest } = c;
+  return rest;
+};
+
 function EditAccount({ v, onDone }: { v: AccountView; onDone: () => void }) {
   const { app } = useApp();
   const a = v.account;
   const [name, setName] = useState(a.name);
   const [rate, setRate] = useState(String((a.interest?.rateBps ?? 0) / 100));
   const [fee, setFee] = useState<Cents | undefined>(a.card?.monthlyFeeCents);
+  const [limit, setLimit] = useState<Cents | undefined>(a.card?.limitCents);
+  const [statementDay, setStatementDay] = useState(a.card?.statementDay ?? 1);
+  const [dueDay, setDueDay] = useState(a.card?.dueDay ?? 1);
   const [face, setFace] = useState<CardFaceT | undefined>(a.face);
   const isCard = a.type === 'credit_card' || a.type === 'chequing';
   const save = async () => {
@@ -358,7 +395,7 @@ function EditAccount({ v, onDone }: { v: AccountView; onDone: () => void }) {
       name: name.trim() || a.name,
       ...(isCard ? { face } : {}),
       ...(a.interest ? { interest: { ...a.interest, rateBps: Math.round(Number(rate) * 100) || 0 } } : {}),
-      ...(a.card ? { card: { ...a.card, monthlyFeeCents: fee ?? 0 } } : {}),
+      ...(a.card ? { card: { ...withoutLimit(a.card), monthlyFeeCents: fee ?? 0, statementDay, dueDay, ...(limit ? { limitCents: limit } : {}) } } : {}),
     });
     onDone();
   };
@@ -373,7 +410,14 @@ function EditAccount({ v, onDone }: { v: AccountView; onDone: () => void }) {
           {S.accounts.rate} <input inputMode="decimal" value={rate} onInput={(e) => setRate((e.target as HTMLInputElement).value)} />
         </label>
       )}
-      {a.card && <MoneyInput label={S.accounts.monthlyFee} value={fee} onChange={setFee} />}
+      {a.card && (
+        <>
+          <MoneyInput label={S.accounts.creditLimit} value={limit} onChange={setLimit} />
+          <MoneyInput label={S.accounts.monthlyFee} value={fee} onChange={setFee} />
+          <MonthlyDayInput label={S.accounts.statementDay} day={statementDay} today={app.clock.today()} onChange={setStatementDay} />
+          <MonthlyDayInput label={S.accounts.dueDay} day={dueDay} today={app.clock.today()} onChange={setDueDay} />
+        </>
+      )}
       {isCard && <CardPicker value={face} onChange={setFace} kind={a.type === 'credit_card' ? 'credit' : 'debit'} fallbackName={name || a.name} />}
       <div class="sheet__actions">
         <button type="button" class="primary block" onClick={save}>
@@ -384,10 +428,11 @@ function EditAccount({ v, onDone }: { v: AccountView; onDone: () => void }) {
   );
 }
 
-function NewAccountForm({ onDone }: { onDone: () => void }) {
+function NewAccountForm({ onDone }: { onDone: (id: string) => void }) {
   const { app } = useApp();
   const [type, setType] = useState<AccountType>('chequing');
   const [name, setName] = useState('');
+  const [limit, setLimit] = useState<Cents>();
   const [balance, setBalance] = useState<Cents>();
   const [rate, setRate] = useState('');
   const [rateKind, setRateKind] = useState<'apy' | 'apr'>('apy');
@@ -400,18 +445,18 @@ function NewAccountForm({ onDone }: { onDone: () => void }) {
     <form
       onSubmit={async (e) => {
         e.preventDefault();
-        await createAccount(app, {
+        const created = await createAccount(app, {
           name: name || S.accountType[type],
           type,
           openingBalanceCents: type === 'credit_card' ? -(balance ?? 0) : (balance ?? 0),
           ...(type === 'savings' ? { interest: { rateBps: Math.round(Number(rate) * 100) || 0, kind: rateKind, compounding } } : {}),
-          ...(type === 'credit_card' ? { card: { monthlyFeeCents: fee ?? 0, statementDay, dueDay } } : {}),
+          ...(type === 'credit_card' ? { card: { monthlyFeeCents: fee ?? 0, statementDay, dueDay, ...(limit ? { limitCents: limit } : {}) } } : {}),
           ...(face && (type === 'credit_card' || type === 'chequing') ? { face } : {}),
         });
         setFace(undefined);
         setName('');
         setBalance(undefined);
-        onDone();
+        onDone(created.id);
       }}
     >
       <h2>{S.accounts.addTitle}</h2>
@@ -447,6 +492,7 @@ function NewAccountForm({ onDone }: { onDone: () => void }) {
       )}
       {type === 'credit_card' && (
         <>
+          <MoneyInput label={S.accounts.creditLimit} value={limit} onChange={setLimit} />
           <MoneyInput label={S.accounts.monthlyFee} value={fee} onChange={setFee} />
           <MonthlyDayInput label={S.accounts.statementDay} day={statementDay} today={app.clock.today()} onChange={setStatementDay} />
           <MonthlyDayInput label={S.accounts.dueDay} day={dueDay} today={app.clock.today()} onChange={setDueDay} />
