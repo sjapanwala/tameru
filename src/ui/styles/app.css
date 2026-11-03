@@ -6949,3 +6949,35 @@ body.tab-menu-open .tabbar {
 .act-cards-wrap[data-on='false'] > .act-cards {
   overflow: hidden;
 }
+
+
+/* ---------- startup error (see Boot in App.tsx) ---------- */
+
+.startup-error {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s3);
+  padding-top: calc(var(--safe-t) + 18vh);
+}
+
+.startup-error h1 {
+  margin: 0;
+  font-size: 1.75rem;
+}
+
+.startup-error p {
+  margin: 0;
+  color: var(--text-2);
+}
+
+.startup-error pre {
+  margin: 0;
+  padding: var(--s3);
+  border-radius: var(--btn-r);
+  background: var(--surface);
+  font-size: 0.75rem;
+  white-space: pre-wrap;
+  word-break: break-word;
+  -webkit-user-select: text;
+  user-select: text;
+}

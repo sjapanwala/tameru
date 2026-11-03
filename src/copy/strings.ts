@@ -60,6 +60,13 @@ export const S = {
     whatsNew: 'What’s new',
   },
 
+  startup: {
+    title: 'Tameru couldn’t open',
+    body: 'Your data is still on this phone; nothing has been deleted. Try again, and if this keeps happening, send the message below.',
+    retry: 'Try again',
+    caughtUp: (why: string) => `Some catching up didn’t finish (${why}). Your data is fine; it’ll try again next time.`,
+  },
+
   common: {
     monthlyOn: (d: number) => `Every month on the ${ordinal(d)}`,
     save: 'Save',

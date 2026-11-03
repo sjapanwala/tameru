@@ -1,4 +1,4 @@
-import { render } from 'preact';
+import { Component, render } from 'preact';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { S } from '../copy/strings';
 import type { FreshStartOffer } from '../domain/freshStart';
@@ -25,7 +25,7 @@ import { Sheet } from './Sheet';
 import { ScanHost } from './scan';
 import { TabBar } from './TabBar';
 import { applyTheme } from './theme';
-import { ToastHost } from './toast';
+import { toast, ToastHost } from './toast';
 import { LoggedHost } from './Logged';
 import { hideSplash } from './splash';
 import { announceUpdate, latestReleases } from './version';
@@ -135,12 +135,16 @@ function Screens({ offer, setOffer }: { offer: FreshStartOffer | null; setOffer:
   );
 }
 
-function Shell({ app, initialOffer, initialLock }: { app: AppT; initialOffer: FreshStartOffer | null; initialLock?: AppLock }) {
+function Shell({ app, initialOffer, initialLock, caughtUp }: { app: AppT; initialOffer: FreshStartOffer | null; initialLock?: AppLock; caughtUp?: string | null }) {
   const [version, setVersion] = useState(0);
   const [offer, setOffer] = useState(initialOffer);
   const [lock, setLock] = useState<AppLock | undefined>(initialLock); // set while locked
   const bump = () => setVersion((v) => v + 1);
   useEffect(hideSplash, []);
+  // Say so if catching up on open failed (the app opened anyway).
+  useEffect(() => {
+    if (caughtUp) setTimeout(() => toast(S.startup.caughtUp(caughtUp)), 600);
+  }, []);
   // Lock again when the app comes back after being away longer than the chosen time.
   const hiddenAt = useRef(0);
   const locked = useRef(!!initialLock);
@@ -173,17 +177,69 @@ function Shell({ app, initialOffer, initialLock }: { app: AppT; initialOffer: Fr
 }
 
 function Boot() {
-  const [state, setState] = useState<{ app: AppT; offer: FreshStartOffer | null; lock?: AppLock }>();
+  const [state, setState] = useState<{ app: AppT; offer: FreshStartOffer | null; lock?: AppLock; caughtUp: string | null }>();
+  const [failed, setFailed] = useState<string>();
   useEffect(() => {
-    openApp().then(async (app) => {
-      const offer = (await onAppOpen(app)).freshStart;
+    (async () => {
+      const app = await openApp();
+      // The open-time chores (recurring entries, closing finished periods) must never keep
+      // the app from opening: if one fails, open anyway and say so. Nothing is lost; they
+      // run again next time.
+      let offer: FreshStartOffer | null = null;
+      let caughtUp: string | null = null;
+      try {
+        offer = (await onAppOpen(app)).freshStart;
+      } catch (e) {
+        console.error('Tameru: catching up on open failed', e);
+        caughtUp = errorText(e);
+      }
       const lock = (await app.repos.settings.get()).lock;
       // An update reload while switched away shouldn't lock an app that was open moments ago.
       const away = takeAway();
-      setState({ app, offer, lock: lock && away && Date.now() - away < lock.relockAfterMs ? undefined : lock });
+      setState({ app, offer, caughtUp, lock: lock && away && Date.now() - away < lock.relockAfterMs ? undefined : lock });
+    })().catch((e) => {
+      console.error('Tameru: could not start', e);
+      setFailed(errorText(e));
+      hideSplash();
     });
   }, []);
-  return state ? <Shell app={state.app} initialOffer={state.offer} initialLock={state.lock} /> : <div class="shell" />;
+  if (failed) return <StartupError text={failed} />;
+  return state ? (
+    <Guard>
+      <Shell app={state.app} initialOffer={state.offer} initialLock={state.lock} caughtUp={state.caughtUp} />
+    </Guard>
+  ) : (
+    <div class="shell" />
+  );
+}
+
+const errorText = (e: unknown) => (e instanceof Error ? `${e.name}: ${e.message}` : String(e));
+
+/** Shown instead of an endless loading screen. Data stays on the device either way. */
+function StartupError({ text }: { text: string }) {
+  return (
+    <div class="shell startup-error" role="alert">
+      <h1>{S.startup.title}</h1>
+      <p>{S.startup.body}</p>
+      <pre>{text}</pre>
+      <button type="button" class="primary block" onClick={() => window.location.reload()}>
+        {S.startup.retry}
+      </button>
+    </div>
+  );
+}
+
+/** Catches a screen that throws while drawing, so the app shows why instead of hanging. */
+class Guard extends Component<{ children: preact.ComponentChildren }, { error?: string }> {
+  state: { error?: string } = {};
+  componentDidCatch(e: unknown) {
+    console.error('Tameru: a screen failed to draw', e);
+    this.setState({ error: errorText(e) });
+    hideSplash();
+  }
+  render() {
+    return this.state.error ? <StartupError text={this.state.error} /> : this.props.children;
+  }
 }
 
 export function mountApp(root: HTMLElement): void {

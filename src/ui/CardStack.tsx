@@ -65,16 +65,28 @@ export function CardStack(props: {
   }, []);
 
   // iOS starts its own page scroll for a vertical drag whatever touch-action says, and
-  // then cancels our pointer events. A native, non-passive touchmove that blocks the
-  // page while the finger is on the stack keeps the drag ours (as useWalletPull does).
+  // then cancels our pointer events. A listener on the stack itself isn't enough: iOS
+  // can skip it over the 3D-layered cards. So listen on the document, and block the
+  // page's scroll for any touch that started inside the stack.
   useEffect(() => {
-    const el = frame.current;
-    if (!el) return;
-    const onTouchMove = (e: TouchEvent) => {
-      if (e.cancelable) e.preventDefault();
+    let ours = false;
+    const onStart = (e: TouchEvent) => {
+      ours = !!frame.current && e.target instanceof Node && frame.current.contains(e.target);
     };
-    el.addEventListener('touchmove', onTouchMove, { passive: false });
-    return () => el.removeEventListener('touchmove', onTouchMove);
+    const onMove = (e: TouchEvent) => {
+      if (ours && e.cancelable) e.preventDefault();
+    };
+    const onEnd = () => (ours = false);
+    document.addEventListener('touchstart', onStart, { passive: true, capture: true });
+    document.addEventListener('touchmove', onMove, { passive: false, capture: true });
+    document.addEventListener('touchend', onEnd, { capture: true });
+    document.addEventListener('touchcancel', onEnd, { capture: true });
+    return () => {
+      document.removeEventListener('touchstart', onStart, { capture: true });
+      document.removeEventListener('touchmove', onMove, { capture: true });
+      document.removeEventListener('touchend', onEnd, { capture: true });
+      document.removeEventListener('touchcancel', onEnd, { capture: true });
+    };
   }, []);
 
   // Esc closes the open stack, as Done does.
@@ -94,27 +106,51 @@ export function CardStack(props: {
     props.onOpen(false);
   };
 
-  const onDown = (e: PointerEvent) => {
-    if (e.pointerType === 'mouse' && e.button !== 0) return;
-    g.current = { x: e.clientX, y: e.clientY, id: e.pointerId, axis: null, target: e.target as Element };
+  // One gesture, fed by touch events for a finger and pointer events for a mouse or pen.
+  // (iOS cancels pointer events when it decides a drag is a scroll; touch events keep
+  // coming, and the document listener above stops the scroll.)
+  const start = (x: number, y: number, id: number, target: EventTarget | null) => {
+    g.current = { x, y, id, axis: null, target: target as Element };
   };
-  const onMove = (e: PointerEvent) => {
+  const move = (cx: number, cy: number, id: number, el?: Element, pointerId?: number) => {
     const s = g.current;
-    if (!s || s.id !== e.pointerId) return;
-    const dx = e.clientX - s.x;
-    const dy = e.clientY - s.y;
+    if (!s || s.id !== id) return;
+    const dx = cx - s.x;
+    const dy = cy - s.y;
     if (!s.axis) {
       if (Math.abs(dx) < AXIS && Math.abs(dy) < AXIS) return;
       s.axis = Math.abs(dx) > Math.abs(dy) ? 'x' : 'y';
-      (e.currentTarget as Element).setPointerCapture?.(e.pointerId);
+      if (el && pointerId !== undefined) el.setPointerCapture?.(pointerId);
     }
     if (s.axis === 'x') setDrag({ x: !open && sel >= 0 ? dx : 0, y: 0, on: true });
     else setDrag({ x: 0, y: dy, on: true });
   };
-  const onUp = (e: PointerEvent) => {
+  const onDown = (e: PointerEvent) => {
+    if (e.pointerType === 'touch' || e.button !== 0) return;
+    start(e.clientX, e.clientY, e.pointerId, e.target);
+  };
+  const onMove = (e: PointerEvent) => e.pointerType !== 'touch' && move(e.clientX, e.clientY, e.pointerId, e.currentTarget as Element, e.pointerId);
+  const onUp = (e: PointerEvent) => e.pointerType !== 'touch' && end(e.pointerId);
+  const touch = (e: TouchEvent) => e.changedTouches[0];
+  const onTouchStart = (e: TouchEvent) => {
+    const t = touch(e);
+    if (t && e.touches.length === 1) start(t.clientX, t.clientY, -1 - t.identifier, e.target);
+  };
+  const onTouchMove = (e: TouchEvent) => {
+    const t = touch(e);
+    if (t) move(t.clientX, t.clientY, -1 - t.identifier);
+  };
+  const onTouchEnd = (e: TouchEvent) => {
+    const t = touch(e);
+    if (!t || !g.current || g.current.id !== -1 - t.identifier) return;
+    // A tap is handled here, so the browser's own click that follows mustn't repeat it.
+    if (g.current.axis || !(e.target as Element).closest?.('[data-allrow]')) e.preventDefault();
+    end(-1 - t.identifier);
+  };
+  const end = (id: number) => {
     const s = g.current;
     g.current = null;
-    if (!s || s.id !== e.pointerId) return;
+    if (!s || s.id !== id) return;
     const { x, y } = dragRef.current;
     setDrag({ x: 0, y: 0, on: false });
     if (!s.axis) {
@@ -165,7 +201,11 @@ export function CardStack(props: {
         onPointerDown={onDown}
         onPointerMove={onMove}
         onPointerUp={onUp}
-        onPointerCancel={cancel}
+        onPointerCancel={(e) => e.pointerType !== 'touch' && cancel()}
+        onTouchStart={onTouchStart}
+        onTouchMove={onTouchMove}
+        onTouchEnd={onTouchEnd}
+        onTouchCancel={cancel}
       >
         <div ref={summary} class="stack__summary" aria-hidden={open || sel >= 0} data-on={!open && sel < 0}>
           <span class="stack__sumlabel">{S.home.allLeft(props.periodEnd)}</span>
@@ -212,7 +252,8 @@ export function CardStack(props: {
             const d = n - 1 - i;
             depth = Math.min(d, DEPTH - 1);
             hidden = d >= DEPTH;
-            y = cardsTop + (DEPTH - 1 - depth) * PEEK - (DEPTH - Math.min(n, DEPTH)) * PEEK + pull * (0.5 + (DEPTH - 1 - depth) * 0.45);
+            // pulled, they fan out: the front card keeps pace with the growing frame, the ones behind lag
+            y = cardsTop + (DEPTH - 1 - depth) * PEEK - (DEPTH - Math.min(n, DEPTH)) * PEEK + pull * (1.1 - depth * 0.375);
             z = i + 1;
           } else {
             const k = (i - sel + n) % n;
