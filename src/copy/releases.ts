@@ -5,6 +5,16 @@ import type { Release } from '../domain/releases';
 
 export const RELEASES: Release[] = [
   {
+    version: '0.12.0',
+    items: [
+      { title: 'A tidier card stack', body: 'All accounts is now a summary of what’s left, with your cards resting behind it. Pull down (or tap) to fan them out and tap one to pick it; pull up or tap Done to close. With a card in front, swipe sideways to switch; Show all goes back to the summary.' },
+      { title: 'See more', body: 'Recent activity sits in its own panel, with See more underneath to open the full list.' },
+      { title: 'Activity, reworked', body: 'Spending for the last 14 days sits on top. Drag across the bars to read any day; let go to show only that day. Open Categories to see where it went, tap a card to see just that card, and use the magnifying glass to search.' },
+      { title: 'A clear confirmation', body: 'After you save something, the screen fills with your accent colour and a check, with what you logged (amount, category, account, date) so you can check it. Tap Done, or Undo if it’s wrong.' },
+      { title: 'A new look', body: 'One clean light and dark look, with an accent colour you pick in Settings: Blue, Green or Orange. It replaces Paper, Harbor and Kiln; if you’d picked one of those you’re on Blue now. Text uses your phone’s system font, and figures line up.' },
+    ],
+  },
+  {
     version: '0.11.0',
     items: [
       { title: 'A new Home', body: 'Your cards sit in a stack at the top. Swipe to switch between All accounts and each card; safe to spend today, the bar under it and the activity list follow the card you’re on. Swipe a transaction left to remove it.' },

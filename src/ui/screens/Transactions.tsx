@@ -1,23 +1,28 @@
-// Activity: every transaction, grouped by day, with search, a type filter, and a
-// summary of this period. Tap a row for details. Upload or photograph a receipt to scan it.
+// Activity: the last 14 days' spending (scrub the chart to pick a day), the cards to
+// scope it to, then every transaction grouped by day with a type filter and search.
+// Tap a row for details. Upload or photograph a receipt to scan it.
 
-import { useMemo, useState } from 'preact/hooks';
+import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
 import { fmtDate, fmtWeekday, S } from '../../copy/strings';
 import { addDays, diffDays } from '../../domain/dates';
 import { isBudgetCategory } from '../../domain/defaults';
 import { merchantKey } from '../../domain/merchant';
 import type { Account, Category, Cents, Split, Transaction } from '../../domain/types';
-import { currentPeriod } from '../../services/plan';
 import { confirmTransaction, deleteTransaction, listByDay, recategorise, restoreTransaction, TxValidationError, updateTransaction } from '../../services/transactions';
 import { Amount, CategorySelect, Message, monogram, MoneyInput, PageHeader } from '../components';
 import { useApp, useLoad } from '../hooks';
-import { ArrowDownLeft, CameraIcon, PencilIcon, PlusIcon, SearchIcon, SwapIcon, TrashIcon, UploadIcon } from '../Icons';
+import { ArrowDownLeft, CameraIcon, ChevronRight, PencilIcon, PlusIcon, SearchIcon, SwapIcon, TrashIcon, UploadIcon } from '../Icons';
+import { useRoute } from '../router';
 import { scanReceipt } from '../scan';
 import { Sheet } from '../Sheet';
-import { SpendCard } from '../SpendCard';
+import { SpendPanel } from '../SpendPanel';
+import { CardFace, useCatalog } from '../cards';
+import { isCard } from '../../services/home';
 import { SwipeRow } from '../SwipeRow';
 import { toast } from '../toast';
 import { orderedAccounts } from '../../services/accounts';
+
+const CARDS_OPEN_KEY = 'tameru-activity-cards';
 
 type Filter = 'all' | 'spent' | 'income' | 'transfer';
 const FILTERS: Filter[] = ['all', 'spent', 'income', 'transfer'];
@@ -27,16 +32,57 @@ const matchesFilter = (t: Transaction, f: Filter) =>
 
 export function Transactions() {
   const { app, bump } = useApp();
+  const route = useRoute();
   const [days, setDays] = useState(60);
   const today = app.clock.today();
   const groups = useLoad((a) => listByDay(a, addDays(today, -days), addDays(today, 31)), [days]);
-  const period = useLoad(currentPeriod);
-  const periodTxs = useLoad(async (a) => (period ? a.repos.transactions.inRange(period.start, today) : []), [period?.start]);
   const accounts = useLoad(orderedAccounts) ?? [];
   const categories = useLoad((a) => a.repos.categories.all()) ?? [];
+  const catalog = useCatalog();
+  const cards = accounts.filter(isCard);
   const budgetCats = categories.filter(isBudgetCategory).sort((a, b) => a.sortOrder - b.sortOrder);
-  const [filter, setFilter] = useState<Filter>('all');
+  // Home's See more can arrive with a type already picked (#/transactions?type=spent).
+  const [filter, setFilter] = useState<Filter>(() => {
+    const t = route.params.get('type') as Filter | null;
+    return t && FILTERS.includes(t) ? t : 'all';
+  });
   const [query, setQuery] = useState('');
+  const [searching, setSearching] = useState(false);
+  const searchRef = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    if (searching) setTimeout(() => searchRef.current?.focus(), 120);
+  }, [searching]);
+  // The card the page is scoped to (Home's See more can pass one), and a picked day.
+  const [cardId, setCardId] = useState<string>(() => route.params.get('card') ?? 'all');
+  const [day, setDay] = useState<string | null>(null);
+  // The Cards row folds away; remembered on this device.
+  const [cardsOpen, setCardsOpen] = useState(() => {
+    try {
+      return localStorage.getItem(CARDS_OPEN_KEY) !== '0';
+    } catch {
+      return true;
+    }
+  });
+  const toggleCards = () => {
+    const next = !cardsOpen;
+    setCardsOpen(next);
+    try {
+      localStorage.setItem(CARDS_OPEN_KEY, next ? '1' : '0');
+    } catch {
+      // private mode: it just won't be remembered
+    }
+  };
+  // Keep the picked card in view in its row (sideways only: never scroll the page).
+  const cardRow = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const row = cardRow.current;
+    const el = row?.querySelector<HTMLElement>('.act-card.on');
+    if (!row || !el) return;
+    const left = el.offsetLeft - row.offsetLeft;
+    if (left < row.scrollLeft || left + el.offsetWidth > row.scrollLeft + row.clientWidth) row.scrollTo({ left: Math.max(0, left - 24), behavior: 'smooth' });
+  }, [cardId, accounts.length, cardsOpen]);
+  const card = cards.find((c) => c.id === cardId);
+  const onCard = (t: Transaction) => !card || t.accountId === card.id || t.toAccountId === card.id;
   const [open, setOpen] = useState<string>();
   const [editing, setEditing] = useState(false); // opened by swiping right: straight to the edit form
   const [msg, setMsg] = useState<string>();
@@ -55,21 +101,15 @@ export function Transactions() {
           ...g,
           transactions: g.transactions.filter(
             (t) =>
+              onCard(t) &&
+              (!day || t.date === day) &&
               matchesFilter(t, filter) &&
               (!q || merchantKey(`${t.merchant ?? ''} ${catName(t.categoryId) ?? ''} ${acct(t.accountId)} ${t.note ?? ''}`).includes(q)),
           ),
         }))
         .filter((g) => g.transactions.length > 0),
-    [groups, filter, q, categories.length, accounts.length],
+    [groups, filter, q, day, card?.id, categories.length, accounts.length],
   );
-
-  // This period's totals for the spending card (its 14-day chart works from the day groups).
-  const summary = useMemo(() => {
-    const txs = (periodTxs ?? []).filter((t) => t.status === 'posted');
-    const spent = txs.reduce((s, t) => s + (t.type === 'expense' ? t.amountCents : t.type === 'refund' ? -t.amountCents : 0), 0);
-    const received = txs.reduce((s, t) => s + (t.type === 'income' ? t.amountCents : 0), 0);
-    return { spent, received };
-  }, [periodTxs]);
 
   const run = async (fn: () => Promise<unknown>, done?: string) => {
     try {
@@ -116,38 +156,98 @@ export function Transactions() {
         }
       />
 
-      <SpendCard
-        spentCents={summary.spent}
-        receivedCents={summary.received}
-        transactions={groups.flatMap((g) => g.transactions)}
-        today={today}
+      <SpendPanel
+        transactions={groups.flatMap((g) => g.transactions).filter(onCard)}
+        dates={Array.from({ length: 14 }, (_, i) => addDays(today, i - 13))}
+        selected={day}
+        onSelect={setDay}
         catName={catName}
+        dayLabel={(d) => dayLabel(d, today)}
       />
 
-      <label class="search">
-        <SearchIcon />
-        <input type="search" value={query} placeholder={S.transactions.search} aria-label={S.transactions.search} onInput={(e) => setQuery((e.target as HTMLInputElement).value)} />
-      </label>
+      {cards.length > 0 && (
+        <>
+          {/* Tap the header to fold the row of cards away; the picked card stays named in it. */}
+          <h2 class="act-fold-head">
+            <button type="button" class="act-fold" aria-expanded={cardsOpen} aria-controls="act-cards" onClick={() => toggleCards()}>
+              <span class="act-fold__title">{S.transactions.cards}</span>
+              <span class="section-head__note">
+                {card ? (card.face?.cardName ?? card.name) : S.home.allAccounts}
+                <ChevronRight />
+              </span>
+            </button>
+          </h2>
+          <div class="act-cards-wrap" data-on={cardsOpen} inert={!cardsOpen}>
+          {/* a row of mini cards to swipe through, All first; picking one scopes the page */}
+          <div class="act-cards" id="act-cards" ref={cardRow} role="radiogroup" aria-label={S.transactions.cards}>
+            {[undefined, ...cards].map((c) => {
+              const id = c?.id ?? 'all';
+              const on = cardId === id;
+              return (
+                <button
+                  type="button"
+                  role="radio"
+                  key={id}
+                  aria-checked={on}
+                  class={`act-card${on ? ' on' : ''}`}
+                  onClick={() => (setCardId(id), setDay(null))}
+                >
+                  <span class="act-card__face">
+                    {c ? <CardFace account={c} catalog={catalog} /> : <span class="act-card__all">{S.transactions.filters.all}</span>}
+                    {c?.face?.last4 && <span class="act-card__last4">•• {c.face.last4}</span>}
+                  </span>
+                  <span class="act-card__name">{c ? (c.face?.cardName ?? c.name) : S.home.allAccounts}</span>
+                </button>
+              );
+            })}
+          </div>
+          </div>
+        </>
+      )}
 
-      <div class="segmented segmented--filters" role="radiogroup" aria-label={S.transactions.title}>
-        <span class="segmented__thumb" style={{ width: `calc((100% - 6px) / ${FILTERS.length})`, transform: `translateX(${FILTERS.indexOf(filter) * 100}%)` }} />
-        {FILTERS.map((f) => (
-          <button type="button" role="radio" aria-checked={filter === f} key={f} onClick={() => setFilter(f)}>
-            {S.transactions.filters[f]}
+      <div class={`act-tools${searching ? ' act-tools--search' : ''}`}>
+        <div class="act-tools__main">
+          <div class="segmented segmented--filters" role="radiogroup" aria-label={S.transactions.title}>
+            <span class="segmented__thumb" style={{ width: `calc((100% - 4px) / ${FILTERS.length})`, transform: `translateX(${FILTERS.indexOf(filter) * 100}%)` }} />
+            {FILTERS.map((f) => (
+              <button type="button" role="radio" aria-checked={filter === f} key={f} tabIndex={searching ? -1 : undefined} onClick={() => setFilter(f)}>
+                {S.transactions.filters[f]}
+              </button>
+            ))}
+          </div>
+          <button type="button" class="icon-btn icon-btn--soft act-tools__find" aria-label={S.transactions.search} tabIndex={searching ? -1 : undefined} onClick={() => setSearching(true)}>
+            <SearchIcon />
           </button>
-        ))}
+        </div>
+        <div class="act-tools__search" aria-hidden={!searching}>
+          <label class="search">
+            <SearchIcon />
+            <input
+              ref={searchRef}
+              type="search"
+              value={query}
+              placeholder={S.transactions.search}
+              aria-label={S.transactions.search}
+              tabIndex={searching ? undefined : -1}
+              onInput={(e) => setQuery((e.target as HTMLInputElement).value)}
+            />
+          </label>
+          <button type="button" class="linkbtn linkbtn--accent" tabIndex={searching ? undefined : -1} onClick={() => (setSearching(false), setQuery(''))}>
+            {S.common.cancel}
+          </button>
+        </div>
       </div>
 
       <Message text={msg} />
-      {shown.length === 0 && <p class="muted empty">{query || filter !== 'all' ? S.transactions.noMatch : S.common.none}</p>}
+      {shown.length === 0 && <p class="muted empty">{query || filter !== 'all' || day || card ? S.transactions.noMatch : S.common.none}</p>}
 
       {shown.map((g) => (
         <div class="day" key={g.date}>
           <div class="day__head">
             <span>{dayLabel(g.date, today)}</span>
-            <span>{S.transactions.dayTotal(g.spentCents, g.inCents)}</span>
+            <span>{S.transactions.dayTotal(...dayTotals(groups.find((x) => x.date === g.date)!.transactions.filter(onCard)))}</span>
           </div>
-          <ul class="txlist">
+          <ul class="txlist txlist--group">
             {g.transactions.map((t) => (
               <li key={t.id}>
                 <SwipeRow
@@ -271,6 +371,19 @@ function TxDetails(props: {
       </div>
     </div>
   );
+}
+
+/** A day's spending (expenses less refunds) and money in, counting posted entries only. */
+function dayTotals(txs: Transaction[]): [spent: Cents, inc: Cents] {
+  let spent = 0;
+  let inc = 0;
+  for (const t of txs) {
+    if (t.status !== 'posted') continue;
+    if (t.type === 'expense') spent += t.amountCents;
+    if (t.type === 'refund') spent -= t.amountCents;
+    if (t.type === 'income') inc += t.amountCents;
+  }
+  return [spent, inc];
 }
 
 function dayLabel(date: string, today: string): string {

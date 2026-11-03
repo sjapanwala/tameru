@@ -65,7 +65,7 @@ export function Settings() {
       </button>
 
       <Group title={S.settings.groups.theme} note={S.settings.themeNote}>
-        <ThemePicker value={settings.theme && THEME_IDS.includes(settings.theme) ? settings.theme : 'paper'} onChange={(theme) => update({ theme: theme === 'paper' ? undefined : theme })} />
+        <ThemePicker value={settings.theme && THEME_IDS.includes(settings.theme) ? settings.theme : 'blue'} onChange={(theme) => update({ theme: theme === 'blue' ? undefined : theme })} />
       </Group>
 
       <Group title={S.settings.groups.budget}>
@@ -179,7 +179,7 @@ export function Settings() {
 
 // ---------- list pieces ----------
 
-/** One tile per theme, each drawn in its own colours: a little hero over two lines of text. */
+/** One tile per accent, each drawn in its own colour: a little hero over two lines of text. */
 function ThemePicker({ value, onChange }: { value: ThemeId; onChange: (t: ThemeId) => void }) {
   return (
     <div class="theme-picker" role="radiogroup" aria-label={S.settings.groups.theme}>

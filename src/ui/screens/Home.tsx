@@ -16,7 +16,7 @@ import { CardStack } from '../CardStack';
 import { Amount, Message, monogram } from '../components';
 import { useApp, useLoad } from '../hooks';
 import { initials } from '../../domain/onboarding';
-import { ArrowDownLeft, ArrowUpRight, BellIcon, PersonIcon, SwapIcon, TrashIcon } from '../Icons';
+import { ArrowDownLeft, ArrowUpRight, BellIcon, ChevronRight, PersonIcon, SwapIcon, TrashIcon } from '../Icons';
 import { useCardColors } from '../institutionColor';
 import { useTween } from '../motion';
 import { QuickRow } from '../QuickRow';
@@ -44,6 +44,7 @@ export function Home(props: { offer: FreshStartOffer | null; clearOffer: () => v
   const cards = (accounts ?? []).filter(isCard);
   const colors = useCardColors(cards, catalog, custom);
   const [stackIndex, setStackIndex] = useState(0);
+  const [stackOpen, setStackOpen] = useState(false);
   // The card on top of the stack (none for All accounts) picks the figures and activity shown.
   const index = Math.min(stackIndex, cards.length);
   const card: Account | undefined = index > 0 ? cards[index - 1] : undefined;
@@ -94,6 +95,9 @@ export function Home(props: { offer: FreshStartOffer | null; clearOffer: () => v
   const now = new Date();
   const firstName = settings?.userName?.trim().split(/\s+/)[0];
 
+  // See more opens Activity on the same card.
+  const seeMoreHref = card ? `#/transactions?card=${encodeURIComponent(card.id)}` : '#/transactions';
+
   const swipeDelete = async (t: Transaction) => {
     const before = await deleteTransaction(app, t.id);
     bump();
@@ -119,10 +123,6 @@ export function Home(props: { offer: FreshStartOffer | null; clearOffer: () => v
     <section class="home">
       <div class="home-head">
         <div class="home-head__who">
-          <span class="datetile" aria-hidden="true">
-            <span>{new Date(`${today}T12:00`).toLocaleString('en-CA', { month: 'short' }).replace('.', '').toUpperCase()}</span>
-            <span>{today.slice(8, 10)}</span>
-          </span>
           <span class="home-head__text">
             <span class="home-head__greet">{S.home.greeting(now.getHours())}</span>
             {firstName && <span class="home-head__name">{firstName}</span>}
@@ -139,10 +139,35 @@ export function Home(props: { offer: FreshStartOffer | null; clearOffer: () => v
         </div>
       </div>
 
-      {cards.length > 0 && <CardStack cards={cards} colors={colors} perCard={data.perCard} totalCents={data.safeTodayCents} catalog={catalog} index={index} onIndex={setStackIndex} />}
+      {cards.length > 0 && (
+        <>
+          <div class="section-head section-head--cards">
+            <h2>{S.home.cards}</h2>
+            <button
+              type="button"
+              class={`linkbtn${stackOpen || index > 0 ? ' linkbtn--on' : ''}`}
+              onClick={() => (stackOpen ? setStackOpen(false) : index > 0 ? setStackIndex(0) : setStackOpen(true))}
+            >
+              {stackOpen ? S.home.done : index > 0 ? S.home.showAll : S.home.cardCount(cards.length)}
+            </button>
+          </div>
+          <CardStack
+            cards={cards}
+            colors={colors}
+            perCard={data.perCard}
+            leftCents={sts.safeCents}
+            periodEnd={data.period.end}
+            catalog={catalog}
+            index={index}
+            onIndex={setStackIndex}
+            open={stackOpen}
+            onOpen={setStackOpen}
+          />
+        </>
+      )}
 
       <div class="today">
-        <p class="today__label">{S.home.safeToday}</p>
+        <p class="today__label">{card ? S.home.safeTodayOn(card.face?.cardName ?? card.name) : S.home.safeToday}</p>
         <button type="button" class="today__amount" aria-label={S.home.showBreakdown} onClick={() => setShowBreakdown(true)}>
           <Amount c={shownSafe} />
         </button>
@@ -206,13 +231,13 @@ export function Home(props: { offer: FreshStartOffer | null; clearOffer: () => v
 
       <div class="section-head">
         <h2>{card ? S.home.cardActivity(card.face?.cardName ?? card.name) : S.home.recentActivity}</h2>
-        <a href="#/transactions">{S.home.viewAll}</a>
+        {activity.length > 0 && <span class="section-head__note">{S.home.swipeToRemove}</span>}
       </div>
       {activity.length === 0 ? (
         <p class="muted">{S.common.none}</p>
       ) : (
         <>
-          <ul class="txlist">
+          <ul class="txlist txlist--group">
             {activity.map((t) => (
               <li key={t.id}>
                 <SwipeRow
@@ -238,9 +263,12 @@ export function Home(props: { offer: FreshStartOffer | null; clearOffer: () => v
               </li>
             ))}
           </ul>
-          <p class="home-hint">{S.home.swipeToRemove}</p>
         </>
       )}
+      <a class="seemore" href={seeMoreHref}>
+        {S.home.seeMore}
+        <ChevronRight />
+      </a>
 
       {showBreakdown && (
         <Sheet label={S.home.showBreakdown} onClose={() => setShowBreakdown(false)}>

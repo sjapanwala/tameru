@@ -230,11 +230,12 @@ export function Amount({ c, sign }: { c: Cents; sign?: '+' | '−' }) {
 export function PageHeader({ eyebrow, title, action }: { eyebrow?: string; title: string; action?: preact.ComponentChildren }) {
   return (
     <header class="page-head">
-      {eyebrow && <p class="eyebrow">{eyebrow}</p>}
       <div class="page-head__row">
         <h1>{title}</h1>
         {action}
       </div>
+      {/* under the title, as Plan's "November budget" is in the design, so every title sits at the same height */}
+      {eyebrow && <p class="page-head__sub">{eyebrow}</p>}
     </header>
   );
 }

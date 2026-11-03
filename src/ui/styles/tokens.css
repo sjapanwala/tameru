@@ -1,26 +1,31 @@
-/* Design tokens — "Ledger".
-   Quiet colour. Type does the work: a grotesk for words, a monospace for every figure,
-   like a well-kept receipt. Paper is the default; the themes at the bottom of this
-   file (Harbor, Kiln) swap the colours. Light and dark follow the system. */
+/* Design tokens.
+   One neutral base, light and dark (following the system), and an accent the user
+   picks in Settings: Blue (the default), Green or Orange. Type is the system font
+   (SF Pro on Apple devices, Inter elsewhere) with fixed-width figures. */
 
-:root,
-[data-theme='paper'] {
-  --bg: #f6f4ef;
-  --surface: #eae6de;
-  --text: #141414;
-  --text-2: #6e6a62;
-  --text-3: #b5b0a5;
-  --line: #e2ded5;
-  --line-strong: #141414;
-  --accent: #141414;
-  --accent-text: #f6f4ef;
-  --accent-soft: #eae6de;
-  --track: #e2ded5;
+:root {
+  --bg: #ffffff;
+  --page: #e5e5ea;
+  --surface: #f2f2f7;
+  --fill: rgb(118 118 128 / 0.12);
+  --fill-2: rgb(118 118 128 / 0.2);
+  --text: #000000;
+  --text-2: rgb(60 60 67 / 0.6);
+  --text-3: rgb(60 60 67 / 0.3);
+  --line: rgb(60 60 67 / 0.18);
+  --rule: rgb(60 60 67 / 0.18);
+  --line-strong: #000000;
+  --track: rgb(118 118 128 / 0.12);
+  --glass: rgb(255 255 255 / 0.72);
+  --thumb: #ffffff;
+  --pos: #248a3d;
+  --neg: #ff3b30;
+  --scrim: rgb(0 0 0 / 0.32);
 
-  /* Geist is bundled with the app (no network); system fonts are only a fallback. */
-  --font: 'Geist Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  --font-display: 'Geist Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  --font-num: 'Geist Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  /* SF Pro on Apple devices; Inter (bundled, no network) everywhere else. */
+  --font: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Pro Display', Inter, system-ui, sans-serif;
+  --font-display: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', Inter, system-ui, sans-serif;
+  --font-num: var(--font); /* figures are fixed-width (tabular-nums), not a monospace face */
 
   --fs-2xs: 0.6875rem;
   --fs-xs: 0.75rem;
@@ -61,159 +66,89 @@
   --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.04), 0 1px 1px rgb(0 0 0 / 0.03);
   --shadow-md: 0 8px 24px -8px rgb(0 0 0 / 0.12), 0 2px 6px rgb(0 0 0 / 0.04);
   --shadow-lg: 0 24px 64px -16px rgb(0 0 0 / 0.28), 0 6px 18px rgb(0 0 0 / 0.08);
-  --hero-bg: radial-gradient(120% 140% at 0% 0%, #1d5a40 0%, #143f2d 50%, #0c2a1d 100%);
-  --hero-text: #e7efe9;
-  --hero-dim: rgb(255 255 255 / 0.5);
-  --hero-line: rgb(255 255 255 / 0.1);
-  --rule: #cfcac0;
-  --pos: #1f7a4a;
-  --neg: #b8432f;
-  --card-credit: #d3b26a;
-  --card-credit-ink: #2b2210;
-  --card-debit: #143f2d;
-  --card-debit-ink: #e7efe9;
-  --scrim: rgb(0 0 0 / 0.32);
 
   color-scheme: light;
 }
 
 @media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #000000;
+    --page: #000000;
+    --surface: #1c1c1e;
+    --fill: rgb(118 118 128 / 0.24);
+    --fill-2: rgb(118 118 128 / 0.32);
+    --text: #ffffff;
+    --text-2: rgb(235 235 245 / 0.6);
+    --text-3: rgb(235 235 245 / 0.3);
+    --line: rgb(84 84 88 / 0.6);
+    --rule: rgb(84 84 88 / 0.6);
+    --line-strong: #ffffff;
+    --track: rgb(118 118 128 / 0.24);
+    --glass: rgb(30 30 30 / 0.72);
+    --thumb: #636366;
+    --pos: #30d158;
+    --neg: #ff453a;
+    --scrim: rgb(0 0 0 / 0.6);
+    --shadow-sm: 0 0 0 1px rgb(255 255 255 / 0.04);
+    --shadow-md: 0 0 0 1px rgb(255 255 255 / 0.06), 0 8px 24px -8px rgb(0 0 0 / 0.6);
+    --shadow-lg: 0 0 0 1px rgb(255 255 255 / 0.07), 0 24px 64px -16px rgb(0 0 0 / 0.8);
+    color-scheme: dark;
+  }
+}
+
+/* ---------- accents: accent / text on accent / soft accent background ---------- */
+
+:root,
+[data-theme='blue'] {
+  --accent: #007aff;
+  --accent-text: #ffffff;
+  --accent-soft: rgb(0 122 255 / 0.12);
+}
+
+[data-theme='green'] {
+  --accent: #248a3d;
+  --accent-text: #ffffff;
+  --accent-soft: rgb(36 138 61 / 0.12);
+}
+
+[data-theme='orange'] {
+  --accent: #c93400;
+  --accent-text: #ffffff;
+  --accent-soft: rgb(201 52 0 / 0.1);
+}
+
+@media (prefers-color-scheme: dark) {
   :root,
-  [data-theme='paper'] {
-    --bg: #191815;
-    --surface: #26241f;
-    --text: #f1eee7;
-    --text-2: #9e988c;
-    --text-3: #5e5a52;
-    --line: #2c2a25;
-    --line-strong: #f1eee7;
-    --accent: #f1eee7;
-    --accent-text: #191815;
-    --accent-soft: #26241f;
-    --track: #2c2a25;
-    --shadow-sm: 0 0 0 1px rgb(255 255 255 / 0.04);
-    --shadow-md: 0 0 0 1px rgb(255 255 255 / 0.06), 0 8px 24px -8px rgb(0 0 0 / 0.6);
-    --shadow-lg: 0 0 0 1px rgb(255 255 255 / 0.07), 0 24px 64px -16px rgb(0 0 0 / 0.8);
-    --hero-bg: radial-gradient(120% 140% at 0% 0%, #26704f 0%, #1d5a40 50%, #143f2d 100%);
-    --rule: #3a3731;
-    --pos: #6fc08f;
-    --neg: #d9604a;
-    --hero-text: #e7efe9;
-    --card-credit: #d3b26a;
-    --card-credit-ink: #2b2210;
-    --card-debit: #1d5a40;
-    --card-debit-ink: #e7efe9;
-    --scrim: rgb(0 0 0 / 0.6);
-    color-scheme: dark;
+  [data-theme='blue'] {
+    --accent: #0a84ff;
+    --accent-text: #ffffff;
+    --accent-soft: rgb(10 132 255 / 0.22);
+  }
+
+  [data-theme='green'] {
+    --accent: #30d158;
+    --accent-text: #000000;
+    --accent-soft: rgb(48 209 88 / 0.2);
+  }
+
+  [data-theme='orange'] {
+    --accent: #ff9f0a;
+    --accent-text: #000000;
+    --accent-soft: rgb(255 159 10 / 0.2);
   }
 }
 
-/* ---------- themes ---------- */
-
-/* Harbor: sea-mist greys, harbour-navy ink and hero, a coral card. */
-[data-theme='harbor'] {
-  --bg: #f2f5f6;
-  --surface: #e3e9ec;
-  --text: #0e1b26;
-  --text-2: #5d6b76;
-  --text-3: #a9b5bd;
-  --line: #dce3e7;
-  --line-strong: #0e1b26;
-  --rule: #c3cdd3;
-  --accent: #0e1b26;
-  --accent-text: #f2f5f6;
-  --accent-soft: #e3e9ec;
-  --track: #dce3e7;
-  --pos: #1e7a62;
-  --neg: #c2462e;
-  --hero-bg: radial-gradient(120% 140% at 0% 0%, #2a4c70 0%, #1c3550 50%, #0e1b26 100%);
-  --hero-text: #e9eff4;
-  --card-credit: #1c3550;
-  --card-credit-ink: #e9eff4;
-  --card-debit: #e07a5f;
-  --card-debit-ink: #2a120b;
-}
-
-@media (prefers-color-scheme: dark) {
-  [data-theme='harbor'] {
-    --bg: #0e1720;
-    --surface: #192530;
-    --text: #e8eef2;
-    --text-2: #8b9aa5;
-    --text-3: #4f5e6a;
-    --line: #1f2b35;
-    --line-strong: #e8eef2;
-    --rule: #2e3c47;
-    --accent: #e8eef2;
-    --accent-text: #0e1720;
-    --accent-soft: #192530;
-    --track: #1f2b35;
-    --pos: #5cc3a2;
-    --neg: #e8735b;
-    --hero-bg: radial-gradient(120% 140% at 0% 0%, #36608c 0%, #2a4c70 50%, #1c3550 100%);
-    --hero-text: #e9eff4;
-    --card-credit: #2a4c70;
-    --card-credit-ink: #e9eff4;
-    --card-debit: #e07a5f;
-    --card-debit-ink: #2a120b;
-    --shadow-sm: 0 0 0 1px rgb(255 255 255 / 0.04);
-    --shadow-md: 0 0 0 1px rgb(255 255 255 / 0.06), 0 8px 24px -8px rgb(0 0 0 / 0.6);
-    --shadow-lg: 0 0 0 1px rgb(255 255 255 / 0.07), 0 24px 64px -16px rgb(0 0 0 / 0.8);
-    --scrim: rgb(0 0 0 / 0.6);
-    color-scheme: dark;
-  }
-}
-
-/* Kiln: fired clay. Sand paper, burnt-umber ink, a terracotta hero. */
-[data-theme='kiln'] {
-  --bg: #f7f0e8;
-  --surface: #efe3d6;
-  --text: #2a1a12;
-  --text-2: #7a6556;
-  --text-3: #c2ae9c;
-  --line: #e8dccf;
-  --line-strong: #2a1a12;
-  --rule: #d6c5b3;
-  --accent: #2a1a12;
-  --accent-text: #f7f0e8;
-  --accent-soft: #efe3d6;
-  --track: #e8dccf;
-  --pos: #4e6b2e;
-  --neg: #b23a1e;
-  --hero-bg: radial-gradient(120% 140% at 0% 0%, #d66a43 0%, #c4532d 50%, #9a3e20 100%);
-  --hero-text: #fff1e8;
-  --card-credit: #c4532d;
-  --card-credit-ink: #fff1e8;
-  --card-debit: #5e6b33;
-  --card-debit-ink: #f3f1e4;
-}
-
-@media (prefers-color-scheme: dark) {
-  [data-theme='kiln'] {
-    --bg: #1c130e;
-    --surface: #2a1e17;
-    --text: #f5eae0;
-    --text-2: #a8917f;
-    --text-3: #6b5546;
-    --line: #33251c;
-    --line-strong: #f5eae0;
-    --rule: #43322a;
-    --accent: #f5eae0;
-    --accent-text: #1c130e;
-    --accent-soft: #2a1e17;
-    --track: #33251c;
-    --pos: #9dbb6e;
-    --neg: #e0694a;
-    --hero-bg: radial-gradient(120% 140% at 0% 0%, #d66a43 0%, #c4532d 50%, #9a3e20 100%);
-    --hero-text: #fff1e8;
-    --card-credit: #c4532d;
-    --card-credit-ink: #fff1e8;
-    --card-debit: #6e7c3c;
-    --card-debit-ink: #f3f1e4;
-    --shadow-sm: 0 0 0 1px rgb(255 255 255 / 0.04);
-    --shadow-md: 0 0 0 1px rgb(255 255 255 / 0.06), 0 8px 24px -8px rgb(0 0 0 / 0.6);
-    --shadow-lg: 0 0 0 1px rgb(255 255 255 / 0.07), 0 24px 64px -16px rgb(0 0 0 / 0.8);
-    --scrim: rgb(0 0 0 / 0.6);
-    color-scheme: dark;
-  }
+/* Panels that used to have their own hero colours take the accent; drawn cards
+   without art are graphite (credit) or the accent (debit). Declared wherever an accent
+   is, so each resolves against its own. */
+:root,
+[data-theme] {
+  --hero-bg: var(--accent);
+  --hero-text: var(--accent-text);
+  --hero-dim: color-mix(in srgb, var(--accent-text) 65%, transparent);
+  --hero-line: color-mix(in srgb, var(--accent-text) 14%, transparent);
+  --card-credit: #2c2c2e;
+  --card-credit-ink: #ffffff;
+  --card-debit: var(--accent);
+  --card-debit-ink: var(--accent-text);
 }

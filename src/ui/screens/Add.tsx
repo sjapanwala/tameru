@@ -2,19 +2,19 @@
 // category and account are already picked by the suggestion engine. One tap to save.
 
 import { useEffect, useState } from 'preact/hooks';
-import { S } from '../../copy/strings';
+import { fmtWeekday, S } from '../../copy/strings';
 import { entryDisplay, entryToCents, keyFromKeyboard, pressKey, type KeypadKey } from '../../domain/amountEntry';
 import { isBudgetCategory } from '../../domain/defaults';
 import { centsToDecimal } from '../../domain/money';
 import type { Split, TransactionType } from '../../domain/types';
 import { suggestFor, type Suggestion } from '../../services/categorise';
-import { addTransaction, TxValidationError } from '../../services/transactions';
+import { addTransaction, deleteTransaction, TxValidationError } from '../../services/transactions';
 import { CategorySelect, ChipSelect, MoneyInput } from '../components';
 import { useApp, useLoad } from '../hooks';
 import { Keypad } from '../Keypad';
 import { haptic } from '../motion';
 import { takeAddPrefill } from '../prefill';
-import { toast } from '../toast';
+import { showLogged } from '../Logged';
 import { orderedAccounts } from '../../services/accounts';
 
 const TYPES = ['expense', 'income', 'refund', 'transfer'] as const;
@@ -61,7 +61,7 @@ export function Add({ onDone, initialType = 'expense' }: { onDone: () => void; i
     setEntry((e) => pressKey(e, k));
   };
 
-  const save = async () => {
+  const save = async (e?: Event) => {
     if (!amount) {
       setShake((n) => n + 1);
       haptic(20);
@@ -69,7 +69,7 @@ export function Add({ onDone, initialType = 'expense' }: { onDone: () => void; i
     }
     try {
       const realSplits = splits.filter((s) => s.amountCents > 0 && s.categoryId);
-      await addTransaction(app, {
+      const tx = await addTransaction(app, {
         amountCents: amount,
         type,
         date,
@@ -78,8 +78,31 @@ export function Add({ onDone, initialType = 'expense' }: { onDone: () => void; i
         merchant,
         note,
       });
-      haptic(12);
-      toast(S.add.saved(amount));
+      // Confirm it full screen, flooding out from the Save button, with what was logged.
+      const btn = (e?.currentTarget as Element | undefined)?.getBoundingClientRect();
+      const acct = (id?: string) => accounts.find((a) => a.id === id)?.name;
+      const cat = (id?: string) => categories.find((c) => c.id === id)?.name;
+      const rows: [string, string][] = [];
+      if (type === 'transfer') {
+        rows.push([S.accounts.from, acct(accountId) ?? ''], [S.accounts.to, acct(toAccountId) ?? '']);
+      } else {
+        rows.push([S.common.category, realSplits.length ? realSplits.map((x) => cat(x.categoryId)).join(' + ') : (cat(categoryId) ?? S.common.uncategorised)]);
+        if (accountId) rows.push([S.transactions.account, acct(accountId) ?? '']);
+      }
+      if (merchant.trim()) rows.push([S.logged.merchant, merchant.trim()]);
+      rows.push([S.transactions.date, date === app.clock.today() ? S.home.today : fmtWeekday(date)]);
+      if (note.trim()) rows.push([S.transactions.note, note.trim()]);
+      showLogged({
+        kind: S.txType[type],
+        amountCents: type === 'expense' ? -amount : amount,
+        sign: type === 'income' || type === 'refund' ? '+' : undefined,
+        rows: rows.filter(([, v]) => v),
+        origin: btn ? { x: btn.left + btn.width / 2, y: btn.top + btn.height / 2 } : undefined,
+        undo: async () => {
+          await deleteTransaction(app, tx.id);
+          bump();
+        },
+      });
       bump();
       onDone();
     } catch (err) {

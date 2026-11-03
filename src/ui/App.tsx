@@ -26,6 +26,7 @@ import { ScanHost } from './scan';
 import { TabBar } from './TabBar';
 import { applyTheme } from './theme';
 import { ToastHost } from './toast';
+import { LoggedHost } from './Logged';
 import { hideSplash } from './splash';
 import { announceUpdate, latestReleases } from './version';
 import { WhatsNew } from './WhatsNew';
@@ -129,6 +130,7 @@ function Screens({ offer, setOffer }: { offer: FreshStartOffer | null; setOffer:
       {news.length > 0 && !sheetOpen && <WhatsNew releases={news} onClose={() => setNews([])} />}
       <ScanHost />
       <ToastHost />
+      <LoggedHost />
     </>
   );
 }

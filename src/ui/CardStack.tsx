@@ -1,8 +1,12 @@
-// Home's card stack. "All accounts" sits on top, then each card in the user's order.
-// Drag the top card sideways to step through them (it wraps); the cards behind fan up
-// above it. All accounts shows today's safe-to-spend split by card. Tap the top card to open it on Accounts.
+// Home's card stack, in three states:
+// - All accounts (closed): a summary of what's left, split by card, with the cards
+//   resting behind it, just their tops showing.
+// - A card selected (closed): that card in front, the next ones peeking above it.
+//   Swipe sideways to step through the cards.
+// - Open: every card fanned out under an "All accounts" row. Tap one to select it.
+// Pull down (or tap) to open; pull up, tap Done, or pick something to close.
 
-import { useRef, useState } from 'preact/hooks';
+import { useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
 import { money, S } from '../copy/strings';
 import type { CatalogCard } from '../domain/cardCatalog';
 import type { Account, Cents } from '../domain/types';
@@ -10,148 +14,248 @@ import type { CardShare } from '../services/home';
 import { CardFace } from './cards';
 import { Amount } from './components';
 import { haptic, reducedMotion } from './motion';
-import { go } from './router';
 
-const SWIPE = 70; // px past which a release moves to the next card
-const DRAG_START = 6;
-const SHOWN = 3; // cards visible in the stack at once
-const LEGEND = 3; // cards named under the All accounts bar
+const SWIPE = 70; // px past which a sideways release moves to the next card
+const PULL = 40; // px past which a vertical release opens or closes
+const AXIS = 8; // px before a drag picks an axis
+const PEEK = 11; // px of each card showing behind the one in front
+const DEPTH = 3; // cards drawn in a closed stack; the rest hide behind the last
+const ROW = 76; // px of each card showing when the stack is open
+const ALL_ROW = 56; // the All accounts row, and the gap under it
+const LEGEND = 3; // cards named under the summary bar
 
 export function CardStack(props: {
   cards: Account[];
   colors: Record<string, string>;
   perCard: Record<string, CardShare>;
-  totalCents: Cents; // today's safe-to-spend, all cards together
+  leftCents: Cents; // what's left for the period, all cards together
+  periodEnd: string;
   catalog: CatalogCard[];
-  index: number;
+  index: number; // 0 is All accounts, then each card
   onIndex: (i: number) => void;
+  open: boolean;
+  onOpen: (open: boolean) => void;
 }) {
-  const { cards, index } = props;
-  const n = cards.length + 1;
-  const [dx, setDx] = useState(0);
-  const [dragging, setDragging] = useState(false);
-  const g = useRef<{ x: number; y: number; id: number; on: boolean } | null>(null);
-
-  const step = (by: number) => {
-    haptic(6);
-    props.onIndex((index + by + n) % n);
+  const { cards, index, open } = props;
+  const n = cards.length;
+  const frame = useRef<HTMLDivElement>(null);
+  const summary = useRef<HTMLDivElement>(null);
+  const [w, setW] = useState(0);
+  const [sumH, setSumH] = useState(112);
+  const [drag, setDragState] = useState({ x: 0, y: 0, on: false });
+  const dragRef = useRef(drag);
+  const setDrag = (d: { x: number; y: number; on: boolean }) => {
+    dragRef.current = d;
+    setDragState(d);
   };
-  const open = () => go(index === 0 ? '/accounts' : `/accounts?id=${encodeURIComponent(cards[index - 1]!.id)}`);
+  const g = useRef<{ x: number; y: number; id: number; axis: 'x' | 'y' | null; target: Element | null } | null>(null);
+
+  useLayoutEffect(() => {
+    const el = frame.current;
+    if (!el) return;
+    const measure = () => {
+      setW(el.clientWidth);
+      if (summary.current) setSumH(summary.current.offsetHeight);
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    if (summary.current) ro.observe(summary.current);
+    return () => ro.disconnect();
+  }, []);
+
+  // iOS starts its own page scroll for a vertical drag whatever touch-action says, and
+  // then cancels our pointer events. A native, non-passive touchmove that blocks the
+  // page while the finger is on the stack keeps the drag ours (as useWalletPull does).
+  useEffect(() => {
+    const el = frame.current;
+    if (!el) return;
+    const onTouchMove = (e: TouchEvent) => {
+      if (e.cancelable) e.preventDefault();
+    };
+    el.addEventListener('touchmove', onTouchMove, { passive: false });
+    return () => el.removeEventListener('touchmove', onTouchMove);
+  }, []);
+
+  // Esc closes the open stack, as Done does.
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && props.onOpen(false);
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [open]);
+
+  const h = w / 1.586; // card height (ID-1 proportions)
+  const sel = index - 1; // selected card, or -1 for All accounts
+
+  const choose = (i: number) => {
+    haptic(6);
+    props.onIndex(i);
+    props.onOpen(false);
+  };
 
   const onDown = (e: PointerEvent) => {
     if (e.pointerType === 'mouse' && e.button !== 0) return;
-    g.current = { x: e.clientX, y: e.clientY, id: e.pointerId, on: false };
+    g.current = { x: e.clientX, y: e.clientY, id: e.pointerId, axis: null, target: e.target as Element };
   };
   const onMove = (e: PointerEvent) => {
     const s = g.current;
     if (!s || s.id !== e.pointerId) return;
-    const x = e.clientX - s.x;
-    const y = e.clientY - s.y;
-    if (!s.on) {
-      if (Math.abs(y) > 10 && Math.abs(y) > Math.abs(x)) return void (g.current = null); // scrolling
-      if (Math.abs(x) < DRAG_START) return;
-      s.on = true;
-      setDragging(true);
+    const dx = e.clientX - s.x;
+    const dy = e.clientY - s.y;
+    if (!s.axis) {
+      if (Math.abs(dx) < AXIS && Math.abs(dy) < AXIS) return;
+      s.axis = Math.abs(dx) > Math.abs(dy) ? 'x' : 'y';
       (e.currentTarget as Element).setPointerCapture?.(e.pointerId);
     }
-    setDx(x);
+    if (s.axis === 'x') setDrag({ x: !open && sel >= 0 ? dx : 0, y: 0, on: true });
+    else setDrag({ x: 0, y: dy, on: true });
   };
   const onUp = (e: PointerEvent) => {
     const s = g.current;
     g.current = null;
     if (!s || s.id !== e.pointerId) return;
-    if (!s.on) return open(); // a tap
-    setDragging(false);
-    setDx(0);
-    if (dx < -SWIPE) step(1);
-    else if (dx > SWIPE) step(-1);
+    const { x, y } = dragRef.current;
+    setDrag({ x: 0, y: 0, on: false });
+    if (!s.axis) {
+      // a tap: when open, pick what was tapped; when closed, open
+      if (!open) return void (haptic(6), props.onOpen(true));
+      const card = s.target?.closest('[data-card]');
+      if (card) choose(Number(card.getAttribute('data-card')) + 1);
+      return; // the All accounts row is a button and handles its own click
+    }
+    if (s.axis === 'y') {
+      if (y > PULL && !open) (haptic(6), props.onOpen(true));
+      else if (y < -PULL && open) props.onOpen(false);
+      return;
+    }
+    if (!open && sel >= 0 && n > 1) {
+      if (x < -SWIPE) (haptic(6), props.onIndex(((sel + 1) % n) + 1));
+      else if (x > SWIPE) (haptic(6), props.onIndex(((sel - 1 + n) % n) + 1));
+    }
+  };
+  const cancel = () => {
+    g.current = null;
+    setDrag({ x: 0, y: 0, on: false });
   };
 
-  // The bar splits today's safe-to-spend by card; each segment is that card's share.
-  const today = (a: Account) => props.perCard[a.id]?.safeTodayCents ?? 0;
-  const total = props.totalCents;
-  const segs = total > 0 ? cards.filter((a) => today(a) > 0) : [];
-  const animate = !dragging && !reducedMotion();
+  const pull = Math.max(0, drag.y);
+  const pullUp = Math.min(0, drag.y);
+  const animate = !drag.on && !reducedMotion();
+  const cardsTop = sumH + 16;
+  const height = open
+    ? ALL_ROW + Math.max(0, n - 1) * ROW + h
+    : sel < 0
+      ? cardsTop + (Math.min(n, DEPTH) - 1) * PEEK + 14 + pull * 1.1
+      : (DEPTH - 1) * PEEK + 2 + h + pull * 0.9;
+
+  // The summary splits what's left by card; each segment is that card's share.
+  const left = (a: Account) => props.perCard[a.id]?.leftCents ?? 0;
+  const total = props.leftCents;
+  const segs = total > 0 ? cards.filter((a) => left(a) > 0) : [];
 
   return (
-    <div class="stack">
+    <div class={`stack${open ? ' stack--open' : ''}`}>
       <div
+        ref={frame}
         class="stack__frame"
-        role="group"
-        aria-roledescription="carousel"
-        aria-label={index === 0 ? S.home.allAccounts : cards[index - 1]!.name}
+        style={{ height: `${height}px`, transition: animate ? undefined : 'none' }}
         onDragStart={(e) => e.preventDefault()}
         onContextMenu={(e) => e.preventDefault()}
         onPointerDown={onDown}
         onPointerMove={onMove}
         onPointerUp={onUp}
-        onPointerCancel={() => {
-          g.current = null;
-          setDragging(false);
-          setDx(0);
-        }}
+        onPointerCancel={cancel}
       >
-        {Array.from({ length: n }, (_, i) => {
-          const pos = (i - index + n) % n;
-          const top = pos === 0;
-          const transform = top ? `translateX(${dx}px) rotate(${dx / 22}deg)` : `translateY(${-pos * 14}px) scale(${1 - pos * 0.06})`;
-          const a = i > 0 ? cards[i - 1] : undefined;
+        <div ref={summary} class="stack__summary" aria-hidden={open || sel >= 0} data-on={!open && sel < 0}>
+          <span class="stack__sumlabel">{S.home.allLeft(props.periodEnd)}</span>
+          <span class="stack__total">
+            <Amount c={total} />
+          </span>
+          {segs.length > 0 && (
+            <>
+              <span class="stack__bar">
+                {segs.map((s) => (
+                  <span key={s.id} style={{ width: `${(left(s) / total) * 100}%`, '--seg': props.colors[s.id] }} />
+                ))}
+              </span>
+              <span class="stack__legend">
+                {segs.slice(0, LEGEND).map((s) => (
+                  <span key={s.id}>
+                    <i style={{ '--seg': props.colors[s.id] }} />
+                    <span class="stack__name">{s.face?.cardName ?? s.name}</span>
+                    <span class="num">{money(Math.round(left(s) / 100) * 100).replace(/\.00$/, '')}</span>
+                  </span>
+                ))}
+              </span>
+            </>
+          )}
+        </div>
+
+        <button type="button" class="stack__allrow" data-allrow tabIndex={open ? 0 : -1} aria-hidden={!open} data-on={open} onClick={() => choose(0)}>
+          <span>{S.home.allAccounts}</span>
+          {sel < 0 && <span class="stack__check" aria-hidden="true">✓</span>}
+        </button>
+
+        {cards.map((a, i) => {
+          let y: number;
+          let x = 0;
+          let rot = 0;
+          let depth = 0;
+          let z: number;
+          let hidden = false;
+          if (open) {
+            y = ALL_ROW + i * ROW + pullUp * 0.4 * i;
+            z = i + 1;
+          } else if (sel < 0) {
+            // resting behind the summary: the first card furthest back, the last in front
+            const d = n - 1 - i;
+            depth = Math.min(d, DEPTH - 1);
+            hidden = d >= DEPTH;
+            y = cardsTop + (DEPTH - 1 - depth) * PEEK - (DEPTH - Math.min(n, DEPTH)) * PEEK + pull * (0.5 + (DEPTH - 1 - depth) * 0.45);
+            z = i + 1;
+          } else {
+            const k = (i - sel + n) % n;
+            depth = Math.min(k, DEPTH - 1);
+            hidden = k >= DEPTH;
+            y = (DEPTH - 1) * PEEK - depth * PEEK + pull * (k === 0 ? 0.9 : Math.max(0.2, 0.9 - k * 0.35));
+            z = n - k;
+            if (k === 0) {
+              x = drag.x;
+              rot = drag.x / 26;
+            }
+          }
+          const sc = 1 - depth * 0.05;
           return (
             <div
-              key={a?.id ?? 'all'}
-              class={`stack__card${animate || !top ? ' stack__card--animate' : ''}`}
-              aria-hidden={!top}
-              style={{ transform, zIndex: String(n - pos), opacity: pos < SHOWN ? '1' : '0' }}
+              key={a.id}
+              data-card={i}
+              class={`stack__card${animate ? ' stack__card--animate' : ''}`}
+              aria-hidden={!open && i !== sel}
+              role={open ? 'button' : undefined}
+              tabIndex={open ? 0 : undefined}
+              aria-label={open ? S.home.showCard(a.face?.cardName ?? a.name) : undefined}
+              onKeyDown={open ? (e) => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), choose(i + 1)) : undefined}
+              style={{
+                transform: `translate3d(${x}px, ${y}px, ${-depth * 40}px) rotateX(${depth * 7}deg) rotate(${rot}deg) scale(${sc})`,
+                zIndex: String(z),
+                opacity: hidden ? '0' : '1',
+                filter: depth ? `saturate(${1 - depth * 0.15})` : undefined,
+                '--shade': String(depth * 0.12),
+              }}
             >
-              {a ? (
-                <CardFace account={a} catalog={props.catalog} />
-              ) : (
-                <div class="cardface allcard">
-                  <span class="allcard__top">
-                    <span class="allcard__title">{S.home.allAccounts}</span>
-                    <span class="allcard__count">{S.home.cardCount(cards.length)}</span>
-                  </span>
-                  <span class="allcard__total">
-                    <span class="allcard__label">{S.home.safeToday}</span>
-                    <Amount c={total} />
-                  </span>
-                  <span class="allcard__split">
-                    <span class="allcard__bar">
-                      {segs.map((s) => (
-                        <span key={s.id} style={{ width: `${(today(s) / total) * 100}%`, '--seg': props.colors[s.id] }} />
-                      ))}
-                    </span>
-                    <span class="allcard__legend">
-                      {segs.slice(0, LEGEND).map((s) => (
-                        <span key={s.id}>
-                          <i style={{ '--seg': props.colors[s.id] }} />
-                          <span class="allcard__name">{s.face?.cardName ?? s.name}</span>
-                          <span class="num">{money(Math.round(today(s) / 100) * 100).replace(/\.00$/, '')}</span>
-                        </span>
-                      ))}
-                    </span>
-                  </span>
-                </div>
-              )}
+              <CardFace account={a} catalog={props.catalog} />
+              <span class="stack__peek" data-on={open}>
+                {S.home.cardToday(money(props.perCard[a.id]?.safeTodayCents ?? 0))}
+              </span>
             </div>
           );
         })}
       </div>
-      <div class="stack__foot">
-        <div class="stack__pager">
-          {Array.from({ length: n }, (_, i) => (
-            <button
-              type="button"
-              key={i}
-              class={i === index ? 'on' : ''}
-              aria-label={i === 0 ? S.home.allAccounts : S.home.showCard(cards[i - 1]!.name)}
-              aria-current={i === index}
-              onClick={() => props.onIndex(i)}
-            />
-          ))}
-        </div>
-        <span class="stack__hint">{S.home.swipeCards}</span>
-      </div>
+      <button type="button" class="stack__hint" onClick={() => (haptic(6), props.onOpen(!open))}>
+        <span class="stack__grabber" aria-hidden="true" />
+        <span>{open ? S.home.stackHint.open : sel < 0 ? S.home.stackHint.all : n > 1 ? S.home.stackHint.card : S.home.stackHint.cardOnly}</span>
+      </button>
     </div>
   );
 }
