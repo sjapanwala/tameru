@@ -76,10 +76,11 @@ interface ServicePrice {
   prevClose: number;
   currency?: string;
   name?: string;
+  time?: number; // seconds since 1970, of the last trade
 }
 
 /** The price service's reply → prices in cents, and the symbols it had nothing for. */
-export function readPrices(body: unknown, closeKey: LocalDate): { quotes: Quote[]; fx?: number; missing: string[] } {
+export function readPrices(body: unknown, closeKey: LocalDate, live?: { now: number }): { quotes: Quote[]; fx?: number; missing: string[] } {
   const o = (body ?? {}) as { prices?: Record<string, ServicePrice>; missing?: unknown };
   const quotes: Quote[] = [];
   let fx: number | undefined;
@@ -92,7 +93,9 @@ export function readPrices(body: unknown, closeKey: LocalDate): { quotes: Quote[
     const price = Math.round(p.price * 10000) / 100;
     const prev = p.prevClose > 0 ? Math.round(p.prevClose * 10000) / 100 : price;
     const name = typeof p.name === 'string' && p.name.trim() ? p.name.trim().slice(0, 80) : undefined;
-    quotes.push({ symbol, priceCents: price, prevCloseCents: prev, tradingDay: closeKey, closeKey, ...(name ? { name } : {}) });
+    // A refresh by hand is a price from during the day, stamped with when it last traded.
+    const at = live ? ((p.time ?? 0) > 0 ? Math.min(p.time! * 1000, live.now) : live.now) : undefined;
+    quotes.push({ symbol, priceCents: price, prevCloseCents: prev, tradingDay: closeKey, closeKey, ...(name ? { name } : {}), ...(at ? { at } : {}) });
   }
   const missing = Array.isArray(o.missing) ? o.missing.filter((m): m is string => typeof m === 'string' && m !== USDCAD) : [];
   return { quotes, ...(fx ? { fx } : {}), missing };
@@ -121,6 +124,7 @@ export interface Portfolio {
   priced: number; // holdings with a price
   hasDay: boolean; // some price came with a real previous close (fetched, not from a file)
   asOf?: LocalDate; // the latest trading day among the prices
+  liveAt?: number; // ms: when the prices are from, if a refresh brought them in during the day
   missingFx: boolean; // US holdings, but no USD→CAD rate yet
 }
 
@@ -132,6 +136,7 @@ export function portfolio(holdings: readonly Holding[], quotes: Record<string, Q
   let day = 0;
   let priced = 0;
   let asOf: LocalDate | undefined;
+  let liveAt: number | undefined;
   let missingFx = false;
   let hasDay = false;
   const views = holdings.map((h): HoldingView => {
@@ -151,6 +156,7 @@ export function portfolio(holdings: readonly Holding[], quotes: Record<string, Q
     } else if (real) {
       priced++;
       if (!asOf || real.tradingDay > asOf) asOf = real.tradingDay;
+      if (real.at && (!liveAt || real.at > liveAt)) liveAt = real.at;
     }
     const v = Math.round(h.shares * q.priceCents * rate);
     const d = Math.round(h.shares * (q.priceCents - q.prevCloseCents) * rate);
@@ -174,6 +180,7 @@ export function portfolio(holdings: readonly Holding[], quotes: Record<string, Q
     priced,
     hasDay,
     ...(asOf ? { asOf } : {}),
+    ...(liveAt ? { liveAt } : {}),
     missingFx,
   };
 }

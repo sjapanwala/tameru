@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { testApp } from '../helpers';
 import { createAccount } from '../../src/services/accounts';
-import { importHoldings, PRICES_URL, refreshQuotes, saveHoldings, setMarkets } from '../../src/services/markets';
+import { importHoldings, PRICES_URL, REFRESHES_PER_DAY, refreshesLeft, refreshNow, refreshQuotes, saveHoldings, setMarkets } from '../../src/services/markets';
 import { parseHoldingsCsv } from '../../src/domain/holdings';
 import type { App } from '../../src/services/app';
 
@@ -126,5 +126,65 @@ describe('market prices', () => {
     await refreshQuotes(app, svc.fetchFn);
     expect(svc.calls[1]).toContain('AAPL');
     expect((await app.repos.settings.get()).markets!.quotes!.AAPL).toMatchObject({ priceCents: 20000 });
+  });
+
+  describe('refreshing by hand', () => {
+    it('brings in every price as it stands now, stamped with the time, three times a day', async () => {
+      const { app } = await setup('2026-11-04T15:30:00Z'); // 10:30 a.m. ET, markets open
+      const svc = fakeService(PRICES);
+      const urls: string[] = [];
+      const fetchFn = (u: string) => (urls.push(u), svc.fetchFn(u));
+      expect(REFRESHES_PER_DAY).toBe(3);
+
+      const first = await refreshNow(app, fetchFn);
+      expect(first).toMatchObject({ updated: 3, left: 2 });
+      // everything, not just what's due, and past the phone's cache
+      expect(svc.calls).toEqual([['NOPE', 'VOO', 'XEQT.TO', 'USDCAD=X']]);
+      expect(urls[0]).toMatch(/&now=\d+$/);
+      const m = (await app.repos.settings.get()).markets!;
+      expect(m.quotes!['XEQT.TO']).toMatchObject({ priceCents: 3500, closeKey: '2026-11-03', at: new Date('2026-11-04T15:30:00Z').getTime() });
+
+      expect(await refreshNow(app, fetchFn)).toMatchObject({ left: 1 });
+      expect(await refreshNow(app, fetchFn)).toMatchObject({ left: 0 });
+      // the fourth asks for nothing
+      expect(await refreshNow(app, fetchFn)).toEqual({ updated: 0, left: 0, limited: true });
+      expect(svc.calls).toHaveLength(3);
+
+      // the next day, three more
+      app.clock.today = () => '2026-11-05';
+      expect(refreshesLeft((await app.repos.settings.get()).markets, '2026-11-05')).toBe(3);
+      expect(await refreshNow(app, fetchFn)).toMatchObject({ left: 2 });
+    });
+
+    it('doesn’t count a refresh that never reached the service', async () => {
+      const { app } = await setup('2026-11-04T15:30:00Z');
+      const offline = async () => {
+        throw new Error('offline');
+      };
+      expect(await refreshNow(app, offline)).toEqual({ updated: 0, stopped: 'network', left: 3 });
+      expect(await refreshNow(app, fakeService(PRICES).fetchFn)).toMatchObject({ left: 2 });
+    });
+
+    it('gives a symbol with no price another try, and the close still comes in after', async () => {
+      const { app } = await setup('2026-11-03T22:00:00Z');
+      await refreshQuotes(app, fakeService(PRICES).fetchFn);
+      expect((await app.repos.settings.get()).markets!.unknown).toEqual(['NOPE']);
+      app.clock.now = () => new Date('2026-11-04T15:30:00Z');
+      await refreshNow(app, fakeService({ ...PRICES, NOPE: 5 }).fetchFn);
+      expect((await app.repos.settings.get()).markets!.unknown).toEqual([]);
+      // after the Nov 4 close, the usual round replaces the day's prices with the close
+      app.clock.now = () => new Date('2026-11-04T21:45:00Z');
+      expect(await refreshQuotes(app, fakeService({ ...PRICES, NOPE: 5 }).fetchFn)).toEqual({ updated: 4 });
+      const q = (await app.repos.settings.get()).markets!.quotes!['XEQT.TO']!;
+      expect(q.closeKey).toBe('2026-11-04');
+      expect(q.at).toBeUndefined();
+    });
+
+    it('does nothing while the feature is off', async () => {
+      const app = await testApp('2026-11-03');
+      const svc = fakeService(PRICES);
+      expect(await refreshNow(app, svc.fetchFn)).toEqual({ updated: 0, left: 3 });
+      expect(svc.calls).toHaveLength(0);
+    });
   });
 });

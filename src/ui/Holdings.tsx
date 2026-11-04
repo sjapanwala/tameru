@@ -6,10 +6,10 @@ import { useRef, useState } from 'preact/hooks';
 import { fmtDate, money, S } from '../copy/strings';
 import { currencyOf, displaySymbol, normaliseSymbol, parseHoldingsCsv, portfolio } from '../domain/holdings';
 import type { Account, Cents, Holding, MarketSettings } from '../domain/types';
-import { importHoldings, refreshQuotes, saveHoldings } from '../services/markets';
+import { importHoldings, refreshesLeft, refreshNow, refreshQuotes, saveHoldings } from '../services/markets';
 import { Amount, MoneyInput } from './components';
 import { useApp } from './hooks';
-import { PlusIcon, UploadIcon } from './Icons';
+import { PlusIcon, RefreshIcon, UploadIcon } from './Icons';
 import { Sheet } from './Sheet';
 import { toast } from './toast';
 
@@ -22,10 +22,18 @@ const n2 = (cents: number) => (cents / 100).toLocaleString('en-CA', { minimumFra
 /** "ISHARES CORE EQUITY ETF" → "Ishares Core Equity ETF": Yahoo's all-caps names, gentler. Short words in caps (ETF, S&P) stay. */
 const softName = (n?: string) => (n && n === n.toUpperCase() ? n.replace(/[A-Z][A-Z'&.]*/g, (w) => (w.length <= 3 ? w : w[0] + w.slice(1).toLowerCase())) : n);
 const signedMoney = (c: Cents) => `${c >= 0 ? '+' : '−'}${money(Math.abs(c))}`;
+/** When a refreshed price is from: "11:42 a.m." today, else "Nov 3, 3:59 p.m.". */
+const when = (ms: number, today: string) => {
+  const d = new Date(ms);
+  const time = d.toLocaleTimeString('en-CA', { hour: 'numeric', minute: '2-digit' });
+  const day = d.toLocaleDateString('en-CA'); // YYYY-MM-DD, local
+  return day === today ? time : `${fmtDate(day)}, ${time}`;
+};
 
 export function HoldingsPanel({ account, markets }: { account: Account; markets?: MarketSettings }) {
   const { app, bump } = useApp();
   const [editing, setEditing] = useState<{ index: number; draft: Holding } | null>(null);
+  const [busy, setBusy] = useState(false);
   const file = useRef<HTMLInputElement>(null);
   const holdings = account.holdings ?? [];
   const on = !!markets?.enabled;
@@ -41,6 +49,21 @@ export function HoldingsPanel({ account, markets }: { account: Account; markets?
     await saveHoldings(app, account.id, list);
     bump();
   };
+  // A refresh by hand: every price as it stands now, a few times a day.
+  const today = app.clock.today();
+  const left = refreshesLeft(markets, today);
+  const refresh = async () => {
+    if (busy) return;
+    setBusy(true);
+    try {
+      const r = await refreshNow(app);
+      bump();
+      toast(r.limited ? M.refreshNone : r.stopped ? M.errors[r.stopped]! : M.refreshed(r.left));
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const importFile = async (f: File) => {
     const file = parseHoldingsCsv(await f.text());
     if (!file.holdings.length) return toast(M.importNone);
@@ -58,7 +81,18 @@ export function HoldingsPanel({ account, markets }: { account: Account; markets?
         <h3>
           {M.holdings} <span class="hold__beta">{M.beta}</span>
         </h3>
-        {on && p.asOf && <span class="hold__asof">{M.asOf(fmtDate(p.asOf))}</span>}
+        {on && holdings.length > 0 && (
+          <div class="hold__fresh">
+            {p.asOf && <span class="hold__asof">{p.liveAt ? M.liveAt(when(p.liveAt, today)) : M.asOf(fmtDate(p.asOf))}</span>}
+            <button type="button" class="linkbtn hold__refresh" disabled={busy || !left} aria-label={M.refreshLabel(left)} onClick={refresh}>
+              <span class={busy ? 'is-spinning' : undefined}>
+                <RefreshIcon />
+              </span>
+              {busy ? M.refreshing : M.refresh}
+              <span class="hold__left">· {M.refreshLeft(left)}</span>
+            </button>
+          </div>
+        )}
       </div>
 
       {!on ? (

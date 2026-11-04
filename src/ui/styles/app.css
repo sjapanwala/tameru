@@ -9473,6 +9473,62 @@ main ul.up-all {
   color: var(--text-2);
 }
 
+/* when the prices are from, and the refresh under it (a few a day) */
+.hold__fresh {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+  min-width: 0;
+  text-align: right;
+}
+
+.hold__refresh {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 32px; /* a comfortable tap, without a button's box */
+  color: var(--accent);
+  font-size: 0.75rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.hold__refresh:disabled {
+  color: var(--text-3);
+  cursor: default;
+}
+
+.hold__refresh span:first-child {
+  display: inline-flex;
+}
+
+.hold__refresh svg {
+  width: 14px;
+  height: 14px;
+}
+
+.hold__refresh .is-spinning {
+  animation: hold-spin 0.9s linear infinite;
+}
+
+.hold__left {
+  color: var(--text-2);
+  font-weight: 500;
+}
+
+@keyframes hold-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hold__refresh .is-spinning {
+    animation: none;
+  }
+}
+
 .hold__note,
 .hold__fine {
   margin: 10px 0 0;

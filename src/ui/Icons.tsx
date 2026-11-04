@@ -51,6 +51,12 @@ export const ArrowDownLeft = () => (
   </Svg>
 );
 
+export const RefreshIcon = () => (
+  <Svg>
+    <path d="M19.5 12a7.5 7.5 0 1 1-2.2-5.3M19.5 4.5v4h-4" />
+  </Svg>
+);
+
 export const SwapIcon = () => (
   <Svg>
     <path d="M8 4v16M4 8l4-4 4 4M16 20V4M20 16l-4 4-4-4" />

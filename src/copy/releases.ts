@@ -5,6 +5,12 @@ import type { Release } from '../domain/releases';
 
 export const RELEASES: Release[] = [
   {
+    version: '0.17.2',
+    items: [
+      { title: 'Refresh your prices', body: 'Holdings now has a Refresh button: it brings in every price as it stands right now, up to three times a day, and shows the time they’re from. Closing prices still come in on their own after each close.' },
+    ],
+  },
+  {
     version: '0.17.1',
     items: [
       { title: 'Smoother cards', body: 'On Accounts, a card passing the front now tips back over the top of the stack and comes down in its place, instead of slipping through the next one, and the roll keeps the speed of your flick. On Home, pulling the stack open keeps your cards in the order they were in, and a swiped card goes round the side to the back of the stack.' },

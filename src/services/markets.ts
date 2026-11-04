@@ -6,6 +6,10 @@
 // USD→CAD rate riding along in the first. Nothing is fetched on a timer, on import (a
 // broker's file brings its own prices) or when a holding is added by hand (it's valued
 // at its entry price until the next close). Only ticker symbols leave the device.
+//
+// On top of that, a refresh by hand brings in every price as it stands right now, a
+// few times a day at most (REFRESHES_PER_DAY): enough to check on a busy day without
+// leaning on the price service.
 
 import { currencyOf, dueSymbols, lastCloseKey, normaliseSymbol, readPrices, USDCAD, type HoldingsImport } from '../domain/holdings';
 import type { Account, Holding, MarketSettings, Quote } from '../domain/types';
@@ -15,10 +19,16 @@ import type { AppContext } from './context';
 /** Where the price service lives (workers/prices). */
 export const PRICES_URL: string = import.meta.env.VITE_PRICES_URL || 'https://prices.tameru.cc';
 const BATCH = 20; // the service's (and Yahoo's) most per request
+export const REFRESHES_PER_DAY = 3;
 
 export interface RefreshResult {
   updated: number; // prices saved (the exchange rate counts as one)
   stopped?: 'network' | 'service'; // why it stopped early, if it did
+}
+
+export interface ManualRefreshResult extends RefreshResult {
+  left: number; // refreshes left today
+  limited?: boolean; // none were left: nothing was asked for
 }
 
 type Fetch = (url: string) => Promise<{ ok: boolean; json: () => Promise<unknown> }>;
@@ -56,8 +66,44 @@ async function refresh(ctx: AppContext, fetchFn: Fetch): Promise<RefreshResult> 
   const due = dueSymbols(holdings, m.quotes, closeKey, m.unknown);
   const needFx = holdings.some((h) => h.currency === 'USD') && m.usdCad?.closeKey !== closeKey;
   if (!due.length && !needFx) return { updated: 0 };
+  const { result } = await fetchRound(ctx, fetchFn, [...due, ...(needFx ? [USDCAD] : [])], closeKey);
+  return result;
+}
 
-  const symbols = [...due, ...(needFx ? [USDCAD] : [])];
+/** Refreshes left today (a local day), of REFRESHES_PER_DAY. */
+export function refreshesLeft(m: MarketSettings | undefined, today: string): number {
+  const used = m?.refreshes?.day === today ? m.refreshes.count : 0;
+  return Math.max(0, REFRESHES_PER_DAY - used);
+}
+
+/**
+ * A refresh by hand: every holding's price as it stands now, and the exchange rate,
+ * whatever's due. Symbols that had no price get another try. Counts against the day's
+ * REFRESHES_PER_DAY only if it reached the price service.
+ */
+export async function refreshNow(ctx: AppContext, fetchFn: Fetch = (u) => fetch(u)): Promise<ManualRefreshResult> {
+  await running; // let a round already under way finish first
+  const m = (await ctx.repos.settings.get()).markets;
+  const today = ctx.clock.today();
+  const left = refreshesLeft(m, today);
+  if (!m?.enabled) return { updated: 0, left };
+  if (!left) return { updated: 0, left, limited: true };
+  const holdings = await allHoldings(ctx);
+  const symbols = [...new Set(holdings.map((h) => h.symbol))];
+  if (holdings.some((h) => h.currency === 'USD')) symbols.push(USDCAD);
+  if (!symbols.length) return { updated: 0, left };
+  const { result, reached } = await fetchRound(ctx, fetchFn, symbols, lastCloseKey(ctx.clock.now()), true);
+  if (!reached) return { ...result, left };
+  const cur = (await ctx.repos.settings.get()).markets!;
+  const used = cur.refreshes?.day === today ? cur.refreshes.count : 0;
+  await ctx.repos.settings.update({ markets: { ...cur, refreshes: { day: today, count: used + 1 } } });
+  return { ...result, left: left - 1 };
+}
+
+/** Ask the price service for these symbols, in rounds of BATCH, and save what comes back. */
+async function fetchRound(ctx: AppContext, fetchFn: Fetch, symbols: string[], closeKey: string, live = false): Promise<{ result: RefreshResult; reached: boolean }> {
+  const m = (await ctx.repos.settings.get()).markets ?? { enabled: false };
+  let reached = false;
   const fresh: Record<string, Quote> = {};
   const missing: string[] = [];
   let usdCad: MarketSettings['usdCad'];
@@ -67,17 +113,19 @@ async function refresh(ctx: AppContext, fetchFn: Fetch): Promise<RefreshResult> 
     const batch = symbols.slice(i, i + BATCH);
     let body: unknown;
     try {
-      const r = await fetchFn(`${PRICES_URL}/?symbols=${batch.map(encodeURIComponent).join(',')}`);
+      // A refresh by hand mustn't get the phone's cached copy of the last answer.
+      const r = await fetchFn(`${PRICES_URL}/?symbols=${batch.map(encodeURIComponent).join(',')}${live ? `&now=${Date.now()}` : ''}`);
       if (!r.ok) {
         stopped = 'service';
         break;
       }
       body = await r.json();
+      reached = true;
     } catch {
       stopped = 'network';
       break;
     }
-    const got = readPrices(body, closeKey);
+    const got = readPrices(body, closeKey, live ? { now: ctx.clock.now().getTime() } : undefined);
     for (const q of got.quotes) {
       fresh[q.symbol] = q;
       updated++;
@@ -86,7 +134,7 @@ async function refresh(ctx: AppContext, fetchFn: Fetch): Promise<RefreshResult> 
       usdCad = { rate: got.fx, closeKey };
       updated++;
     }
-    missing.push(...got.missing); // not asked again until the holding changes
+    missing.push(...got.missing); // not asked again until the holding changes (or a refresh by hand)
   }
 
   // Merge into the settings as they are now, not as they were before the requests:
@@ -95,13 +143,14 @@ async function refresh(ctx: AppContext, fetchFn: Fetch): Promise<RefreshResult> 
   const saved: MarketSettings = {
     ...cur,
     quotes: { ...(cur.quotes ?? {}), ...fresh },
-    unknown: [...new Set([...(cur.unknown ?? []), ...missing])],
+    // a symbol that's priced now is known again
+    unknown: [...new Set([...(cur.unknown ?? []).filter((s) => !fresh[s]), ...missing])],
     ...(usdCad ? { usdCad } : {}),
   };
   if (stopped) saved.lastError = stopped;
   else delete saved.lastError;
   await ctx.repos.settings.update({ markets: saved });
-  return { updated, ...(stopped ? { stopped } : {}) };
+  return { result: { updated, ...(stopped ? { stopped } : {}) }, reached };
 }
 
 /** Everyone's holdings, for counting requests. */

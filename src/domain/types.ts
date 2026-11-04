@@ -313,6 +313,7 @@ export interface Quote {
   closeKey: LocalDate; // the market close this fetch covered (see lastCloseKey)
   name?: string; // the security's short name, as Yahoo gives it
   from?: 'file' | 'entry'; // not a fetched close: a broker file's price, or the entry price standing in until the close
+  at?: number; // ms: a price taken during the day by a refresh, not a close (when it last traded)
 }
 
 export interface MarketSettings {
@@ -322,6 +323,7 @@ export interface MarketSettings {
   lastError?: 'network' | 'service';
   unknown?: string[]; // symbols Yahoo had no price for
   usage?: { day: LocalDate; count: number }; // lookups made on a UTC day, to stay under the free 25
+  refreshes?: { day: LocalDate; count: number }; // refreshes asked for by hand on a local day (see REFRESHES_PER_DAY)
 }
 
 /** Accent colours over one neutral light and dark base. */
