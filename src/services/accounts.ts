@@ -2,12 +2,13 @@
 
 import { balanceTrend, cardDates, creditUsed, monthFlows, nextInterestDate, yearContributions, type CardDates } from '../domain/accountInsights';
 import { moveInList, reorderSubset, sortAccounts } from '../domain/accountOrder';
-import { addDays } from '../domain/dates';
+import { analyseCard, type CardAnalysis } from '../domain/cardAnalysis';
+import { addDays, isLocalDate } from '../domain/dates';
 import { recurringOriginKey } from '../domain/materialise';
 import { occurrenceAmount, occurrences } from '../domain/recurrence';
 import { cleanLast4, isHexColor } from '../domain/cardCatalog';
 import { balanceAsOf, cardOwing, netContributed } from '../domain/ledger';
-import type { Account, AccountType, CardConfig, CardFace, Cents, InterestConfig, LocalDate } from '../domain/types';
+import type { Account, AccountType, CardConfig, CardFace, CardStatement, Cents, InterestConfig, LocalDate } from '../domain/types';
 import { stamp, type AppContext } from './context';
 import { syncCardFee } from './recurring';
 import { accruedInterest } from './automation';
@@ -156,6 +157,7 @@ export interface AccountInsights {
   nextInterest?: LocalDate;
   yearContributedCents?: Cents;
   upcoming: { name: string; date: LocalDate; amountCents: Cents; income: boolean }[];
+  cardAnalysis?: CardAnalysis; // credit cards
 }
 
 /** Everything the Accounts panel shows for one account. */
@@ -180,6 +182,51 @@ export async function accountInsights(ctx: AppContext, accountId: string): Promi
     ...(creditUsed(account, txs, today) !== undefined ? { creditUsed: creditUsed(account, txs, today) } : {}),
     ...(account.interest ? { nextInterest: nextInterestDate(account, today) } : {}),
     ...(account.type === 'investing' ? { yearContributedCents: yearContributions(account, txs, today) } : {}),
+    ...(account.type === 'credit_card' && account.card ? { cardAnalysis: analyseCard(account, txs, today) } : {}),
     upcoming,
   };
+}
+
+export interface CardDetails {
+  limitCents?: Cents | null; // null clears it
+  aprBps?: number | null;
+  statements?: CardStatement[]; // replaces the entered statements
+}
+
+const whole = (n: unknown): n is number => typeof n === 'number' && Number.isInteger(n);
+
+/** Keep well-formed statements, one per closing date, newest first. */
+export function cleanStatements(list: readonly CardStatement[]): CardStatement[] {
+  const byDate = new Map<LocalDate, CardStatement>();
+  for (const s of list) {
+    if (!isLocalDate(s.closingDate) || !whole(s.balanceCents)) continue;
+    byDate.set(s.closingDate, {
+      closingDate: s.closingDate,
+      balanceCents: s.balanceCents,
+      ...(whole(s.minimumCents) && s.minimumCents >= 0 ? { minimumCents: s.minimumCents } : {}),
+      ...(whole(s.paidCents) && s.paidCents >= 0 ? { paidCents: s.paidCents } : {}),
+    });
+  }
+  return [...byDate.values()].sort((a, b) => b.closingDate.localeCompare(a.closingDate)).slice(0, 24);
+}
+
+/** Save what the user told us about a credit card: its limit, interest rate and past statements. */
+export async function saveCardDetails(ctx: AppContext, id: string, d: CardDetails): Promise<Account> {
+  const cur = await ctx.repos.accounts.get(id);
+  if (!cur?.card) throw new Error('not a credit card');
+  const card: CardConfig = { ...cur.card };
+  if (d.limitCents !== undefined) {
+    if (d.limitCents && d.limitCents > 0) card.limitCents = d.limitCents;
+    else delete card.limitCents;
+  }
+  if (d.aprBps !== undefined) {
+    if (d.aprBps && d.aprBps > 0 && d.aprBps < 10000) card.aprBps = Math.round(d.aprBps);
+    else delete card.aprBps;
+  }
+  if (d.statements !== undefined) {
+    const list = cleanStatements(d.statements);
+    if (list.length) card.statements = list;
+    else delete card.statements;
+  }
+  return updateAccount(ctx, id, { card });
 }

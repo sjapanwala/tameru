@@ -129,7 +129,7 @@ mark.on { --swipe: 1; }
   overflow: hidden;
 }
 .stage__panel::before { /* faint figures, like the back of a ledger */
-  content: "$1,380.21  $115.01  12 days  $53.22  +$980.00  −$923.47  91%  $1,380.21  $115.01  12 days  $53.22  +$980.00";
+  content: "$114.27  $3,199.56  27 days  $53.22  +$2,103.26  −$2,615.12  96%  $114.27  $3,199.56  27 days  $53.22  +$2,103.26";
   position: absolute; inset: -10% -10%; font: 600 clamp(3rem, 9vw, 8rem)/1.05 var(--mono); letter-spacing: -0.05em;
   color: rgb(255 255 255 / 0.035); word-spacing: 0.4em; transform: rotate(-8deg);
 }
@@ -394,14 +394,7 @@ footer { background: var(--ink); color: var(--paper); padding: 72px 0 calc(110px
 </head>
 <body id="top">
 <svg width="0" height="0" style="position:absolute" aria-hidden="true">
-  <symbol id="logo" viewBox="0 0 64 64">
-    <rect width="64" height="64" rx="15" fill="#0f0f0e"/>
-    <g transform="translate(0 3)" fill="none" stroke-width="5" stroke-linecap="round">
-      <path d="M16.44 47.56A22 22 0 1 1 47.56 47.56" stroke="#e6e3da" stroke-opacity=".2"/>
-      <path d="M16.44 47.56A22 22 0 1 1 48.5 17.45" stroke="#e6f490"/>
-      <path d="M30.75 19.5V35a5 5 0 0 0 5 5H38M24.75 26.5H38" stroke="#e6e3da" stroke-linejoin="round"/>
-    </g>
-  </symbol>
+  <symbol id="logo" viewBox="0 0 1024 1024"><defs>  <linearGradient id="logo-bg" x1="0" y1="0" x2="0.35" y2="1">    <stop offset="0" stop-color="#3b9bff"/>    <stop offset="0.55" stop-color="#0a77f5"/>    <stop offset="1" stop-color="#0058d6"/>  </linearGradient>  <radialGradient id="logo-glow" cx="0.3" cy="0.18" r="0.75">    <stop offset="0" stop-color="#fff" stop-opacity="0.22"/>    <stop offset="1" stop-color="#fff" stop-opacity="0"/>  </radialGradient>  <filter id="logo-lift" x="-50%" y="-50%" width="200%" height="200%">    <feDropShadow dx="0" dy="6" stdDeviation="9" flood-color="#002a6e" flood-opacity="0.35"/>  </filter></defs><rect width="1024" height="1024" rx="230" fill="url(#logo-bg)"/><rect width="1024" height="1024" rx="230" fill="url(#logo-glow)"/><g stroke-width="26" stroke-linecap="round"><line x1="512.0" y1="222.0" x2="512.0" y2="160.0" stroke="#fff" stroke-opacity="1"/><line x1="560.8" y1="203.8" x2="567.1" y2="164.3" stroke="#fff" stroke-opacity="1"/><line x1="608.4" y1="215.3" x2="620.8" y2="177.2" stroke="#fff" stroke-opacity="1"/><line x1="653.6" y1="234.0" x2="671.8" y2="198.4" stroke="#fff" stroke-opacity="1"/><line x1="695.4" y1="259.6" x2="718.9" y2="227.2" stroke="#fff" stroke-opacity="1"/><line x1="717.1" y1="306.9" x2="760.9" y2="263.1" stroke="#fff" stroke-opacity="1"/><line x1="764.4" y1="328.6" x2="796.8" y2="305.1" stroke="#fff" stroke-opacity="1"/><line x1="790.0" y1="370.4" x2="825.6" y2="352.2" stroke="#fff" stroke-opacity="1"/><line x1="808.7" y1="415.6" x2="846.8" y2="403.2" stroke="#fff" stroke-opacity="1"/><line x1="820.2" y1="463.2" x2="859.7" y2="456.9" stroke="#fff" stroke-opacity="1"/><line x1="802.0" y1="512.0" x2="864.0" y2="512.0" stroke="#fff" stroke-opacity="1"/><line x1="820.2" y1="560.8" x2="859.7" y2="567.1" stroke="#fff" stroke-opacity="1"/><line x1="808.7" y1="608.4" x2="846.8" y2="620.8" stroke="#fff" stroke-opacity="1"/><line x1="790.0" y1="653.6" x2="825.6" y2="671.8" stroke="#fff" stroke-opacity="1"/><line x1="764.4" y1="695.4" x2="796.8" y2="718.9" stroke="#fff" stroke-opacity="1"/><line x1="717.1" y1="717.1" x2="760.9" y2="760.9" stroke="#fff" stroke-opacity="1"/><line x1="695.4" y1="764.4" x2="718.9" y2="796.8" stroke="#fff" stroke-opacity="1"/><line x1="653.6" y1="790.0" x2="671.8" y2="825.6" stroke="#fff" stroke-opacity="1"/><line x1="608.4" y1="808.7" x2="620.8" y2="846.8" stroke="#fff" stroke-opacity="1"/><line x1="560.8" y1="820.2" x2="567.1" y2="859.7" stroke="#fff" stroke-opacity="1"/><line x1="512.0" y1="802.0" x2="512.0" y2="864.0" stroke="#fff" stroke-opacity="1"/><line x1="463.2" y1="820.2" x2="456.9" y2="859.7" stroke="#fff" stroke-opacity="1"/><line x1="415.6" y1="808.7" x2="403.2" y2="846.8" stroke="#fff" stroke-opacity="1"/><line x1="370.4" y1="790.0" x2="352.2" y2="825.6" stroke="#fff" stroke-opacity="1"/><line x1="328.6" y1="764.4" x2="305.1" y2="796.8" stroke="#fff" stroke-opacity="1"/><line x1="306.9" y1="717.1" x2="263.1" y2="760.9" stroke="#fff" stroke-opacity="1"/><line x1="259.6" y1="695.4" x2="227.2" y2="718.9" stroke="#fff" stroke-opacity="1"/><line x1="234.0" y1="653.6" x2="198.4" y2="671.8" stroke="#fff" stroke-opacity="1"/><line x1="215.3" y1="608.4" x2="177.2" y2="620.8" stroke="#fff" stroke-opacity="1"/><line x1="203.8" y1="560.8" x2="164.3" y2="567.1" stroke="#fff" stroke-opacity="1"/><line x1="222.0" y1="512.0" x2="160.0" y2="512.0" stroke="#fff" stroke-opacity="0.3"/><line x1="203.8" y1="463.2" x2="164.3" y2="456.9" stroke="#fff" stroke-opacity="0.3"/><line x1="215.3" y1="415.6" x2="177.2" y2="403.2" stroke="#fff" stroke-opacity="0.3"/><line x1="234.0" y1="370.4" x2="198.4" y2="352.2" stroke="#fff" stroke-opacity="0.3"/><line x1="259.6" y1="328.6" x2="227.2" y2="305.1" stroke="#fff" stroke-opacity="0.3"/><line x1="306.9" y1="306.9" x2="263.1" y2="263.1" stroke="#fff" stroke-opacity="0.3"/><line x1="328.6" y1="259.6" x2="305.1" y2="227.2" stroke="#fff" stroke-opacity="0.3"/><line x1="370.4" y1="234.0" x2="352.2" y2="198.4" stroke="#fff" stroke-opacity="0.3"/><line x1="415.6" y1="215.3" x2="403.2" y2="177.2" stroke="#fff" stroke-opacity="0.3"/><line x1="463.2" y1="203.8" x2="456.9" y2="164.3" stroke="#fff" stroke-opacity="0.3"/></g><circle cx="180.7" cy="532.8" r="44" fill="#fff" filter="url(#logo-lift)"/><circle cx="180.7" cy="532.8" r="20" fill="url(#logo-bg)"/><path transform="translate(512 520) scale(0.8) translate(-502 -507)" d="M492 330V600a84 84 0 0 0 84 84H608M396 452H608" fill="none" stroke="#fff" stroke-width="84" stroke-linecap="round" stroke-linejoin="round"/></symbol>
   <symbol id="arrow" viewBox="0 0 20 20"><path d="M5 15 15 5M7 5h8v8" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
 </svg>
 
@@ -435,9 +428,9 @@ footer { background: var(--ink); color: var(--paper); padding: 72px 0 calc(110px
     <div class="stage__sticky">
       <div class="stage__panel"></div>
       <svg class="dial" viewBox="-100 -100 200 200" aria-hidden="true"></svg>
-      <div class="slip slip--a"><small>Safe to spend</small><b>$1,380.21</b></div>
-      <div class="slip slip--b"><small>Each day · 12 left</small><b>$115.01</b></div>
-      <div class="stage__phone"><div class="phone"><img src="/screens/home.png" alt="Tameru's Home screen showing $1,380.21 safe to spend, $115.01 a day for 12 days, with an Amex Gold card" width="780" height="1688" fetchpriority="high"></div></div>
+      <div class="slip slip--a"><small>Safe to spend today</small><b>$114.27</b></div>
+      <div class="slip slip--b"><small>Left to Nov 30</small><b>$3,199.56</b></div>
+      <div class="stage__phone"><div class="phone"><img src="/screens/home.png" alt="Tameru's Home screen for Jordan: $114.27 safe to spend today, $3,199.56 left to Nov 30 across a Scotiabank Momentum, an RBC ION+ and chequing" width="780" height="1688" fetchpriority="high"></div></div>
     </div>
   </section>
 
@@ -449,23 +442,23 @@ footer { background: var(--ink); color: var(--paper); padding: 72px 0 calc(110px
     <article class="step" style="--i:0; --bg: var(--dots)">
       <div class="step__copy">
         <div><span class="step__n">No.<b>01</b></span><h3>One number, every time you open it</h3></div>
-        <p>Home shows what’s safe to spend after everything coming up before your next pay, split into a daily amount. Your cards sit right underneath, and the things you buy every week are one tap away.</p>
+        <p>Home shows what’s safe to spend today, with rent, bills, goals and a buffer already set aside before your next pay. Your cards sit in a stack right above it, and the things you buy every week are one tap away.</p>
       </div>
-      <div class="step__art"><div class="phone"><img src="/screens/home.png" alt="Home: safe to spend, an Amex Gold card, quick adds for coffee and transit, and recent spending" width="780" height="1688" loading="lazy"></div></div>
+      <div class="step__art"><div class="phone"><img src="/screens/home.png" alt="Home: the card stack with what’s left on each card, $114.27 safe to spend today, Expense and Income, and quick adds for coffee and gas" width="780" height="1688" loading="lazy"></div></div>
     </article>
     <article class="step" style="--i:1; --bg: var(--hatch)">
       <div class="step__copy">
         <div><span class="step__n">No.<b>02</b></span><h3>Every dollar, by day</h3></div>
-        <p>Activity lists what you spent and received this period, grouped by day with a running total. Search it, filter it, add from a receipt photo, or export it all as a CSV.</p>
+        <p>Activity shows the last two weeks at a glance: a bar for each day, split by category, next to what came in. Below, every entry grouped by day. Pick a card, search, filter, add from a receipt photo, or export it all as a CSV.</p>
       </div>
-      <div class="step__art"><div class="phone"><img src="/screens/activity.png" alt="Activity: $1,393.46 spent this period, $980 received, with transactions grouped by day" width="780" height="1688" loading="lazy"></div></div>
+      <div class="step__art"><div class="phone"><img src="/screens/activity.png" alt="Activity: $2,615.12 spent over the last 14 days and $2,103.26 received, a bar per day, and a row of cards to filter by" width="780" height="1688" loading="lazy"></div></div>
     </article>
     <article class="step" style="--i:2; --bg: var(--engrave)">
       <div class="step__copy">
         <div><span class="step__n">No.<b>03</b></span><h3>Every card and account in one place</h3></div>
-        <p>Chequing, savings with interest, credit cards with their real card art, due dates and statement days. See what you owe, which way it’s trending, and when the next payment lands.</p>
+        <p>Chequing, savings with interest, and credit cards with their real card art. Each card shows its statement cycle, what to pay and by when, every past statement, how much of the limit you’re using, and what the next statement will likely be.</p>
       </div>
-      <div class="step__art"><div class="phone"><img src="/screens/accounts.png" alt="Accounts: an Amex Gold with $167.77 owing, a 30-day balance chart, payment due in 8 days" width="780" height="1688" loading="lazy"></div></div>
+      <div class="step__art"><div class="phone"><img src="/screens/accounts.png" alt="Accounts: a Scotiabank Momentum Visa with $1,442.14 owing, down $720.20 over 30 days, and this statement cycle, Oct 9 to Nov 8" width="780" height="1688" loading="lazy"></div></div>
     </article>
   </section>
 
@@ -473,34 +466,34 @@ footer { background: var(--ink); color: var(--paper); padding: 72px 0 calc(110px
     <div class="planner__sticky">
       <div class="planner__card">
         <div class="planner__copy up">
-          <p class="eyebrow">Plan · Oct 1 – Oct 31</p>
+          <p class="eyebrow">Plan · Nov 1 – Nov 30</p>
           <h2>Give every dollar of your pay <mark>a job.</mark></h2>
           <p class="lede">Your income is a dial of 100 ticks. Each category and goal takes its share, in dollars or as a percentage, and comes off the top, so the number on Home is only what’s truly free.</p>
         </div>
         <div class="planner__dial">
-          <svg viewBox="0 0 800 440" role="img" aria-label="An example plan: $1,813.47 of $1,993.33 planned across bills, groceries, transport, eating out, fun, personal, an irregular fund and an emergency fund"></svg>
+          <svg viewBox="0 0 800 440" role="img" aria-label="An example plan: $4,325.47 of $4,520.53 planned across bills, groceries, transport, eating out, fun, personal, an irregular fund, an emergency fund and a trip"></svg>
         </div>
         <ul class="legend" aria-hidden="true"></ul>
-        <div class="planner__phone"><div class="phone"><img src="/screens/plan.png" alt="The Plan screen: 91% of income planned, $1,813.47 of $1,993.33, with the dial and categories" width="780" height="1688" loading="lazy"></div></div>
+        <div class="planner__phone"><div class="phone"><img src="/screens/plan.png" alt="The Plan screen: 96% of income planned, $4,325.47 of $4,520.53, with the dial and categories" width="780" height="1688" loading="lazy"></div></div>
       </div>
     </div>
   </section>
 
   <section class="wrap trio" aria-label="Features">
     <article class="card up" style="--bg: var(--dots)">
-      <div class="card__art"><div class="crop" style="--src:url(/screens/home.png); --h:250; --y:69.5%; --r:-1.5deg" role="img" aria-label="Quick adds for coffee at $2.45 and transit at $3.35"></div></div>
+      <div class="card__art"><div class="crop" style="--src:url(/screens/home-quick.png); --h:240; --y:40.4%; --r:-1.5deg" role="img" aria-label="Quick adds for coffee at $2.45 and gas at $60.00"></div></div>
       <h3>Quick adds</h3>
       <p>Four slots on Home for the things you buy all the time. Tap once and it’s logged, with undo.</p>
     </article>
     <article class="card up" style="--bg: var(--hatch)">
-      <div class="card__art"><div class="crop" style="--src:url(/screens/activity.png); --h:400; --y:15.5%; --r:1deg" role="img" aria-label="Spent this period card with a daily bar chart"></div></div>
+      <div class="card__art"><div class="crop" style="--src:url(/screens/activity.png); --h:540; --y:44%; --r:1deg" role="img" aria-label="A bar for each day of the last two weeks, split by category, with the daily average"></div></div>
       <h3>Spending at a glance</h3>
-      <p>What went out this period, day by day, next to what came in. Snap a receipt and Tameru reads the store, total and date on your phone.</p>
+      <p>What went out over the last two weeks, day by day and by category, next to what came in. Snap a receipt and Tameru reads the store, total and date on your phone.</p>
     </article>
     <article class="card up" style="--bg: var(--engrave)">
-      <div class="card__art"><div class="crop" style="--src:url(/screens/accounts.png); --h:420; --y:17.7%; --r:-1deg" role="img" aria-label="An Amex Gold with its real card art"></div></div>
+      <div class="card__art"><div class="crop" style="--src:url(/screens/accounts.png); --h:500; --y:32.3%; --r:-1deg" role="img" aria-label="A Scotiabank Momentum Visa with its real card art"></div></div>
       <h3>Your actual cards</h3>
-      <p>Pick your card from the catalog and it shows up with its real art, its due date and what you owe on it.</p>
+      <p>Pick your card from the catalog and it shows up with its real art. Add its limit, rate and a few past statements and you get its full history and outlook.</p>
     </article>
   </section>
 
@@ -518,7 +511,7 @@ footer { background: var(--ink); color: var(--paper); padding: 72px 0 calc(110px
       </div>
       <div class="scan__stage">
         <div class="slipr" aria-hidden="true">
-          <header><b>NO FRILLS</b><span>123 Bloor St W · Toronto</span><span>2026-10-20 · 18:42</span></header>
+          <header><b>NO FRILLS</b><span>123 Bloor St W · Toronto</span><span>2026-11-01 · 18:42</span></header>
           <p><span>BANANAS</span><span>1.29</span></p>
           <p><span>2% MILK 4L</span><span>6.49</span></p>
           <p><span>EGGS LARGE 12</span><span>4.29</span></p>
@@ -530,13 +523,13 @@ footer { background: var(--ink); color: var(--paper); padding: 72px 0 calc(110px
           <p><span>TOMATO SAUCE</span><span>3.29</span></p>
           <p><span>OLD CHEDDAR</span><span>7.99</span></p>
           <p class="t"><span>TOTAL</span><span>53.22</span></p>
-          <p><span>AMEX ••••1005</span><span>53.22</span></p>
+          <p><span>VISA ••••2290</span><span>53.22</span></p>
           <p class="c">APPROVED</p>
         </div>
         <div class="scan__phone"><div class="phone"><div class="scan__screen">
           <div class="viewfinder" data-show="cam"></div>
-          <img src="/screens/scan-found.png" data-show="found" alt="Tameru found $53.22 at No Frills #3121, paid with the Amex Gold ending 1005, on Tue Oct 20" width="780" height="1688" loading="lazy">
-          <img src="/screens/scan-add.png" data-show="add" alt="The Add sheet filled in: $53.22, Groceries suggested, Amex Gold" width="780" height="1688" loading="lazy">
+          <img src="/screens/scan-found.png" data-show="found" alt="Tameru found $53.22 at No Frills #3121, paid with the Scotiabank Momentum ending 2290, on Sun Nov 1" width="780" height="1688" loading="lazy">
+          <img src="/screens/scan-add.png" data-show="add" alt="The Add sheet filled in: $53.22, Groceries suggested, Scotiabank Momentum" width="780" height="1688" loading="lazy">
           <div class="flash"></div>
         </div></div></div>
       </div>
@@ -613,7 +606,7 @@ footer { background: var(--ink); color: var(--paper); padding: 72px 0 calc(110px
   const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
   const clamp = (v) => Math.min(1, Math.max(0, v));
 
-  // The dial: 100 ticks, like the Plan screen. Lights up to the logo's two-thirds.
+  // The dial: 100 ticks, like the Plan screen. Lights up as far round as the logo does (74%).
   const dial = document.querySelector('.dial');
   const NS = 'http://www.w3.org/2000/svg';
   const ticks = [];
@@ -626,14 +619,14 @@ footer { background: var(--ink); color: var(--paper); padding: 72px 0 calc(110px
     dial.append(l); ticks.push(l);
   }
 
-  // The Plan dial, from the sample plan in the app (Plan screen, Oct 1 – Oct 31):
+  // The Plan dial, from the sample plan in the app (Plan screen, Nov 1 – Nov 30):
   // amounts in cents, whole ticks as the app rounds them, and the shares it shows.
   function planScene() {
-    const INCOME = 199333;
+    const INCOME = 452053;
     const slices = [
-      ['Bills', '#94a3b8', 92347, 46, 46], ['Groceries', '#ff6b5b', 42000, 21, 21], ['Transport', '#4ade80', 9000, 5, 5],
-      ['Eating out', '#ffb547', 15000, 8, 8], ['Fun & shopping', '#38bdf8', 6000, 3, 3], ['Personal & health', '#a78bfa', 3000, 1, 2],
-      ['Irregular', '#d6b98c', 4000, 2, 2], ['Emergency fund', '#f472b6', 10000, 5, 5],
+      ['Bills', '#94a3b8', 247547, 55, 55], ['Groceries', '#ff6b5b', 56000, 12, 12], ['Transport', '#4ade80', 30000, 7, 7],
+      ['Eating out', '#ffb547', 26000, 6, 6], ['Fun & shopping', '#38bdf8', 15000, 3, 3], ['Personal & health', '#a78bfa', 8000, 2, 2],
+      ['Irregular', '#d6b98c', 10000, 2, 2], ['Emergency fund', '#f472b6', 30000, 7, 7], ['Portugal trip', '#2dd4bf', 10000, 2, 2],
     ].map(([name, color, cents, ticks, pct]) => ({ name, color, cents, ticks, pct }));
     const money = (c) => '$' + (c / 100).toLocaleString('en-CA', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     const svg = document.querySelector('.planner__dial svg');
@@ -732,7 +725,7 @@ footer { background: var(--ink); color: var(--paper); padding: 72px 0 calc(110px
   // Each pinned scene reacts to its own scroll progress, 0..1.
   const scenes = {
     stage: (p) => {
-      const lit = Math.round(clamp(p * 1.25) * 68);
+      const lit = Math.round(clamp(p * 1.25) * 74);
       ticks.forEach((t, i) => t.classList.toggle('lit', i < lit));
     },
     plan: planScene(),

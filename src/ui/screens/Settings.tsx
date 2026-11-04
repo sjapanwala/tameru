@@ -16,6 +16,7 @@ import { PinEntry } from '../PinPad';
 import { Sheet } from '../Sheet';
 import { addAllToCalendar } from '../calendar';
 import { versionLabel } from '../version';
+import { go } from '../router';
 
 type Editing = 'name' | 'period' | 'buffer' | 'lockOn' | 'lockChange' | 'lockOff' | 'relock' | 'erase';
 
@@ -106,6 +107,10 @@ export function Settings() {
             <Row label={S.settings.lockOff} onClick={() => setEditing('lockOff')} />
           </>
         )}
+      </Group>
+
+      <Group>
+        <Row label={S.settings.tour} sub={S.settings.tourSub} onClick={() => update({ tourPending: true }).then(() => go('/'))} />
       </Group>
 
       <Group title={S.settings.groups.freshStart} note={S.settings.freshNote}>

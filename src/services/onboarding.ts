@@ -118,7 +118,7 @@ export async function finishOnboarding(ctx: AppContext, a: OnboardingAnswers, pl
     { source: 'onboarding', periodDays: periodLength(current) },
   );
   const habits = Object.fromEntries(a.categories.flatMap((c, k) => (c.weeklyCents !== undefined ? [[catIds.get(categoryTempId(k))!, c.weeklyCents]] : [])));
-  await ctx.repos.settings.update({ onboardedAt: ctx.clock.now().toISOString(), habitWeeklyCents: habits, ...(a.name ? { userName: a.name } : {}), lastOpenedDate: today, onboarding: undefined });
+  await ctx.repos.settings.update({ onboardedAt: ctx.clock.now().toISOString(), tourPending: true, habitWeeklyCents: habits, ...(a.name ? { userName: a.name } : {}), lastOpenedDate: today, onboarding: undefined });
   await logEvent(ctx, 'onboarding_complete', { accounts: answers.length, incomes: a.incomes.length, bills: a.bills.length, goals: a.goals.length });
   emit('onboardingComplete', { accounts: answers.length, goals: a.goals.length });
 }

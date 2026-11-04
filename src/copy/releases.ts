@@ -5,6 +5,18 @@ import type { Release } from '../domain/releases';
 
 export const RELEASES: Release[] = [
   {
+    version: '0.16.0',
+    items: [
+      { title: 'A new way to get started', body: 'Setting up Tameru is now a conversation: it asks one thing at a time and remembers what you said. Amounts go on a dial you turn (or tap to type), dates on a calendar, and bills, spending and goals start from a list you tick.' },
+      { title: 'A full tour', body: 'New here? The tour walks every page, feature by feature, with what each one does and how to use it. Jump between pages or skip any of them, and take it again any time from Settings.' },
+      { title: 'A new icon', body: 'Tameru’s icon is now its own dial: a ring of ticks on blue, the way you set amounts. The loading screen turns the same dial while the app opens.' },
+      { title: 'Other accounts', body: 'PayPal, a gift card, anything else that holds money: add it as Other. It isn’t counted in safe to spend.' },
+      { title: 'Each card, analysed', body: 'On Accounts, a credit card now leads with its statement cycle: what you’ve charged so far and when it closes, what to pay on the last statement and by when, your statements month by month with how each was paid, how much of your limit you’re using, and an outlook for the next statement.' },
+      { title: 'Tell Tameru about your cards', body: 'Add a card’s limit, interest rate and last few statements and its history goes back before you started using Tameru. New cards ask as you add them; for the rest, Complete this card shows what’s left.' },
+      { title: 'Every card in the stack', body: 'Home’s card stack now shows all your cards, each peeking out behind the next, instead of stopping at three.' },
+    ],
+  },
+  {
     version: '0.15.0',
     items: [
       { title: 'Slide between tabs', body: 'Put your finger on the tab bar and slide: the circle glides along under it, and letting go opens that tab. Tapping a tab glides the circle across too. Holding for shortcuts works as before.' },

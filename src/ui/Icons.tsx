@@ -182,3 +182,17 @@ export const GearIcon = () => (
     <path d="M12 3v2.2M12 18.8V21M3 12h2.2M18.8 12H21M5.6 5.6l1.6 1.6M16.8 16.8l1.6 1.6M5.6 18.4l1.6-1.6M16.8 7.2l1.6-1.6" />
   </Svg>
 );
+
+export const WalletIcon = () => (
+  <Svg>
+    <path d="M4 7.5A2.5 2.5 0 0 1 6.5 5H17v3" />
+    <rect x="4" y="7.5" width="16" height="11.5" rx="2.5" />
+    <path d="M16 13.25h1.5" />
+  </Svg>
+);
+
+export const CloseIcon = () => (
+  <Svg>
+    <path d="M6.5 6.5l11 11M17.5 6.5l-11 11" />
+  </Svg>
+);

@@ -7,7 +7,7 @@ import type { GeneratorInput } from './planGenerator';
 import { perMonth } from './recurrence';
 import type { CardFace, Cents, Frequency, LocalDate } from './types';
 
-export type AccountChoice = 'chequing' | 'savings' | 'credit_card' | 'investing' | 'cash';
+export type AccountChoice = 'chequing' | 'savings' | 'credit_card' | 'investing' | 'cash' | 'other';
 
 export interface IncomeAnswer {
   name: string;
@@ -179,6 +179,7 @@ export const ACCOUNT_LABEL_DEFAULTS: Record<AccountChoice, string> = {
   credit_card: 'Credit card',
   investing: 'Investing',
   cash: 'Cash',
+  other: 'Other',
 };
 
 export function defaultAccount(type: AccountChoice): AccountAnswer {

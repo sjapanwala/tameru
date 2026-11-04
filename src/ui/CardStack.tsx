@@ -22,7 +22,10 @@ const PEEK = 11; // px of each card showing behind the one in front
 // At rest under the summary: how much of the front card shows, and of each card behind it.
 const REST_FRONT = 58;
 const REST_PEEK = 16;
-const DEPTH = 3; // cards drawn in a closed stack; the rest hide behind the last
+// A closed stack draws every card, each peeking behind the next. The 3D shrink and tilt
+// are spread across the stack, so the last card looks as far back as the third did
+// when there were three, however many there are.
+const FAR = 2;
 const ROW = 76; // px of each card showing when the stack is open
 const ALL_ROW = 56; // the All accounts row, and the gap under it
 const LEGEND = 3; // cards named under the summary bar
@@ -104,6 +107,8 @@ export function CardStack(props: {
 
   const h = w / 1.586; // card height (ID-1 proportions)
   const sel = index - 1; // selected card, or -1 for All accounts
+  const DEPTH = Math.max(1, n); // cards drawn in a closed stack
+  const look = (d: number) => (d * FAR) / Math.max(FAR, n - 1); // how far back a card at depth d looks
 
   const choose = (i: number) => {
     haptic(6);
@@ -187,7 +192,7 @@ export function CardStack(props: {
   const height = open
     ? ALL_ROW + Math.max(0, n - 1) * ROW + h
     : sel < 0
-      ? cardsTop + (Math.min(n, DEPTH) - 1) * REST_PEEK + REST_FRONT + pull * 1.1
+      ? cardsTop + (DEPTH - 1) * REST_PEEK + REST_FRONT + pull * 1.1
       : (DEPTH - 1) * PEEK + 2 + h + pull * 0.9;
 
   // The summary splits what's left by card; each segment is that card's share.
@@ -248,7 +253,6 @@ export function CardStack(props: {
           let rot = 0;
           let depth = 0;
           let z: number;
-          let hidden = false;
           if (open) {
             y = ALL_ROW + i * ROW + pullUp * 0.4 * i;
             z = i + 1;
@@ -256,23 +260,22 @@ export function CardStack(props: {
             // resting behind the summary: the first card in front, the rest tucked behind it
             // in order (the same front card as Accounts' stack)
             const d = i;
-            depth = Math.min(d, DEPTH - 1);
-            hidden = d >= DEPTH;
+            depth = d;
             // pulled, they fan out: the front card keeps pace with the growing frame, the ones behind lag
-            y = cardsTop + (DEPTH - 1 - depth) * REST_PEEK - (DEPTH - Math.min(n, DEPTH)) * REST_PEEK + pull * (1.1 - depth * 0.375);
+            y = cardsTop + (DEPTH - 1 - depth) * REST_PEEK + pull * (1.1 - look(depth) * 0.375);
             z = n - i;
           } else {
             const k = (i - sel + n) % n;
-            depth = Math.min(k, DEPTH - 1);
-            hidden = k >= DEPTH;
-            y = (DEPTH - 1) * PEEK - depth * PEEK + pull * (k === 0 ? 0.9 : Math.max(0.2, 0.9 - k * 0.35));
+            depth = k;
+            y = (DEPTH - 1) * PEEK - depth * PEEK + pull * (k === 0 ? 0.9 : Math.max(0.2, 0.9 - look(k) * 0.35));
             z = n - k;
             if (k === 0) {
               x = drag.x;
               rot = drag.x / 26;
             }
           }
-          const sc = 1 - depth * 0.05;
+          const t = look(depth);
+          const sc = 1 - t * 0.05;
           return (
             <div
               key={a.id}
@@ -284,11 +287,10 @@ export function CardStack(props: {
               aria-label={open ? S.home.showCard(a.face?.cardName ?? a.name) : undefined}
               onKeyDown={open ? (e) => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), choose(i + 1)) : undefined}
               style={{
-                transform: `translate3d(${x}px, ${y}px, ${-depth * 40}px) rotateX(${depth * 7}deg) rotate(${rot}deg) scale(${sc})`,
+                transform: `translate3d(${x}px, ${y}px, ${-t * 40}px) rotateX(${t * 7}deg) rotate(${rot}deg) scale(${sc})`,
                 zIndex: String(z),
-                opacity: hidden ? '0' : '1',
-                filter: depth ? `saturate(${1 - depth * 0.15})` : undefined,
-                '--shade': String(depth * 0.12),
+                filter: depth ? `saturate(${1 - t * 0.15})` : undefined,
+                '--shade': String(t * 0.12),
               }}
             >
               <CardFace account={a} catalog={props.catalog} />

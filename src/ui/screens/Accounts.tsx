@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'preact/hooks';
 import { fmtDate, money, S } from '../../copy/strings';
 import { sparkPath } from '../../domain/accountInsights';
-import type { AccountType, CardFace as CardFaceT, Category, Cents, Compounding, Transaction } from '../../domain/types';
+import type { Account, AccountType, CardFace as CardFaceT, Category, Cents, Compounding, Transaction } from '../../domain/types';
 import { CardFace, CardPicker, useCatalog } from '../cards';
+import { CardAnalysisPanel, CardDetailsFlow, type CardStep } from '../CardAnalysis';
 import { CardMenu } from '../CardMenu';
 import { accountInsights, createAccount, listAccounts, removeAccount, reorderAccounts, restoreAccount, updateAccount, type AccountView } from '../../services/accounts';
 import { CardRoll } from '../CardRoll';
@@ -27,6 +28,7 @@ export function Accounts() {
   const [index, setIndex] = useState(0);
   const [adding, setAdding] = useState(wanted === 'new');
   const [focus, setFocus] = useState<string>(); // a just-added account, brought to the front
+  const [guide, setGuide] = useState<Account | null>(null); // a just-added credit card: ask for its details
   // The tab bar's Add account can arrive while this screen is already showing.
   useEffect(() => {
     if (wanted === 'new') setAdding(true);
@@ -122,7 +124,12 @@ export function Accounts() {
 
       {adding && (
         <Sheet label={S.accounts.addTitle} onClose={() => setAdding(false)}>
-          <NewAccountForm onDone={(id) => (setAdding(false), setFocus(id), bump())} />
+          <NewAccountForm onDone={(acc) => (setAdding(false), setFocus(acc.id), acc.type === 'credit_card' && setGuide(acc), bump())} />
+        </Sheet>
+      )}
+      {guide && (
+        <Sheet label={S.cardx.flowTitle} onClose={() => (setGuide(null), bump())}>
+          <CardDetailsFlow account={guide} onDone={(saved) => (setGuide(null), saved && toast(S.cardx.saved), bump())} />
         </Sheet>
       )}
       {menu && (
@@ -177,6 +184,9 @@ const headlineOf = (v: AccountView) =>
 function AccountDetails({ v, txs, categories }: { v: AccountView; txs: Transaction[]; categories: Category[] }) {
   const a = v.account;
   const insights = useLoad((app) => accountInsights(app, a.id), [a.id]);
+  const { bump } = useApp();
+  const [details, setDetails] = useState<CardStep | null>(null);
+  const analysis = insights?.cardAnalysis;
   const headline = headlineOf(v);
   // Rolls from the previous card's figure to this one's (the panel remounts per card).
   const shownHeadline = useTween(headline, 'account-panel', 800);
@@ -203,7 +213,8 @@ function AccountDetails({ v, txs, categories }: { v: AccountView; txs: Transacti
 
   const tiles: TileProps[] = [];
   const i = insights;
-  if (a.type === 'credit_card' && i?.card) {
+  // Credit cards with an analysis show it instead of the trend and date tiles.
+  if (a.type === 'credit_card' && i?.card && !analysis) {
     // Nothing owing: there's no payment to make, whatever day it is.
     tiles.push(
       owing > 0
@@ -214,13 +225,15 @@ function AccountDetails({ v, txs, categories }: { v: AccountView; txs: Transacti
     if (i.creditUsed !== undefined) tiles.push({ label: S.accounts.tiles.creditUsed, value: `${Math.round(i.creditUsed * 100)}%`, bar: i.creditUsed });
     if ((a.card?.monthlyFeeCents ?? 0) > 0) tiles.push({ label: S.accounts.monthlyFee, value: <Amount c={a.card!.monthlyFeeCents} />, sub: S.accounts.tiles.perMonth });
   }
+  // The analysis covers the rest; the fee sits with the card's other facts.
+  if (analysis && (a.card?.monthlyFeeCents ?? 0) > 0) tiles.push({ label: S.accounts.monthlyFee, value: <Amount c={a.card!.monthlyFeeCents} />, sub: S.accounts.tiles.perMonth });
   if (a.type === 'savings' && a.interest) {
     tiles.push({ label: S.accounts.rate, value: `${(a.interest.rateBps / 100).toFixed(2)}%`, sub: a.interest.kind.toUpperCase() });
     tiles.push({ label: S.accounts.tiles.thisMonth, value: <Amount c={v.interestAccruedCents ?? 0} sign="+" />, sub: S.accounts.tiles.building });
     if (i?.nextInterest) tiles.push({ label: S.accounts.tiles.nextInterest, value: fmtDate(i.nextInterest), sub: S.accounts.tiles.paidIn });
     tiles.push({ label: S.accounts.interestEarned, value: <Amount c={v.interestEarnedCents ?? 0} />, sub: S.accounts.tiles.soFar });
   }
-  if ((a.type === 'chequing' || a.type === 'cash') && i) {
+  if ((a.type === 'chequing' || a.type === 'cash' || a.type === 'other') && i) {
     tiles.push({ label: S.accounts.tiles.in, value: <Amount c={i.flows.inCents} sign="+" />, sub: S.accounts.tiles.thisMonthSub });
     tiles.push({ label: S.accounts.tiles.out, value: <Amount c={-i.flows.outCents} />, sub: S.accounts.tiles.thisMonthSub });
   }
@@ -253,7 +266,14 @@ function AccountDetails({ v, txs, categories }: { v: AccountView; txs: Transacti
         </p>
       </div>
 
-      {series.length > 1 && (
+      {analysis && <CardAnalysisPanel r={analysis} onDetails={setDetails} />}
+      {details && a.card && (
+        <Sheet label={S.cardx.flowTitle} onClose={() => (setDetails(null), bump())}>
+          <CardDetailsFlow account={a} start={details} onDone={(saved) => (setDetails(null), saved && toast(S.cardx.saved), bump())} />
+        </Sheet>
+      )}
+
+      {series.length > 1 && !analysis && (
         <div class="acct-panel">
           <Sparkline values={series} label={S.accounts.trendLabel(series.length)} />
         </div>
@@ -373,10 +393,16 @@ function Sparkline({ values, label }: { values: number[]; label: string }) {
   );
 }
 
-/** A card's settings with no credit limit (clearing the field removes it). */
-const withoutLimit = <T extends { limitCents?: Cents }>(c: T): Omit<T, 'limitCents'> => {
-  const { limitCents: _drop, ...rest } = c;
+/** A card's settings with no credit limit or rate (clearing either field removes it). */
+const withoutLimit = <T extends { limitCents?: Cents; aprBps?: number }>(c: T): Omit<T, 'limitCents' | 'aprBps'> => {
+  const { limitCents: _drop, aprBps: _rate, ...rest } = c;
   return rest;
+};
+
+/** The APR field as basis points, or nothing when it's blank or not a rate. */
+const aprField = (text: string): { aprBps?: number } => {
+  const n = Number(text.replace('%', '').trim());
+  return text.trim() && Number.isFinite(n) && n > 0 && n < 100 ? { aprBps: Math.round(n * 100) } : {};
 };
 
 function EditAccount({ v, onDone }: { v: AccountView; onDone: () => void }) {
@@ -386,6 +412,7 @@ function EditAccount({ v, onDone }: { v: AccountView; onDone: () => void }) {
   const [rate, setRate] = useState(String((a.interest?.rateBps ?? 0) / 100));
   const [fee, setFee] = useState<Cents | undefined>(a.card?.monthlyFeeCents);
   const [limit, setLimit] = useState<Cents | undefined>(a.card?.limitCents);
+  const [apr, setApr] = useState(a.card?.aprBps ? (a.card.aprBps / 100).toFixed(2) : '');
   const [statementDay, setStatementDay] = useState(a.card?.statementDay ?? 1);
   const [dueDay, setDueDay] = useState(a.card?.dueDay ?? 1);
   const [face, setFace] = useState<CardFaceT | undefined>(a.face);
@@ -395,7 +422,7 @@ function EditAccount({ v, onDone }: { v: AccountView; onDone: () => void }) {
       name: name.trim() || a.name,
       ...(isCard ? { face } : {}),
       ...(a.interest ? { interest: { ...a.interest, rateBps: Math.round(Number(rate) * 100) || 0 } } : {}),
-      ...(a.card ? { card: { ...withoutLimit(a.card), monthlyFeeCents: fee ?? 0, statementDay, dueDay, ...(limit ? { limitCents: limit } : {}) } } : {}),
+      ...(a.card ? { card: { ...withoutLimit(a.card), monthlyFeeCents: fee ?? 0, statementDay, dueDay, ...(limit ? { limitCents: limit } : {}), ...aprField(apr) } } : {}),
     });
     onDone();
   };
@@ -413,6 +440,9 @@ function EditAccount({ v, onDone }: { v: AccountView; onDone: () => void }) {
       {a.card && (
         <>
           <MoneyInput label={S.accounts.creditLimit} value={limit} onChange={setLimit} />
+          <label>
+            {S.accounts.aprField} <input inputMode="decimal" placeholder="20.99" value={apr} onInput={(e) => setApr((e.target as HTMLInputElement).value)} />
+          </label>
           <MoneyInput label={S.accounts.monthlyFee} value={fee} onChange={setFee} />
           <MonthlyDayInput label={S.accounts.statementDay} day={statementDay} today={app.clock.today()} onChange={setStatementDay} />
           <MonthlyDayInput label={S.accounts.dueDay} day={dueDay} today={app.clock.today()} onChange={setDueDay} />
@@ -428,11 +458,10 @@ function EditAccount({ v, onDone }: { v: AccountView; onDone: () => void }) {
   );
 }
 
-function NewAccountForm({ onDone }: { onDone: (id: string) => void }) {
+function NewAccountForm({ onDone }: { onDone: (account: Account) => void }) {
   const { app } = useApp();
   const [type, setType] = useState<AccountType>('chequing');
   const [name, setName] = useState('');
-  const [limit, setLimit] = useState<Cents>();
   const [balance, setBalance] = useState<Cents>();
   const [rate, setRate] = useState('');
   const [rateKind, setRateKind] = useState<'apy' | 'apr'>('apy');
@@ -450,13 +479,13 @@ function NewAccountForm({ onDone }: { onDone: (id: string) => void }) {
           type,
           openingBalanceCents: type === 'credit_card' ? -(balance ?? 0) : (balance ?? 0),
           ...(type === 'savings' ? { interest: { rateBps: Math.round(Number(rate) * 100) || 0, kind: rateKind, compounding } } : {}),
-          ...(type === 'credit_card' ? { card: { monthlyFeeCents: fee ?? 0, statementDay, dueDay, ...(limit ? { limitCents: limit } : {}) } } : {}),
+          ...(type === 'credit_card' ? { card: { monthlyFeeCents: fee ?? 0, statementDay, dueDay } } : {}),
           ...(face && (type === 'credit_card' || type === 'chequing') ? { face } : {}),
         });
         setFace(undefined);
         setName('');
         setBalance(undefined);
-        onDone(created.id);
+        onDone(created);
       }}
     >
       <h2>{S.accounts.addTitle}</h2>
@@ -492,7 +521,6 @@ function NewAccountForm({ onDone }: { onDone: (id: string) => void }) {
       )}
       {type === 'credit_card' && (
         <>
-          <MoneyInput label={S.accounts.creditLimit} value={limit} onChange={setLimit} />
           <MoneyInput label={S.accounts.monthlyFee} value={fee} onChange={setFee} />
           <MonthlyDayInput label={S.accounts.statementDay} day={statementDay} today={app.clock.today()} onChange={setStatementDay} />
           <MonthlyDayInput label={S.accounts.dueDay} day={dueDay} today={app.clock.today()} onChange={setDueDay} />

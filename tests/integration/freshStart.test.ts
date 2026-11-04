@@ -28,7 +28,9 @@ describe('fresh start after time away', () => {
     const after = await getHome(app);
     expect(after.overs).toEqual([]); // the restarted period starts clean
     const bills = after.rows.find((r) => r.category.id === 'cat_bills')!.budget;
-    expect(bills.allocatedCents).toBe(after.sts.breakdown.billsCents);
+    // Bills gets what was still due at the restart; whatever's left of it is what's still to come
+    // (a bill due on the restart day itself is in the first and already spent from it).
+    expect(bills.remainingCents).toBe(after.sts.breakdown.billsCents);
     expect((await app.repos.events.all()).filter((e) => e.type === 'fresh_start')).toHaveLength(1);
     expect((await app.repos.snapshots.all()).length).toBeGreaterThanOrEqual(2); // earlier periods snapshotted
   });

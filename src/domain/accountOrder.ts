@@ -1,9 +1,9 @@
 // The order accounts appear in: the user's own once they've rearranged, otherwise
-// cards first (as in a wallet), then chequing, savings, cash, investing.
+// cards first (as in a wallet), then chequing, savings, cash, investing, other.
 
 import type { Account, Id } from './types';
 
-const TYPE_RANK: Record<Account['type'], number> = { credit_card: 0, chequing: 1, savings: 2, cash: 3, investing: 4 };
+const TYPE_RANK: Record<Account['type'], number> = { credit_card: 0, chequing: 1, savings: 2, cash: 3, investing: 4, other: 5 };
 
 export function sortAccounts<T extends Pick<Account, 'type' | 'createdAt' | 'sortOrder'>>(accounts: readonly T[]): T[] {
   return [...accounts].sort(

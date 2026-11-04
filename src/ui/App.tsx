@@ -30,6 +30,7 @@ import { LoggedHost } from './Logged';
 import { hideSplash } from './splash';
 import { announceUpdate, latestReleases } from './version';
 import { WhatsNew } from './WhatsNew';
+import { Tour } from './Tour';
 import type { Release } from '../domain/releases';
 
 // When an unlocked app was last sent to the background, kept across a reload (this tab only).
@@ -128,6 +129,9 @@ function Screens({ offer, setOffer }: { offer: FreshStartOffer | null; setOffer:
       {route.path === '/whats-new' && <WhatsNew releases={latestReleases()} onClose={() => go(lastPath.current)} />}
       {/* Not over onboarding or another sheet: it waits for the next screen change. */}
       {news.length > 0 && !sheetOpen && <WhatsNew releases={news} onClose={() => setNews([])} />}
+      {/* The tour, once after onboarding or from Settings. It opens the Add sheet itself, so it can sit over
+          sheets; it waits for What's new to close. */}
+      {settings.tourPending && news.length === 0 && <Tour onEnd={() => setCelebration(undefined)} />}
       <ScanHost />
       <ToastHost />
       <LoggedHost />

@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { testApp } from '../helpers';
 import { categoryId } from '../../src/domain/defaults';
 import { seedSampleData } from '../../src/data/seed';
+import { analyseCard } from '../../src/domain/cardAnalysis';
+import { balanceAsOf } from '../../src/domain/ledger';
 import { createAccount } from '../../src/services/accounts';
 import { contribute, createGoal, listGoals, removeGoal, setGoalContribution } from '../../src/services/goals';
 import { getHome } from '../../src/services/home';
@@ -82,16 +84,25 @@ describe('plan services', () => {
     expect(g.progress.progressCents).toBe(15000);
   });
 
-  it('the seeded student has a sensible home screen', async () => {
+  it('the seeded sample (Jordan, an average budget) has a sensible home screen', async () => {
     const app = await testApp('2026-10-18');
     await seedSampleData(app);
     const home = await getHome(app);
     expect(Number.isSafeInteger(home.sts.safeCents)).toBe(true);
     expect(home.rows).toHaveLength(7);
-    expect(home.sts.breakdown.goalLines).toHaveLength(1);
+    expect(home.sts.breakdown.goalLines).toHaveLength(2);
+    expect(home.sts.safeCents).toBeGreaterThan(0);
     expect(home.upcoming.every((u) => u.date > '2026-10-18' && u.date <= '2026-10-25')).toBe(true);
     const accounts = await app.repos.accounts.all();
-    expect(accounts.map((a) => a.type).sort()).toEqual(['chequing', 'credit_card', 'investing', 'savings']);
+    expect(accounts.map((a) => a.type).sort()).toEqual(['chequing', 'credit_card', 'credit_card', 'investing', 'savings']);
+    // The cards' statements: entered ones from before Tameru, tracked ones since, and every account stays above zero.
+    const visa = accounts.find((a) => a.name === 'Scotia Momentum')!;
+    const txs = await app.repos.transactions.all();
+    const r = analyseCard(visa, txs, '2026-10-18')!;
+    expect(r.history.filter((h) => h.source === 'entered')).toHaveLength(3);
+    expect(r.history.filter((h) => h.source === 'tracked').length).toBeGreaterThanOrEqual(2);
+    expect(r.missing).toEqual({ limit: false, apr: false, statements: 0 });
+    for (const a of accounts.filter((x) => x.type !== 'credit_card')) expect(balanceAsOf(a, txs, '2026-10-18'), a.name).toBeGreaterThan(0);
     const interest = (await app.repos.transactions.all()).filter((t) => t.originKey?.startsWith('int:'));
     expect(interest.length).toBeGreaterThanOrEqual(2);
   });

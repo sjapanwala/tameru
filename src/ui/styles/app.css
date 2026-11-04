@@ -4009,7 +4009,7 @@ body:has(.gate) {
 }
 
 /* fields: soft filled boxes instead of underlines */
-:is(.onb, .onb-sheet) label:not(.switch):not(:has(> input[type='checkbox'])):not(:has(> input[type='radio'])) {
+:is(.onb, .onb-sheet) label:not(.switch):not(.field--inline):not(.dial__figure):not(:has(> input[type='checkbox'])):not(:has(> input[type='radio'])) {
   display: block;
   margin: 0 0 var(--s4);
   font-size: var(--fs-xs);
@@ -8019,4 +8019,1423 @@ main ul.up-all {
 .up-all__amt small {
   font-size: 0.75rem;
   color: var(--text-2);
+}
+
+/* ---------- a credit card's analysis on Accounts: cycle, payment, statements, use ---------- */
+
+.cardx {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 20px;
+}
+
+.cardx-panel {
+  padding: 16px;
+  border-radius: 20px;
+  background: var(--surface);
+  animation: enter var(--t-slow) var(--glide) backwards;
+}
+
+.cardx-panel h3 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.cardx-eyebrow {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--text-2);
+}
+
+.cardx-big {
+  margin: 6px 0 0;
+  font-family: var(--font-display);
+  font-size: 2rem;
+  font-weight: 600;
+  letter-spacing: -0.035em;
+  line-height: 1.1;
+}
+
+.cardx-big .amt {
+  font-family: inherit;
+}
+
+.cardx-big .amt__c {
+  color: var(--text-3);
+}
+
+.cardx-big__sub {
+  font-family: var(--font);
+  font-size: 0.9375rem;
+  font-weight: 500;
+  letter-spacing: 0;
+  color: var(--text-2);
+}
+
+.cardx-meta,
+.cardx-foot {
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  margin: 8px 0 0;
+  font-size: 0.8125rem;
+  color: var(--text-2);
+}
+
+.cardx-foot {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 0.5px solid var(--line);
+}
+
+.cardx-note {
+  margin: 8px 0 0;
+  font-size: 0.8125rem;
+  color: var(--text-2);
+}
+
+.cardx-headrow {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+
+/* the cycle so far: a track filling up to today */
+.cardx-track {
+  position: relative;
+  height: 6px;
+  margin-top: 14px;
+  border-radius: 3px;
+  background: var(--fill);
+}
+
+.cardx-track > span {
+  position: absolute;
+  inset: 0 auto 0 0;
+  border-radius: 3px;
+  background: var(--accent);
+  transform-origin: left;
+  animation: bar-grow 0.9s var(--glide) both;
+}
+
+.cardx-track > i {
+  position: absolute;
+  top: 50%;
+  width: 14px;
+  height: 14px;
+  margin: -7px 0 0 -7px;
+  border-radius: 50%;
+  background: var(--bg);
+  border: 3px solid var(--accent);
+}
+
+/* "Complete this card": a progress ring and one row per missing detail */
+.cardx-todo__head {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.cardx-todo__head p {
+  margin: 4px 0 0;
+  font-size: 0.8125rem;
+  color: var(--text-2);
+}
+
+.cardx-ring {
+  --p: 0;
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  background: conic-gradient(var(--accent) calc(var(--p) * 360deg), var(--fill) 0);
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.cardx-ring > span {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--surface);
+}
+
+.cardx-todo ul {
+  margin: 12px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.cardx-todo li {
+  padding: 0;
+  border: 0;
+}
+
+.cardx-todo li + li {
+  border-top: 0.5px solid var(--line);
+}
+
+.cardx-todo__row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 0;
+  margin: 0;
+  padding: 10px 0;
+  border: 0;
+  background: none;
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+}
+
+.cardx-todo__row > svg {
+  width: 16px;
+  height: 16px;
+  color: var(--text-3);
+}
+
+.cardx-todo__text {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  font-size: 0.9375rem;
+  font-weight: 500;
+}
+
+.cardx-todo__text small {
+  line-height: 1.3;
+  font-size: 0.75rem;
+  font-weight: 400;
+  color: var(--text-2);
+}
+
+.cardx-todo__row.is-done .cardx-todo__text > span {
+  color: var(--text-2);
+}
+
+.cardx-check {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 1.5px solid var(--fill-2);
+  color: var(--accent-text);
+}
+
+.is-done .cardx-check,
+.cardx-check--on {
+  border-color: var(--accent);
+  background: var(--accent);
+}
+
+.cardx-check svg {
+  width: 14px;
+  height: 14px;
+}
+
+/* the payment on the last statement */
+.cardx-pay--soon {
+  background: var(--text);
+  color: var(--bg);
+}
+
+.cardx-pay--soon .cardx-eyebrow,
+.cardx-pay--soon .cardx-big__sub,
+.cardx-pay--soon .cardx-note,
+.cardx-pay--soon dt {
+  color: color-mix(in srgb, var(--bg) 65%, transparent);
+}
+
+.cardx-pay--soon .cardx-big .amt__c {
+  color: color-mix(in srgb, var(--bg) 45%, transparent);
+}
+
+.cardx-pay--done {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.cardx-pay--done p {
+  margin: 2px 0 0;
+  font-size: 0.8125rem;
+  color: var(--text-2);
+}
+
+.cardx-pay--quiet .cardx-note {
+  margin: 0;
+}
+
+.cardx-link {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--text);
+  font-size: 0.9375rem;
+  text-align: left;
+  cursor: pointer;
+}
+
+.cardx-link svg {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  color: var(--text-3);
+}
+
+.cardx-pair {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin: 14px 0 0;
+}
+
+.cardx-pair dt {
+  font-size: 0.75rem;
+  color: var(--text-2);
+}
+
+.cardx-pair dd {
+  margin: 2px 0 0;
+  font-size: 1.0625rem;
+  font-weight: 600;
+}
+
+.cardx-pair .amt__c {
+  opacity: 0.5;
+}
+
+/* statement history: a bar per statement, a dot for how it was paid, and the estimate */
+.cardx-detail {
+  min-height: 1.4em;
+  margin: 10px 0 0;
+  font-size: 0.875rem;
+  color: var(--text-2);
+}
+
+.cardx-detail b {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.cardx-bars {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.cardx-bar {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--text-2);
+  cursor: pointer;
+}
+
+.cardx-bar__col {
+  display: flex;
+  align-items: flex-end;
+  width: 100%;
+  height: 96px;
+}
+
+.cardx-bar__col > span {
+  display: block;
+  width: 100%;
+  border-radius: 6px;
+  background: var(--fill-2);
+  transform-origin: bottom;
+  animation: rise 0.8s var(--glide) both;
+  transition: background var(--t-fast) var(--glide);
+}
+
+.cardx-bar.is-on .cardx-bar__col > span {
+  background: var(--accent);
+}
+
+.cardx-bar--est .cardx-bar__col > span {
+  background: repeating-linear-gradient(135deg, var(--fill-2) 0 4px, transparent 4px 8px);
+  box-shadow: inset 0 0 0 1.5px var(--fill-2);
+}
+
+.cardx-bar--est.is-on .cardx-bar__col > span {
+  background: repeating-linear-gradient(135deg, color-mix(in srgb, var(--accent) 45%, transparent) 0 4px, transparent 4px 8px);
+  box-shadow: inset 0 0 0 1.5px var(--accent);
+}
+
+.cardx-bar__label {
+  font-size: 0.6875rem;
+}
+
+.cardx-bar.is-on .cardx-bar__label {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.cardx-dot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  vertical-align: middle;
+}
+
+.cardx-dot--full {
+  background: var(--pos);
+}
+
+.cardx-dot--part {
+  box-shadow: inset 0 0 0 1.5px var(--text-2);
+}
+
+.cardx-legend {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.cardx-legend .cardx-dot--part {
+  margin-left: 6px;
+}
+
+@keyframes rise {
+  from {
+    transform: scaleY(0);
+  }
+}
+
+/* credit used: now, where it's heading by the statement, and the 30% mark */
+.cardx-use {
+  position: relative;
+  height: 8px;
+  margin-top: 14px;
+  border-radius: 4px;
+  background: var(--fill);
+  overflow: hidden;
+}
+
+.cardx-use > span {
+  position: absolute;
+  inset: 0 auto 0 0;
+  background: var(--accent);
+  transform-origin: left;
+  animation: bar-grow 0.9s var(--glide) both;
+}
+
+.cardx-use > .cardx-use__next {
+  background: repeating-linear-gradient(135deg, color-mix(in srgb, var(--accent) 50%, transparent) 0 3px, transparent 3px 6px);
+  animation: none;
+}
+
+.cardx-use > i {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  margin-left: -1px;
+  background: var(--bg);
+}
+
+.cardx-tiles {
+  margin-top: 0;
+}
+
+.tile--add {
+  min-height: 0;
+  margin: 0;
+  border: 0;
+  color: var(--text);
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+}
+
+.tile--add .tile__value {
+  color: var(--text-3);
+}
+
+.tile--add .tile__sub {
+  color: var(--accent);
+}
+
+.accounts .cardx + .section-head,
+.accounts .cardx .section-head {
+  margin-top: 20px;
+}
+
+/* ---------- card details flow: limit, rate, statements, one step at a time ---------- */
+
+.cardflow h2 {
+  margin: 12px 0 6px;
+}
+
+.cardflow > .muted {
+  margin: 0 0 16px;
+  font-size: 0.9375rem;
+}
+
+.cardflow__steps {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.cardflow__steps > span:not(.cardflow__count) {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--fill-2);
+  transition: background var(--t-mid) var(--glide);
+}
+
+.cardflow__steps > span.is-on,
+.cardflow__steps > span.is-done {
+  background: var(--accent);
+}
+
+.cardflow__count {
+  margin-left: 6px;
+  font-size: 0.8125rem;
+  color: var(--text-2);
+}
+
+.cardflow__list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.cardflow__st {
+  margin: 0;
+  padding: 12px 14px 4px;
+  border: 0;
+  border-radius: 16px;
+  background: var(--surface);
+}
+
+.cardflow__st legend {
+  float: left;
+  width: 100%;
+  padding: 0;
+  margin-bottom: 4px;
+  font-size: 0.875rem;
+}
+
+.cardflow__st legend span {
+  color: var(--text-2);
+}
+
+.cardflow__pair {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.cardflow__more {
+  width: 100%;
+  margin-top: 10px;
+  border: 1.5px dashed var(--fill-2);
+  border-radius: 16px;
+  background: none;
+  color: var(--text-2);
+}
+
+.cardflow__sub {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 12px;
+}
+
+.cardflow__st legend,
+.cardflow__st legend b {
+  text-transform: none;
+  letter-spacing: normal;
+  font-size: 0.875rem;
+  color: var(--text);
+}
+
+.cardflow__st legend span {
+  color: var(--text-2);
+  font-weight: 400;
+}
+
+/* ---------- onboarding as a conversation ---------- */
+
+.talk {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+}
+
+/* your last answer, as a reply on the right */
+.talk__reply {
+  align-self: flex-end;
+  max-width: 80%;
+  margin: 0 0 18px;
+  padding: 9px 14px;
+  border-radius: 20px 20px 6px 20px;
+  background: var(--accent);
+  color: var(--accent-text);
+  font-size: 0.9375rem;
+  font-weight: 500;
+  line-height: 1.3;
+  animation: talk-reply 0.45s var(--glide) backwards;
+}
+
+@keyframes talk-reply {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.96);
+  }
+}
+
+.talk__app {
+  display: grid;
+  grid-template-columns: 32px 1fr;
+  gap: 12px;
+  align-items: start;
+}
+
+.talk__avatar {
+  width: 32px;
+  height: 32px;
+  margin-top: 4px;
+  border-radius: 9px;
+  box-shadow: 0 0 0 0.5px var(--line);
+}
+
+.talk__line {
+  margin: 0 0 6px;
+  font-size: 1.0625rem;
+  font-weight: 500;
+  line-height: 1.4;
+  color: var(--text-2);
+  text-wrap: pretty;
+}
+
+.talk__line--head {
+  margin-bottom: 8px;
+  font-family: var(--font-display);
+  font-size: clamp(1.5rem, 7vw, 1.875rem);
+  font-weight: 600;
+  letter-spacing: -0.025em;
+  line-height: 1.15;
+  color: var(--text);
+  text-wrap: balance;
+}
+
+.talk__line--hint {
+  font-size: 0.9375rem;
+  font-weight: 400;
+}
+
+/* each word arrives on its own, as if being said */
+.talk__w {
+  display: inline;
+  animation: talk-word 0.38s var(--glide) backwards;
+}
+
+@keyframes talk-word {
+  from {
+    opacity: 0;
+    filter: blur(4px);
+  }
+}
+
+/* the controls wait until the lines are in */
+.talk__ui {
+  margin-top: 24px;
+  animation: talk-ui 0.5s var(--glide) backwards;
+  animation-delay: var(--after, 0ms);
+}
+
+@keyframes talk-ui {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .talk__w,
+  .talk__ui,
+  .talk__reply {
+    animation: none;
+  }
+}
+
+/* welcome: a soft glow behind the first hello, and one big field */
+.onb-welcome {
+  position: relative;
+  isolation: isolate;
+}
+
+.onb-welcome__glow {
+  position: absolute;
+  z-index: -1;
+  inset: -120px -40px auto;
+  height: 420px;
+  background: radial-gradient(50% 50% at 40% 45%, color-mix(in srgb, var(--accent) 22%, transparent), transparent 70%);
+  pointer-events: none;
+  animation: fade-in 1.4s var(--glide) both;
+}
+
+.talk--hello {
+  padding-top: 12vh;
+}
+
+.talk--hello .talk__avatar {
+  width: 56px;
+  height: 56px;
+  border-radius: 15px;
+  margin: 0 0 18px;
+}
+
+.talk--hello .talk__app {
+  display: block;
+}
+
+:is(.onb, .onb-sheet) .talk__input:not([type='checkbox']):not([type='radio']) {
+  width: 100%;
+  min-height: 0;
+  margin: 0;
+  padding: 6px 0 10px;
+  border: 0;
+  border-bottom: 2px solid var(--fill-2);
+  border-radius: 0;
+  background: none;
+  font-family: var(--font-display);
+  font-size: 1.75rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+:is(.onb, .onb-sheet) .talk__input:not([type='checkbox']):not([type='radio']):focus {
+  border-color: var(--accent);
+  background: none;
+}
+
+/* the inner exchanges of one step (income) slide in like the steps do */
+.onb-phase {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  animation: onb-in-fwd var(--t-slow) var(--glide) backwards;
+}
+
+.onb-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.onb-fields label {
+  margin: 0;
+}
+
+/* a label and its field on one line, on a soft panel */
+:is(.onb, .onb-sheet) .field--inline {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0 0 10px;
+  padding: 0 0 0 16px;
+  border-radius: var(--radius);
+  background: var(--surface);
+  font-size: 0.9375rem;
+  color: var(--text-2);
+}
+
+:is(.onb, .onb-sheet) .field--inline > span:first-child {
+  flex: none;
+}
+
+:is(.onb, .onb-sheet) .field--inline input:not([type='checkbox']):not([type='radio']),
+:is(.onb, .onb-sheet) .field--inline .field__box {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  text-align: right;
+  background: none;
+}
+
+:is(.onb, .onb-sheet) .field--inline .field__box input:not([type='checkbox']) {
+  text-align: right;
+}
+
+:is(.onb, .onb-sheet) .field--inline .field__box {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding-right: 16px;
+}
+
+:is(.onb, .onb-sheet) .field--inline .field__cur {
+  position: static;
+  transform: none;
+  color: var(--text-3);
+}
+
+:is(.onb, .onb-sheet) .field--inline .field__box .field__cur + input:not([type='checkbox']):not([type='radio']) {
+  flex: 0 1 9ch;
+  padding: 0 0 0 2px !important;
+  text-align: left;
+}
+
+.onb-label {
+  margin: 20px 0 8px;
+  font-size: 0.8125rem;
+  color: var(--text-2);
+}
+
+.onb-note {
+  margin: 12px 0 0;
+  font-size: 0.8125rem;
+  color: var(--text-2);
+}
+
+.onb-sheet__title:not([type='checkbox']) {
+  width: 100%;
+  margin: 0 0 4px !important;
+  padding: 0 !important;
+  min-height: 0 !important;
+  border: 0 !important;
+  background: none !important;
+  font-family: var(--font-display);
+  font-size: 1.5rem !important;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.onb-tiles .onb-tile:last-child:nth-child(odd) {
+  grid-column: auto;
+}
+
+/* ---------- the amount dial ---------- */
+
+.dial {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.dial__ring {
+  position: relative;
+  width: min(78vw, 290px);
+  aspect-ratio: 1;
+  touch-action: none;
+  cursor: grab;
+  border-radius: 50%;
+  outline: none;
+}
+
+.dial__ring:focus-visible {
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 40%, transparent);
+}
+
+.dial__ring svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.dial__tick {
+  stroke: var(--fill-2);
+  stroke-width: 1.4;
+  stroke-linecap: round;
+  transition: stroke 0.15s;
+}
+
+.dial__tick.is-on {
+  stroke: color-mix(in srgb, var(--accent) 35%, var(--fill-2));
+}
+
+.dial__tick.is-lead {
+  stroke: var(--accent);
+}
+
+.dial__knob {
+  fill: var(--bg);
+  stroke: var(--accent);
+  stroke-width: 2.2;
+  filter: drop-shadow(0 1px 2px rgb(0 0 0 / 0.25));
+}
+
+.dial__centre {
+  position: absolute;
+  inset: 18%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--surface);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.04);
+}
+
+.dial__figure {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  margin: 0;
+  color: var(--text);
+  cursor: text;
+}
+
+.dial__cur {
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--text-3);
+}
+
+.dial .dial__figure input:not([type='checkbox']):not([type='radio']) {
+  max-width: 7.5ch;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  font-family: var(--font-display);
+  font-size: 2.5rem;
+  font-weight: 600;
+  letter-spacing: -0.04em;
+  text-align: center;
+  caret-color: var(--accent);
+}
+
+.dial .dial__figure input:focus {
+  background: none;
+}
+
+.dial__label {
+  font-size: 0.8125rem;
+  color: var(--text-2);
+}
+
+.dial__hint {
+  margin: 10px 0 0;
+  font-size: 0.75rem;
+  color: var(--text-3);
+  text-align: center;
+}
+
+/* ---------- the calendar ---------- */
+
+.cal {
+  padding: 14px 12px 12px;
+  border-radius: 20px;
+  background: var(--surface);
+}
+
+.cal__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.cal__month {
+  font-weight: 600;
+  font-size: 1rem;
+}
+
+.cal__nav {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: var(--fill);
+  color: var(--text);
+}
+
+.cal__nav svg {
+  width: 16px;
+  height: 16px;
+}
+
+.cal__nav:disabled {
+  opacity: 0.3;
+}
+
+.cal__grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+  justify-items: center;
+}
+
+.cal__wd {
+  padding: 4px 0 6px;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: var(--text-3);
+}
+
+.cal__day {
+  width: 38px;
+  height: 38px;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  color: var(--text);
+  font-size: 0.9375rem;
+  font-variant-numeric: tabular-nums;
+  transition: background var(--t-fast) var(--glide), color var(--t-fast) var(--glide);
+}
+
+.cal__day.is-today {
+  box-shadow: inset 0 0 0 1.5px var(--fill-2);
+}
+
+.cal__day.is-on {
+  background: var(--accent);
+  color: var(--accent-text);
+  font-weight: 600;
+  box-shadow: none;
+}
+
+.cal__day:disabled {
+  color: var(--text-3);
+}
+
+.cal__note {
+  margin: 8px 4px 0;
+  font-size: 0.8125rem;
+  color: var(--text-2);
+}
+
+/* ---------- defaults to tick: bills, spending, goals ---------- */
+
+.picks {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-radius: 20px;
+  background: var(--surface);
+  overflow: hidden;
+}
+
+.picks > .pick {
+  display: flex;
+  align-items: stretch;
+  padding: 0;
+  border: 0;
+}
+
+.picks > .pick + .pick {
+  box-shadow: inset 0 0.5px 0 var(--line);
+}
+
+.pick__toggle,
+.pick__main {
+  min-height: 0;
+  margin: 0;
+  border: 0;
+  background: none;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.pick__toggle {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 56px;
+  padding: 0;
+}
+
+.pick__main {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 13px 16px 13px 0;
+  text-align: left;
+}
+
+.pick--add .pick__main {
+  padding-left: 16px;
+}
+
+.pick__main--static {
+  cursor: default;
+}
+
+.pick__main > svg {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  color: var(--text-3);
+}
+
+.pick__circle {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 1.5px solid var(--fill-2);
+  color: var(--accent-text);
+  transition: background var(--t-fast) var(--glide), border-color var(--t-fast) var(--glide), transform var(--t-fast) var(--glide);
+}
+
+.pick.is-on .pick__circle {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.pick__toggle:active .pick__circle {
+  transform: scale(0.88);
+}
+
+.pick__circle svg {
+  width: 15px;
+  height: 15px;
+}
+
+.pick__circle--add {
+  border: 0;
+  background: var(--fill);
+  color: var(--accent);
+}
+
+.pick__text {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.pick__text strong {
+  font-size: 1rem;
+  font-weight: 500;
+}
+
+.pick__text small {
+  font-size: 0.8125rem;
+  color: var(--text-2);
+}
+
+.pick:not(.is-on) .pick__text small {
+  color: var(--text-3);
+}
+
+.pick--add .pick__text strong {
+  color: var(--accent);
+}
+
+.pick.is-off {
+  opacity: 0.45;
+}
+
+/* ---------- the app tour ---------- */
+
+.tour {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+}
+
+.tour__scrim {
+  position: absolute;
+  inset: 0;
+  background: rgb(0 0 0 / 0.62);
+  -webkit-backdrop-filter: blur(2px);
+  backdrop-filter: blur(2px);
+  transition: opacity 0.3s;
+}
+
+.tour__scrim.is-clear {
+  opacity: 0;
+}
+
+/* the lit-up feature: a clear window, with the dark everywhere else */
+.tour__hole {
+  position: absolute;
+  border-radius: 20px;
+  box-shadow: 0 0 0 9999px rgb(0 0 0 / 0.62);
+  transition: top 0.45s var(--glide), left 0.45s var(--glide), width 0.45s var(--glide), height 0.45s var(--glide);
+  pointer-events: none;
+}
+
+/* a soft ring that breathes round it */
+.tour__hole::after {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border-radius: inherit;
+  border: 2px solid color-mix(in srgb, var(--accent) 80%, white);
+  animation: tour-ring 2.2s ease-in-out infinite;
+}
+
+@keyframes tour-ring {
+  50% {
+    inset: -7px;
+    opacity: 0.35;
+  }
+}
+
+.tour__note {
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  max-width: 440px;
+  margin: 0 auto;
+  padding: 12px 18px 16px;
+  border-radius: 26px;
+  background: var(--bg);
+  color: var(--text);
+  box-shadow: 0 24px 60px -14px rgb(0 0 0 / 0.55), 0 0 0 0.5px var(--line);
+  animation: tour-note 0.42s var(--glide) both;
+}
+
+@keyframes tour-note {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.97);
+  }
+}
+
+/* the pages, as icons along the top */
+.tour__chapters {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  margin: 0 -8px 12px;
+  padding-bottom: 10px;
+  border-bottom: 0.5px solid var(--line);
+}
+
+.tour__chapters button {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  color: var(--text-3);
+}
+
+.tour__chapters button svg {
+  width: 18px;
+  height: 18px;
+}
+
+.tour__chapters button.is-on {
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  color: var(--accent);
+}
+
+.tour__chapters .tour__end {
+  margin-left: auto;
+  background: var(--fill);
+  color: var(--text-2);
+}
+
+.tour__progress {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 10px;
+}
+
+.tour__progress span {
+  flex: 1;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--fill);
+}
+
+.tour__progress span.is-done {
+  background: color-mix(in srgb, var(--accent) 45%, var(--fill));
+}
+
+.tour__progress span.is-on {
+  background: var(--accent);
+}
+
+.tour__eyebrow {
+  margin: 0 0 2px !important;
+  font-size: 0.75rem !important;
+  font-weight: 600;
+  color: var(--accent) !important;
+}
+
+.tour__eyebrow .num {
+  color: var(--text-3);
+  font-weight: 500;
+}
+
+.tour__note h2 {
+  margin: 0 0 6px;
+  font-size: 1.3125rem;
+  letter-spacing: -0.02em;
+}
+
+.tour__note p {
+  margin: 0;
+  font-size: 0.9375rem;
+  color: var(--text-2);
+  line-height: 1.42;
+}
+
+/* the gesture to try, on its own tinted strip */
+.tour__note .tour__tip {
+  margin-top: 10px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--accent) 9%, transparent);
+  color: var(--text);
+  font-size: 0.875rem;
+}
+
+.tour__tip b {
+  display: block;
+  margin-bottom: 2px;
+  font-size: 0.6875rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.tour__actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 14px;
+}
+
+.tour__actions button.primary {
+  margin: 0;
+  min-height: 46px;
+  padding: 0 24px;
+}
+
+.tour__actions button.link:disabled {
+  visibility: hidden;
+}
+
+/* a page's opening card: its icon, what it's for, and what the tour will show */
+.tour__note--intro {
+  padding-bottom: 18px;
+}
+
+.tour__icon {
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  margin: 6px 0 12px;
+  border-radius: 16px;
+  background: var(--accent);
+  color: var(--accent-text);
+}
+
+.tour__icon svg {
+  width: 26px;
+  height: 26px;
+}
+
+.tour__note--intro h2 {
+  font-size: 1.75rem;
+}
+
+.tour__note .tour__label {
+  margin: 14px 0 6px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-3);
+}
+
+.tour__list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: tour;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px 12px;
+}
+
+.tour__list li {
+  counter-increment: tour;
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+  font-size: 0.875rem;
+  color: var(--text);
+  line-height: 1.3;
+}
+
+.tour__list li::before {
+  content: counter(tour);
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--fill);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: var(--text-2);
+  font-variant-numeric: tabular-nums;
+  transform: translateY(2px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tour__hole {
+    transition: none;
+  }
+  .tour__hole::after,
+  .tour__note {
+    animation: none;
+  }
 }

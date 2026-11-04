@@ -14,7 +14,9 @@ export interface BaseRecord {
 
 // ---------- Accounts ----------
 
-export type AccountType = 'chequing' | 'savings' | 'credit_card' | 'investing' | 'cash';
+// 'other': anything else that holds money (PayPal, a gift card, a prepaid card). It isn't
+// counted as spendable, so safe-to-spend never leans on money that may be hard to use.
+export type AccountType = 'chequing' | 'savings' | 'credit_card' | 'investing' | 'cash' | 'other';
 export type Compounding = 'daily' | 'monthly' | 'quarterly' | 'annually';
 
 export interface InterestConfig {
@@ -28,6 +30,16 @@ export interface CardConfig {
   statementDay: number; // 1–31
   dueDay: number; // 1–31
   limitCents?: Cents;
+  aprBps?: number; // purchase interest rate, basis points: 2099 = 20.99%
+  statements?: CardStatement[]; // from the user's bank statements, any order
+}
+
+/** One statement as the bank showed it. Owing is positive. History only: never moves the balance. */
+export interface CardStatement {
+  closingDate: LocalDate;
+  balanceCents: Cents;
+  minimumCents?: Cents;
+  paidCents?: Cents; // what the user paid toward it
 }
 
 export interface Account extends BaseRecord {
@@ -277,6 +289,7 @@ export interface Settings {
   coversHandled?: Record<string, Cents>;
   lock?: AppLock; // absent = no passcode
   theme?: ThemeId; // absent = blue
+  tourPending?: boolean; // show the app tour on the next Home: after onboarding, or "Take a tour"
 }
 
 /** Accent colours over one neutral light and dark base. */
