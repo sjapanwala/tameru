@@ -30,6 +30,7 @@ const ROW = 76; // px of each card showing when the stack is open
 const ALL_ROW = 56; // the All accounts row, and the gap under it
 const LEGEND = 3; // cards named under the summary bar
 const SUMMARY_GAP = 30; // px between the summary's legend and the cards resting under it
+const FLY_MS = 260; // a swiped card's trip out to the side, before it tucks in at its new place
 
 export function CardStack(props: {
   cards: Account[];
@@ -57,6 +58,24 @@ export function CardStack(props: {
     setDragState(d);
   };
   const g = useRef<{ x: number; y: number; id: number; axis: 'x' | 'y' | null; target: Element | null } | null>(null);
+
+  // The stack's order, front card first, as account ids. Every state draws the cards in
+  // this order (closed, resting and open alike), so opening, closing and picking never
+  // make two cards swap places through each other. Picking a card lifts it to the front
+  // and leaves the rest in order; a swipe sends the front card round to the back (or
+  // brings the back one round to the front) by way of the side, clear of the others.
+  const [order, setOrder] = useState<string[]>(() => cards.map((a) => a.id));
+  const ids = cards.map((a) => a.id);
+  const known = order.filter((id) => ids.includes(id));
+  let ord = known.length === order.length ? order : known;
+  if (ord.length !== n) ord = [...ord, ...ids.filter((id) => !ord.includes(id))];
+  const selId = index > 0 ? cards[index - 1]?.id : undefined;
+  if (selId && ord[0] !== selId) ord = [selId, ...ord.filter((id) => id !== selId)];
+  if (ord !== order && (ord.length !== order.length || ord.some((id, k) => id !== order[k]))) setOrder(ord);
+  const depthOf = (id: string) => Math.max(0, ord.indexOf(id));
+  const [fly, setFly] = useState<{ id: string; x: number } | null>(null);
+  const flying = useRef(false);
+  useEffect(() => () => void (flying.current = false), []);
 
   useLayoutEffect(() => {
     const el = frame.current;
@@ -175,10 +194,35 @@ export function CardStack(props: {
       else if (y < -PULL && open) props.onOpen(false);
       return;
     }
-    if (!open && sel >= 0 && n > 1) {
-      if (x < -SWIPE) (haptic(6), props.onIndex(((sel + 1) % n) + 1));
-      else if (x > SWIPE) (haptic(6), props.onIndex(((sel - 1 + n) % n) + 1));
+    if (!open && sel >= 0 && n > 1 && !flying.current) {
+      if (x < -SWIPE) shuffle(1);
+      else if (x > SWIPE) shuffle(-1);
     }
+  };
+  // dir 1: the front card goes out to the left and round to the back.
+  // dir -1: the back card comes out to the right and round to the front.
+  const shuffle = (dir: 1 | -1) => {
+    haptic(6);
+    const next = dir === 1 ? [...ord.slice(1), ord[0]!] : [ord[n - 1]!, ...ord.slice(0, n - 1)];
+    const goTo = () => props.onIndex(ids.indexOf(next[0]!) + 1);
+    if (reducedMotion()) return void (setOrder(next), goTo());
+    const id = dir === 1 ? ord[0]! : ord[n - 1]!;
+    const off = -dir * w * 1.3; // well clear of the stack by the time they change places
+    flying.current = true;
+    setFly({ id, x: off });
+    window.setTimeout(() => {
+      if (!flying.current) return;
+      // it's clear of the stack now: change places, still out at the side…
+      setOrder(next);
+      goTo();
+      // …then slide in at its new depth
+      requestAnimationFrame(() =>
+        requestAnimationFrame(() => {
+          flying.current = false;
+          setFly(null);
+        }),
+      );
+    }, FLY_MS);
   };
   const cancel = () => {
     g.current = null;
@@ -252,27 +296,28 @@ export function CardStack(props: {
           let x = 0;
           let rot = 0;
           let depth = 0;
-          let z: number;
+          const k = depthOf(a.id); // place in the stack, 0 at the front
+          const z = n - k; // the same in every state, so cards never pass through each other
           if (open) {
-            y = ALL_ROW + i * ROW + pullUp * 0.4 * i;
-            z = i + 1;
+            // fanned out top to bottom in stack order, the front card at the bottom
+            const row = n - 1 - k;
+            y = ALL_ROW + row * ROW + pullUp * 0.4 * row;
           } else if (sel < 0) {
-            // resting behind the summary: the first card in front, the rest tucked behind it
-            // in order (the same front card as Accounts' stack)
-            const d = i;
-            depth = d;
+            // resting behind the summary, the front card lowest and the rest tucked behind it
+            depth = k;
             // pulled, they fan out: the front card keeps pace with the growing frame, the ones behind lag
             y = cardsTop + (DEPTH - 1 - depth) * REST_PEEK + pull * (1.1 - look(depth) * 0.375);
-            z = n - i;
           } else {
-            const k = (i - sel + n) % n;
             depth = k;
             y = (DEPTH - 1) * PEEK - depth * PEEK + pull * (k === 0 ? 0.9 : Math.max(0.2, 0.9 - look(k) * 0.35));
-            z = n - k;
             if (k === 0) {
               x = drag.x;
               rot = drag.x / 26;
             }
+          }
+          if (fly?.id === a.id) {
+            x = fly.x;
+            rot = fly.x / 80;
           }
           const t = look(depth);
           const sc = 1 - t * 0.05;

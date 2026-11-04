@@ -5,6 +5,12 @@ import type { Release } from '../domain/releases';
 
 export const RELEASES: Release[] = [
   {
+    version: '0.17.1',
+    items: [
+      { title: 'Smoother cards', body: 'On Accounts, a card passing the front now tips back over the top of the stack and comes down in its place, instead of slipping through the next one, and the roll keeps the speed of your flick. On Home, pulling the stack open keeps your cards in the order they were in, and a swiped card goes round the side to the back of the stack.' },
+    ],
+  },
+  {
     version: '0.17.0',
     items: [
       { title: 'Investment prices (beta)', body: 'Add the holdings in an investing account, one by one or from your broker’s CSV, and Accounts shows what they’re worth, your all-time invested, your all-time P&L and today’s change. Prices are Yahoo Finance closing prices, fetched once after each market close in a single round for all your holdings. Importing a file or adding a holding fetches nothing: the file brings its prices, and a new holding shows its entry price until the close. Turn it on in Settings → Experimental. Only your ticker symbols leave your phone.' },

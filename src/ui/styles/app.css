@@ -7604,12 +7604,6 @@ body.tab-menu-open .tabbar {
   border-radius: 18px;
 }
 
-.roll__card--animate {
-  transition:
-    transform 520ms cubic-bezier(0.32, 1.1, 0.48, 1),
-    opacity 300ms ease;
-}
-
 .roll__card .cardface {
   border-radius: 18px;
   box-shadow: 0 1px 2px rgb(0 0 0 / 0.08), 0 10px 24px -10px rgb(0 0 0 / 0.3);
@@ -7622,9 +7616,8 @@ body.tab-menu-open .tabbar {
   inset: 0;
   border-radius: inherit;
   background: #000;
-  opacity: var(--shade, 0);
+  opacity: var(--shade, 0); /* set every frame with the card's place: no transition, or it would lag */
   pointer-events: none;
-  transition: opacity 300ms ease;
 }
 
 .roll__card:not(.is-front) * {
