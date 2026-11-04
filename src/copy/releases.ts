@@ -5,6 +5,12 @@ import type { Release } from '../domain/releases';
 
 export const RELEASES: Release[] = [
   {
+    version: '0.17.0',
+    items: [
+      { title: 'Investment prices (beta)', body: 'Add the holdings in an investing account, one by one or from your broker’s CSV, and Accounts shows what they’re worth, your all-time invested, your all-time P&L and today’s change. Prices are Yahoo Finance closing prices, fetched once after each market close in a single round for all your holdings. Importing a file or adding a holding fetches nothing: the file brings its prices, and a new holding shows its entry price until the close. Turn it on in Settings → Experimental. Only your ticker symbols leave your phone.' },
+    ],
+  },
+  {
     version: '0.16.0',
     items: [
       { title: 'A new way to get started', body: 'Setting up Tameru is now a conversation: it asks one thing at a time and remembers what you said. Amounts go on a dial you turn (or tap to type), dates on a calendar, and bills, spending and goals start from a list you tick.' },

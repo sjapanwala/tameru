@@ -4,6 +4,7 @@ import { sparkPath } from '../../domain/accountInsights';
 import type { Account, AccountType, CardFace as CardFaceT, Category, Cents, Compounding, Transaction } from '../../domain/types';
 import { CardFace, CardPicker, useCatalog } from '../cards';
 import { CardAnalysisPanel, CardDetailsFlow, type CardStep } from '../CardAnalysis';
+import { HoldingsPanel } from '../Holdings';
 import { CardMenu } from '../CardMenu';
 import { accountInsights, createAccount, listAccounts, removeAccount, reorderAccounts, restoreAccount, updateAccount, type AccountView } from '../../services/accounts';
 import { CardRoll } from '../CardRoll';
@@ -187,6 +188,7 @@ function AccountDetails({ v, txs, categories }: { v: AccountView; txs: Transacti
   const { bump } = useApp();
   const [details, setDetails] = useState<CardStep | null>(null);
   const analysis = insights?.cardAnalysis;
+  const markets = useLoad((app) => app.repos.settings.get())?.markets;
   const headline = headlineOf(v);
   // Rolls from the previous card's figure to this one's (the panel remounts per card).
   const shownHeadline = useTween(headline, 'account-panel', 800);
@@ -267,6 +269,7 @@ function AccountDetails({ v, txs, categories }: { v: AccountView; txs: Transacti
       </div>
 
       {analysis && <CardAnalysisPanel r={analysis} onDetails={setDetails} />}
+      {a.type === 'investing' && <HoldingsPanel account={a} markets={markets} />}
       {details && a.card && (
         <Sheet label={S.cardx.flowTitle} onClose={() => (setDetails(null), bump())}>
           <CardDetailsFlow account={a} start={details} onDone={(saved) => (setDetails(null), saved && toast(S.cardx.saved), bump())} />

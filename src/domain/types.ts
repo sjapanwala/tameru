@@ -52,6 +52,7 @@ export interface Account extends BaseRecord {
   archived: boolean;
   interest?: InterestConfig; // savings only
   card?: CardConfig; // credit_card only
+  holdings?: Holding[]; // investing only: what's held, for the experimental market prices
   face?: CardFace; // how the account's card looks (credit or debit)
   sortOrder?: number; // user's order (wallet, carousel, pickers); unset until they reorder
 }
@@ -290,6 +291,37 @@ export interface Settings {
   lock?: AppLock; // absent = no passcode
   theme?: ThemeId; // absent = blue
   tourPending?: boolean; // show the app tour on the next Home: after onboarding, or "Take a tour"
+  markets?: MarketSettings; // experimental: daily closing prices for investing holdings
+}
+
+/** One position in an investing account. Shares can be fractional. */
+export interface Holding {
+  symbol: string; // Yahoo's form: XEQT.TO for the TSX, AAPL for US
+  shares: number;
+  avgCostCents?: Cents; // entry price per share, in the holding's currency
+  costCadCents?: Cents; // what it cost in all, in CAD (a broker's book value); wins over avgCostCents
+  name?: string; // the security's name, from a broker's file
+  currency: 'CAD' | 'USD';
+}
+
+/** A day's closing price. Cents may be fractional (sub-cent prices). */
+export interface Quote {
+  symbol: string;
+  priceCents: number;
+  prevCloseCents: number;
+  tradingDay: LocalDate;
+  closeKey: LocalDate; // the market close this fetch covered (see lastCloseKey)
+  name?: string; // the security's short name, as Yahoo gives it
+  from?: 'file' | 'entry'; // not a fetched close: a broker file's price, or the entry price standing in until the close
+}
+
+export interface MarketSettings {
+  enabled: boolean;
+  quotes?: Record<string, Quote>;
+  usdCad?: { rate: number; closeKey: LocalDate };
+  lastError?: 'network' | 'service';
+  unknown?: string[]; // symbols Yahoo had no price for
+  usage?: { day: LocalDate; count: number }; // lookups made on a UTC day, to stay under the free 25
 }
 
 /** Accent colours over one neutral light and dark base. */

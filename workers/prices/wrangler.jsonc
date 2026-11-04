@@ -1,0 +1,11 @@
+// Tameru's price service (experimental investment prices). Deploy once with
+//   cd workers/prices && npx wrangler deploy
+// then attach the custom domain prices.tameru.cc in the Cloudflare dashboard
+// (Workers & Pages → tameru-prices → Settings → Domains & Routes).
+{
+  "name": "tameru-prices",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-10-01",
+  "workers_dev": true,
+  "observability": { "enabled": false }
+}

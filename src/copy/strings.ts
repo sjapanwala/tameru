@@ -520,6 +520,57 @@ export const S = {
 
   cal: { prev: 'Previous month', next: 'Next month' },
 
+  // Market prices for investing holdings (experimental).
+  markets: {
+    group: 'Experimental',
+    toggle: 'Investment prices',
+    toggleSub: 'Closing prices for your holdings from Yahoo Finance, fetched once after each market close.',
+    beta: 'Beta',
+    privacy: 'Your ticker symbols go to Yahoo Finance through Tameru’s price service, once each trading day after the close. Nothing else leaves this phone, and the service keeps nothing. Yahoo’s prices aren’t an official feed and may sometimes be unavailable.',
+    status: (day: string) => `Prices from the ${day} close. Next round after 4:20 p.m. Eastern on the next trading day.`,
+    noPrices: 'No prices yet. They load after the next market close, or now if you’ve just turned this on.',
+    requests: (symbols: number, requests: number) => `${symbols} ${symbols === 1 ? 'symbol' : 'symbols'}: ${requests === 1 ? 'one request' : `${requests} requests`} after each close.`,
+    errors: {
+      network: 'Couldn’t reach the price service. Prices load next time you’re online.',
+      service: 'The price service couldn’t get prices from Yahoo just now. It tries again next time Tameru opens.',
+    } as Record<string, string>,
+
+    holdings: 'Holdings',
+    cols: { ticker: 'Ticker', price: 'Price', value: 'Value', pnl: 'P&L', total: 'Total' },
+    entry: 'entry price',
+    soon: 'after the close',
+    noPrice: 'no price',
+    fromImport: (day: string) => `import · ${day}`,
+    us: 'US-listed',
+    ca: 'Canadian-listed',
+    value: 'Market value',
+    invested: 'All-time invested',
+    investedSub: 'what your holdings cost',
+    pnl: 'All-time P&L',
+    pnlSub: (pct: string) => `${pct} on what you put in`,
+    today: 'Today',
+    todaySub: 'since the last close',
+    asOf: (day: string) => `At the ${day} close`,
+    noCost: 'add a cost for P&L',
+    fx: 'US holdings shown in Canadian dollars at the latest USD→CAD rate.',
+    fxPending: 'US holdings are in US dollars until the exchange rate loads.',
+    off: 'Turn on Investment prices in Settings → Experimental to see what your holdings are worth.',
+    add: 'Add a holding',
+    import: 'Import CSV',
+    imported: (n: number, left: number) => `Imported ${plural(n, 'holding')}${left ? `; ${left} ${left === 1 ? 'row' : 'rows'} left out` : ''}.`,
+    importNone: 'No holdings found. The file needs a symbol and a quantity column.',
+    edit: 'Edit holding',
+    symbol: 'Symbol',
+    symbolHint: 'Like XEQT.TO for the TSX, MU.NE for Cboe Canada, or VOO for US.',
+    sharesLabel: 'Shares',
+    avgCost: 'Entry price per share',
+    avgCostHint: 'What you paid for each share. P&L is measured from it; the market price comes in after the next close.',
+    inCurrency: (c: string) => `Prices in ${c}`,
+    save: 'Save',
+    remove: 'Remove holding',
+    empty: 'No holdings yet. Add them one by one, or import your broker’s CSV.',
+  },
+
   // The tour: every page in turn, each opening with what's on it, then a spotlight on
   // each feature with what it does and, where there's a gesture, how to try it.
   tour: {

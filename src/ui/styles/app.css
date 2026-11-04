@@ -9439,3 +9439,353 @@ main ul.up-all {
     animation: none;
   }
 }
+
+/* ---------- investing holdings (experimental): value, invested, P&L, each holding ---------- */
+
+.hold {
+  margin-top: 20px;
+  padding: 16px;
+  border-radius: 20px;
+  background: var(--surface);
+  animation: enter var(--t-slow) var(--glide) backwards;
+}
+
+.hold__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+}
+
+.hold__head h3 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.hold__beta {
+  margin-left: 6px;
+  padding: 2px 6px;
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  color: var(--accent);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  vertical-align: 2px;
+}
+
+.hold__asof {
+  font-size: 0.75rem;
+  color: var(--text-2);
+}
+
+.hold__note,
+.hold__fine {
+  margin: 10px 0 0;
+  font-size: 0.8125rem;
+  color: var(--text-2);
+}
+
+.hold__fine {
+  font-size: 0.75rem;
+  color: var(--text-3);
+}
+
+.hold__value {
+  display: flex;
+  flex-direction: column;
+  margin-top: 10px;
+}
+
+.hold__value .hold__label {
+  font-size: 0.8125rem;
+  color: var(--text-2);
+}
+
+/* today's change, under the value */
+.hold__day {
+  font-size: 0.8125rem;
+  color: var(--text-2);
+}
+
+.hold__day .amt {
+  font-weight: 600;
+}
+
+.hold__day.is-up .amt {
+  color: var(--pos);
+}
+
+.hold__day.is-down .amt {
+  color: var(--neg);
+}
+
+.hold__value b {
+  font-family: var(--font-display);
+  font-size: 2rem;
+  font-weight: 600;
+  letter-spacing: -0.035em;
+  line-height: 1.15;
+}
+
+.hold__value .amt {
+  font-family: inherit;
+}
+
+.hold__value .amt__c {
+  color: var(--text-3);
+}
+
+.accounts .hold__tiles {
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.accounts .hold__tiles .tile {
+  min-height: 0;
+  padding: 12px 12px 10px;
+  border-radius: 14px;
+  background: var(--bg);
+  animation: none;
+}
+
+.accounts .hold__tiles .tile__label {
+  font-size: 0.6875rem;
+}
+
+.accounts .hold__tiles .tile__value {
+  margin-top: 4px;
+  font-size: 1.125rem;
+}
+
+.accounts .hold__tiles .tile__sub {
+  font-size: 0.6875rem;
+  line-height: 1.25;
+}
+
+.hold__pnl.is-up .tile__value {
+  color: var(--pos);
+}
+
+.hold__pnl.is-down .tile__value {
+  color: var(--neg);
+}
+
+/* holdings as a ledger: ticker | price | value | P&L, figures in columns */
+.ledger {
+  margin: 14px -4px 0;
+  font-variant-numeric: tabular-nums;
+  container-type: inline-size;
+}
+
+.ledger__fold {
+  display: none;
+}
+
+/* Narrow: the price column folds under the value, so the ticker and name keep their room. */
+@container (max-width: 330px) {
+  .ledger .ledger__row {
+    grid-template-columns: minmax(0, 1fr) 96px 62px;
+  }
+  .ledger__row > :nth-child(2) {
+    display: none;
+  }
+  .ledger__weight {
+    display: none;
+  }
+  .ledger__fold {
+    display: block;
+  }
+  .ledger__row--total > span:nth-child(2) {
+    display: none;
+  }
+}
+
+/* Very narrow (small phones with large text): tighter figures, and the ticker keeps its width. */
+@container (max-width: 260px) {
+  .ledger .ledger__row {
+    grid-template-columns: minmax(52px, 1fr) 78px 56px;
+    column-gap: 6px;
+  }
+  .ledger__num > span,
+  .ledger__ticker b {
+    font-size: 0.8125rem;
+  }
+  .ledger__fold {
+    font-size: 0.625rem !important;
+  }
+}
+
+.ledger__row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 68px 76px 62px;
+  column-gap: 8px;
+  align-items: start;
+  width: 100%;
+  min-height: 0;
+  margin: 0;
+  padding: 9px 4px;
+  border: 0;
+  border-radius: 10px;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background var(--t-fast) var(--glide);
+}
+
+.ledger__row + .ledger__row {
+  box-shadow: inset 0 0.5px 0 var(--line);
+}
+
+button.ledger__row:active {
+  background: var(--fill);
+}
+
+.ledger__row--head {
+  padding-top: 0;
+  padding-bottom: 6px;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-3);
+  cursor: default;
+}
+
+.ledger__row--head span:not(:first-child) {
+  text-align: right;
+}
+
+.ledger__row--total {
+  margin-top: 2px;
+  box-shadow: inset 0 1px 0 var(--text-3) !important;
+  font-weight: 700;
+  cursor: default;
+}
+
+.ledger__row--total > span:first-child {
+  font-size: 0.8125rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.ledger__ticker {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.ledger__ticker b {
+  font-size: 0.9375rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
+.ledger__ticker small,
+.ledger__num small {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: 0.6875rem;
+  color: var(--text-2);
+}
+
+.ledger__num {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  min-width: 0;
+  text-align: right;
+}
+
+.ledger__num > span {
+  font-size: 0.875rem;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.ledger__num sup {
+  margin-left: 2px;
+  font-size: 0.5625rem;
+  font-weight: 700;
+  color: var(--text-3);
+  vertical-align: 3px;
+}
+
+.ledger__num small {
+  max-width: 100%;
+}
+
+.ledger__pnl.is-up > span,
+.ledger__pnl.is-up small {
+  color: var(--pos);
+}
+
+.ledger__pnl.is-down > span,
+.ledger__pnl.is-down small {
+  color: var(--neg);
+}
+
+.ledger__pnl small {
+  opacity: 0.8;
+}
+
+.hold__actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.hold__actions button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 44px;
+  margin: 0;
+  border: 0;
+  border-radius: 14px;
+  background: var(--bg);
+  color: var(--accent);
+  min-width: 0;
+  padding: 0 8px;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.hold__actions svg {
+  width: 16px;
+  height: 16px;
+}
+
+.hold-sheet h2 {
+  margin-top: 0;
+}
+
+.hold-sheet small {
+  display: block;
+  margin-top: 6px;
+}
+
+.hold-sheet__hint {
+  margin: -6px 0 16px;
+  font-size: 0.8125rem;
+}
+
+/* Settings → Experimental: where prices stand, and the requests each close makes */
+.markets-key {
+  display: block;
+  padding: 12px 16px;
+}
+
+.markets-key__status {
+  margin: 0 0 4px;
+  font-size: 0.75rem;
+  color: var(--text-2);
+}

@@ -6,6 +6,7 @@ import type { AppLock, TransactionType } from '../domain/types';
 import { devMode } from '../pwa/standalone';
 import { openApp, type App as AppT } from '../services/app';
 import { onAppOpen } from '../services/appOpen';
+import { refreshQuotes } from '../services/markets';
 import { on } from '../services/events';
 import { AppCtx, useApp, useLoad } from './hooks';
 import { go, useRoute } from './router';
@@ -167,9 +168,13 @@ function Shell({ app, initialOffer, initialLock, caughtUp }: { app: AppT; initia
     document.addEventListener('visibilitychange', onChange);
     return () => document.removeEventListener('visibilitychange', onChange);
   }, []);
+  // Market prices (experimental): a check on open and on each return to the app. It only
+  // calls out when the market has closed since the last prices, and never holds anything up.
+  const prices = () => void refreshQuotes(app).then((r) => r.updated > 0 && bump()).catch(() => {});
+  useEffect(prices, []);
   // Opening the app again later in the day (e.g. from the background) runs bookkeeping again.
   useEffect(() => {
-    const onVisible = () => document.visibilityState === 'visible' && onAppOpen(app).then((r) => (r.freshStart && setOffer(r.freshStart), bump()));
+    const onVisible = () => document.visibilityState === 'visible' && (prices(), onAppOpen(app).then((r) => (r.freshStart && setOffer(r.freshStart), bump())));
     document.addEventListener('visibilitychange', onVisible);
     return () => document.removeEventListener('visibilitychange', onVisible);
   }, []);

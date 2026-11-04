@@ -2,7 +2,7 @@
 // start, data, and erasing. Anything that needs more than a switch opens a sheet.
 
 import { useEffect, useState } from 'preact/hooks';
-import { money, S } from '../../copy/strings';
+import { fmtDate, money, S } from '../../copy/strings';
 import { exportCsv, exportJson, importCsv, importJson } from '../../data/exportImport';
 import { initials } from '../../domain/onboarding';
 import { THEME_IDS, type AppLock, type PeriodConfig, type Settings as SettingsT, type ThemeId } from '../../domain/types';
@@ -17,6 +17,8 @@ import { Sheet } from '../Sheet';
 import { addAllToCalendar } from '../calendar';
 import { versionLabel } from '../version';
 import { go } from '../router';
+import { allHoldingsOf, refreshQuotes, requestsPerClose, setMarkets } from '../../services/markets';
+import type { MarketSettings } from '../../domain/types';
 
 type Editing = 'name' | 'period' | 'buffer' | 'lockOn' | 'lockChange' | 'lockOff' | 'relock' | 'erase';
 
@@ -106,6 +108,21 @@ export function Settings() {
             <Row label={S.settings.lockChange} onClick={() => setEditing('lockChange')} />
             <Row label={S.settings.lockOff} onClick={() => setEditing('lockOff')} />
           </>
+        )}
+      </Group>
+
+      <Group title={S.markets.group} note={S.markets.privacy}>
+        <Switch
+          label={`${S.markets.toggle} · ${S.markets.beta}`}
+          sub={S.markets.toggleSub}
+          checked={!!settings.markets?.enabled}
+          onChange={(v) => setMarkets(app, { enabled: v }).then(bump).then(() => v && refreshQuotes(app).then((r) => r.updated > 0 && bump()))}
+        />
+        {settings.markets?.enabled && (
+          <div class="settings-row settings-row--static markets-key">
+            <p class="markets-key__status">{marketStatus(settings.markets)}</p>
+            <MarketRequests />
+          </div>
         )}
       </Group>
 
@@ -414,3 +431,19 @@ function EraseSheet(props: { onErase: () => void }) {
   );
 }
 
+
+/** Where the prices stand: the last close they're from, or what stopped them. */
+function marketStatus(m: MarketSettings): string {
+  if (m.lastError) return S.markets.errors[m.lastError]!;
+  const days = Object.values(m.quotes ?? {}).map((q) => q.tradingDay).sort();
+  return days.length ? S.markets.status(fmtDate(days[days.length - 1]!)) : S.markets.noPrices;
+}
+
+
+/** How many requests each after-close round makes for the holdings there are. */
+function MarketRequests() {
+  const holdings = useLoad(allHoldingsOf);
+  if (!holdings?.length) return null;
+  const symbols = new Set(holdings.map((h) => h.symbol)).size;
+  return <p class="markets-key__status">{S.markets.requests(symbols, requestsPerClose(symbols + 1))}</p>;
+}

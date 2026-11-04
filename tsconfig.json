@@ -15,5 +15,5 @@
     "isolatedModules": true,
     "types": ["vite/client", "vite-plugin-pwa/client", "node", "dom-chromium-installation-events"]
   },
-  "include": ["src", "tests", "vite.config.ts"]
+  "include": ["src", "tests", "workers", "vite.config.ts"]
 }

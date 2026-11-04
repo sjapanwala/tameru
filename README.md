@@ -76,6 +76,7 @@ Pay that varies counts at its low end, and bills that vary count at their high e
 - **No sign-up and no bank connection.** You enter balances once and log spending yourself.
 - **Works offline.** The app is cached on the device at install. Card art and the receipt reader (Tesseract, bundled with the app, never a CDN) are kept after their first use.
 - **Backups are files you keep.** Export from More → Settings, restore on a new phone.
+- **One exception, off by default:** the experimental investment prices send your ticker symbols (nothing else) to Yahoo Finance through a small price service (`workers/prices`) once after each market close. It stores nothing.
 
 
 ## Get it on your phone 📲
