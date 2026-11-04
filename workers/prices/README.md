@@ -5,7 +5,10 @@ endpoints can't be called from the app (no CORS), so the app asks this Worker on
 after each market close, up to 20 symbols per request.
 
 - `GET /?symbols=XEQT.TO,VFV.TO,PSI,USDCAD=X` → `{ prices: { SYMBOL: { price, prevClose, currency, time } }, missing: [...] }`
-- Only `app.tameru.cc` and `localhost` may call it from a browser.
+- Only `app.tameru.cc` and `localhost` may call it; anything else gets a 403.
+- Guards for Yahoo: an answer is cached at the edge for 60 s (same tickers, any order),
+  and requests are rate limited to 10 a minute per IP and 60 a minute overall (429).
+  The limits are the `ratelimits` bindings in `wrangler.jsonc`.
 - Stores nothing. Yahoo's endpoint is unofficial and may change or stop working.
 
 ## Deploy

@@ -48,4 +48,58 @@ describe('the price service', () => {
     expect((await handle(get('symbols=VFV.TO'), yahoo({}, 429).fn)).status).toBe(502);
     expect(readSpark({ nonsense: true }, ['A'])).toEqual({ prices: {}, missing: ['A'] });
   });
+
+  describe('guarding Yahoo', () => {
+    const limiter = (allowed: number) => {
+      const keys: string[] = [];
+      return { keys, limit: async ({ key }: { key: string }) => (keys.push(key), { success: keys.filter((k) => k === key).length <= allowed }) };
+    };
+    const memoryCache = () => {
+      const kept = new Map<string, Response>();
+      return {
+        kept,
+        match: async (r: RequestInfo | URL) => kept.get(String((r as Request).url ?? r))?.clone(),
+        put: async (r: RequestInfo | URL, res: Response) => void kept.set(String((r as Request).url ?? r), res),
+      } as unknown as Pick<Cache, 'match' | 'put'> & { kept: Map<string, Response> };
+    };
+    const from = (ip: string, q = 'symbols=XEQT.TO') => new Request(`https://prices.tameru.cc/?${q}`, { headers: { Origin: 'https://app.tameru.cc', 'CF-Connecting-IP': ip } });
+
+    it('turns away anything that isn’t the app, before Yahoo', async () => {
+      const y = yahoo(spark);
+      expect((await handle(new Request('https://prices.tameru.cc/?symbols=XEQT.TO'), y.fn)).status).toBe(403);
+      expect((await handle(get('symbols=XEQT.TO', 'https://example.com'), y.fn)).status).toBe(403);
+      expect(y.calls).toHaveLength(0);
+    });
+
+    it('gives each device its own allowance, and everyone a shared one', async () => {
+      const y = yahoo(spark);
+      const perClient = limiter(2);
+      const overall = limiter(3);
+      const guard = { perClient, overall };
+      expect((await handle(from('1.1.1.1'), y.fn, guard)).status).toBe(200);
+      expect((await handle(from('1.1.1.1'), y.fn, guard)).status).toBe(200);
+      const third = await handle(from('1.1.1.1'), y.fn, guard);
+      expect(third.status).toBe(429);
+      expect(third.headers.get('Access-Control-Allow-Origin')).toBe('https://app.tameru.cc'); // so the app can tell
+      expect((await handle(from('2.2.2.2'), y.fn, guard)).status).toBe(200); // another device: fine
+      expect((await handle(from('3.3.3.3'), y.fn, guard)).status).toBe(429); // but everyone's used the shared 3
+      expect(y.calls).toHaveLength(3);
+      expect(overall.keys.every((k) => k === 'all')).toBe(true);
+    });
+
+    it('answers the same tickers from the edge for a minute, in any order, whatever else is on the URL', async () => {
+      const y = yahoo(spark);
+      const cache = memoryCache();
+      const perClient = limiter(100);
+      const guard = { cache, perClient };
+      const first = await handle(from('1.1.1.1', 'symbols=XEQT.TO,USDCAD=X'), y.fn, guard);
+      expect(first.status).toBe(200);
+      const again = await handle(from('1.1.1.1', 'symbols=usdcad=x,XEQT.TO&now=123'), y.fn, guard);
+      expect(await again.json()).toEqual(await first.json());
+      expect(again.headers.get('Access-Control-Allow-Origin')).toBe('https://app.tameru.cc');
+      expect(y.calls).toHaveLength(1);
+      expect(perClient.keys).toHaveLength(1); // a cached answer doesn't count against anyone
+      expect([...cache.kept.values()][0]!.headers.get('Cache-Control')).toBe('public, max-age=60');
+    });
+  });
 });
